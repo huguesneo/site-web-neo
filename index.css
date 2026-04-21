@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  /* Couleurs NEO */
+  --color-neo: #00BBB1;
+  --color-neo-50: #E0F7F6;
+  --color-neo-100: #B3EBE8;
+  --color-neo-200: #80DED9;
+  --color-neo-300: #4DD1CA;
+  --color-neo-400: #26C6BE;
+  --color-neo-500: #00BBB1;
+  --color-neo-600: #009D94;
+  --color-neo-700: #007F78;
+  --color-neo-800: #00615C;
+  --color-neo-900: #004541;
+
+  --color-dark-900: #1A1A1A;
+  --color-dark-800: #2D2D2D;
+
+  /* Polices */
+  --font-sans: 'Montserrat', sans-serif;
+
+  /* Animations */
+  --animate-fade-in-up: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-in: fadeIn 1s ease-out forwards;
+  --animate-scale-slow: scaleSlow 20s linear infinite alternate;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  /* Keyframes */
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    0% { opacity: 0; transform: translateY(100%); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scaleSlow {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+}

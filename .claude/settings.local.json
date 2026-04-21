@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s 'https://services.leadconnectorhq.com/products/?locationId=YG2spvWJqnD75L3V95UJ' -H 'Authorization: Bearer pit-3e4492f6-9984-4371-819d-63998a48aecc' -H 'Version: 2021-07-28')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s https://services.leadconnectorhq.com/oauth/installedLocations -H 'Authorization: Bearer pit-8d9947f0-1b9d-47e6-baad-011feeac29f3' -H 'Version: 2021-07-28')",
+      "Bash(curl -s -X POST https://services.leadconnectorhq.com/blogs/posts/search -H 'Authorization: Bearer pit-8d9947f0-1b9d-47e6-baad-011feeac29f3' -H 'Version: 2021-07-28' -H 'Content-Type: application/json' -d '{\"locationId\":\"YG2spvWJqnD75L3V95UJ\"}')",
+      "Bash(curl -s https://rest.gohighlevel.com/v1/blogs/ -H 'Authorization: Bearer pit-8d9947f0-1b9d-47e6-baad-011feeac29f3')",
+      "Bash(curl -s https://services.leadconnectorhq.com/locations/YG2spvWJqnD75L3V95UJ -H 'Authorization: Bearer pit-8d9947f0-1b9d-47e6-baad-011feeac29f3' -H 'Version: 2021-07-28')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)[:10] if isinstance\\(d,dict\\) else d\\)\")",
+      "Bash(curl -s 'https://services.leadconnectorhq.com/blogs/categories?locationId=YG2spvWJqnD75L3V95UJ&limit=10&offset=0' -H 'Authorization: Bearer pit-8d9947f0-1b9d-47e6-baad-011feeac29f3' -H 'Version: 2021-07-28')",
+      "Bash(curl -s 'https://services.leadconnectorhq.com/blogs/posts?locationId=YG2spvWJqnD75L3V95UJ&limit=10&offset=0' -H 'Authorization: Bearer pit-8d9947f0-1b9d-47e6-baad-011feeac29f3' -H 'Version: 2021-07-28')",
+      "Bash(/usr/bin/curl -s \"https://services.leadconnectorhq.com/blogs?locationId=YG2spvWJqnD75L3V95UJ&limit=10&offset=0\" -H \"Authorization: Bearer pit-8d9947f0-1b9d-47e6-baad-011feeac29f3\" -H \"Version: 2021-07-28\")",
+      "Bash(find /Users/huguesneo/Desktop/COWORK/site-web-neo/dist -type f -exec ls -lh {} \\\\;)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(find /Users/huguesneo/Desktop/COWORK/site-web-neo -type f \\\\\\( -name \"*.png\" -o -name \"*.jpg\" -o -name \"*.jpeg\" -o -name \"*.gif\" -o -name \"*.webp\" -o -name \"*.svg\" -o -name \"*.mp4\" -o -name \"*.webm\" -o -name \"*.mov\" \\\\\\) ! -path \"*/node_modules/*\" -exec ls -lh {} \\\\;)",
+      "Bash(sort -k2)",
+      "Bash(npm run *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(echo \"PID: $!\")"
+    ]
+  }
+}
