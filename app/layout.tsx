@@ -19,6 +19,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': ['MedicalClinic', 'LocalBusiness'],
   name: 'NEO Performance',
+  image: 'https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6941c9327109a899ec69b43c.png',
   description: 'Clinique spécialisée en optimisation de la composition corporelle, du métabolisme et des hormones. Programme de 15 semaines pour femmes actives de 35 à 50 ans.',
   url: 'https://www.neoperformance.ca/',
   telephone: '(450) 486-4006',
