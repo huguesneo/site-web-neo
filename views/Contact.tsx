@@ -253,7 +253,7 @@ const Contact: React.FC = () => {
                       </label>
                     </div>
 
-                    <Button className="w-full justify-center mt-2 group" disabled={isLoading}>
+                    <Button type="submit" className="w-full justify-center mt-2 group" disabled={isLoading}>
                       {isLoading ? 'Envoi en cours…' : 'Envoyer le message'}
                       {!isLoading && <Send size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
                     </Button>
