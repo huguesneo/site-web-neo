@@ -46,7 +46,7 @@ const PROVINCES: { label: string; code: string }[] = [
 ];
 
 const Checkout: React.FC = () => {
-  const { items, subtotal, coupon, clearCart } = useCart();
+  const { items, subtotal, coupon, clearCart, hydrated } = useCart();
   const router = useRouter();
 
   const [form, setForm] = useState<FormData>({
@@ -66,12 +66,12 @@ const Checkout: React.FC = () => {
   const total = subtotal - discount + taxes;
 
   useEffect(() => {
-    if (items.length === 0 && status === 'idle') {
+    if (hydrated && items.length === 0 && status === 'idle') {
       router.push('/boutique');
     }
-  }, [items.length, status, router]);
+  }, [hydrated, items.length, status, router]);
 
-  if (items.length === 0 && status === 'idle') {
+  if (hydrated && items.length === 0 && status === 'idle') {
     return null;
   }
 

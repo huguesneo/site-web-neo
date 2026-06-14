@@ -18,6 +18,7 @@ interface CartContextValue {
   items: CartItem[];
   count: number;
   subtotal: number;
+  hydrated: boolean;
   coupon: AppliedCoupon | null;
   applyCoupon: (code: string) => Promise<void>;
   removeCoupon: () => void;
@@ -30,32 +31,32 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('neo_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [coupon, setCoupon] = useState<AppliedCoupon | null>(() => {
-    try {
-      const saved = localStorage.getItem('neo_coupon');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  // Démarre vide (identique côté serveur et au 1er rendu client) pour éviter
+  // toute erreur d'hydratation, puis charge le panier depuis localStorage.
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    try {
+      const savedCart = localStorage.getItem('neo_cart');
+      if (savedCart) setItems(JSON.parse(savedCart));
+      const savedCoupon = localStorage.getItem('neo_coupon');
+      if (savedCoupon) setCoupon(JSON.parse(savedCoupon));
+    } catch { /* ignore */ }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem('neo_cart', JSON.stringify(items));
-  }, [items]);
+  }, [items, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     if (coupon) localStorage.setItem('neo_coupon', JSON.stringify(coupon));
     else localStorage.removeItem('neo_coupon');
-  }, [coupon]);
+  }, [coupon, hydrated]);
 
   const subtotal = items.reduce((sum, i) => sum + parseFloat(i.product.price) * i.quantity, 0);
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -135,7 +136,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <CartContext.Provider value={{ items, count, subtotal, coupon, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
+    <CartContext.Provider value={{ items, count, subtotal, hydrated, coupon, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
       {children}
     </CartContext.Provider>
   );
