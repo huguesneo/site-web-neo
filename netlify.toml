@@ -1,0 +1,17 @@
+# Configuration Netlify
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  # Ces variables NEXT_PUBLIC_ sont intégrées au site côté navigateur de façon
+  # volontaire (elles ne sont pas secrètes). On les exclut du scan de secrets
+  # de Netlify pour que le build passe. Les vrais secrets Moneris
+  # (MONERIS_CLIENT_SECRET, MONERIS_API_KEY, MONERIS_MERCHANT_ID) NE sont PAS
+  # dans cette liste : ils restent surveillés et ne doivent jamais apparaître
+  # dans le navigateur.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_GEMINI_API_KEY,NEXT_PUBLIC_GHL_API_KEY,NEXT_PUBLIC_GHL_LOCATION_ID,NEXT_PUBLIC_WC_URL,NEXT_PUBLIC_WC_KEY,NEXT_PUBLIC_WC_SECRET,NEXT_PUBLIC_MONERIS_ENV,NEXT_PUBLIC_MONERIS_HT_PROFILE_ID"

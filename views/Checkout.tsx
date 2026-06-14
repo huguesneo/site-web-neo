@@ -1,9 +1,23 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, ArrowRight, Package } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import Section from '../components/Section';
+
+// ─── Moneris Hosted Tokenization (iframe sécurisée) ─────────────────────────────
+const HT_IS_PROD = process.env.NEXT_PUBLIC_MONERIS_ENV === 'prod';
+const HT_HOST = HT_IS_PROD ? 'https://www3.moneris.com' : 'https://esqa.moneris.com';
+const HT_ORIGIN = `${HT_HOST}/HPPtoken/index.php`;
+const HT_PROFILE_ID = process.env.NEXT_PUBLIC_MONERIS_HT_PROFILE_ID || '';
+
+// URL de l'iframe : champs carte (numéro + expiration + CVV) stylés sobrement.
+const HT_IFRAME_SRC =
+  `${HT_HOST}/HPPtoken/index.php?id=${HT_PROFILE_ID}&pmmsg=true` +
+  `&enable_exp=1&enable_cvd=1&display_labels=1` +
+  `&css_body=font-family:sans-serif;` +
+  `&css_textbox=border:1px solid %23d1d5db;border-radius:10px;padding:10px;width:90%25;` +
+  `&css_input_label=color:%23374151;font-size:13px;`;
 
 interface FormData {
   firstName: string;
@@ -39,77 +53,53 @@ const Checkout: React.FC = () => {
     firstName: '', lastName: '', email: '', phone: '',
     address: '', city: '', province: 'QC', postalCode: '', notes: '',
   });
-  const [status, setStatus] = useState<'idle' | 'loading' | 'redirecting' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [payInfo, setPayInfo] = useState<{ url: string; orderId: number; total: number } | null>(null);
-  const [countdown, setCountdown] = useState(4);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [orderInfo, setOrderInfo] = useState<{ orderId: number; total: number } | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  // Contexte de la commande en cours, lu par le gestionnaire de message de l'iframe
+  const pendingRef = useRef<{ orderId: number; total: number } | null>(null);
+  const finalizedRef = useRef(false);
 
   const discount = coupon?.discountValue ?? 0;
   const taxes = (subtotal - discount) * 0.14975;
   const total = subtotal - discount + taxes;
 
   useEffect(() => {
-    if (items.length === 0 && status !== 'redirecting') {
+    if (items.length === 0 && status === 'idle') {
       router.push('/boutique');
     }
   }, [items.length, status, router]);
 
-  if (items.length === 0 && status !== 'redirecting') {
+  if (items.length === 0 && status === 'idle') {
     return null;
   }
 
-  // ─── Écran de transition vers Moneris ───────────────────────────────────────
-  if (status === 'redirecting' && payInfo) {
-    const circumference = 2 * Math.PI * 26; // rayon 26
-    const progress = (countdown / 4) * circumference;
+  // ─── Écran de confirmation après paiement approuvé ───────────────────────────
+  if (status === 'success' && orderInfo) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4">
         <div className="text-center max-w-md w-full animate-fade-in">
-
-          {/* Icône succès */}
           <div className="w-20 h-20 bg-green-500/15 border border-green-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={38} className="text-green-400" />
           </div>
 
-          <h1 className="text-2xl font-bold text-white mb-1">Commande confirmée !</h1>
-          <p className="text-gray-400 text-sm mb-1">Commande #{payInfo.orderId}</p>
-          <p className="text-neo text-2xl font-extrabold mb-8 tracking-tight">
-            {payInfo.total.toFixed(2)} $
+          <h1 className="text-2xl font-bold text-white mb-1">Paiement réussi !</h1>
+          <p className="text-gray-400 text-sm mb-1">Commande #{orderInfo.orderId}</p>
+          <p className="text-neo text-2xl font-extrabold mb-6 tracking-tight">
+            {orderInfo.total.toFixed(2)} $
           </p>
-
-          {/* Countdown circulaire */}
-          <div className="relative w-20 h-20 mx-auto mb-6">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 60 60">
-              <circle cx="30" cy="30" r="26" fill="none" stroke="#374151" strokeWidth="4" />
-              <circle
-                cx="30" cy="30" r="26" fill="none"
-                stroke="#00BBB1" strokeWidth="4"
-                strokeDasharray={circumference}
-                strokeDashoffset={circumference - progress}
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset 1s linear' }}
-              />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">
-              {countdown}
-            </span>
-          </div>
-
           <p className="text-gray-400 text-sm mb-8">
-            Redirection automatique vers le paiement sécurisé…
+            Merci pour ta commande ! Un courriel de confirmation te sera envoyé. Expédition sous 24/48h.
           </p>
 
-          {/* Bouton immédiat */}
-          <a
-            href={payInfo.url}
-            onClick={() => clearInterval(countdownRef.current!)}
+          <button
+            onClick={() => router.push('/boutique')}
             className="inline-flex items-center gap-2 bg-neo hover:bg-neo-600 text-white font-bold px-8 py-3.5 rounded-xl transition-colors shadow-lg shadow-neo/25 mb-6"
           >
-            Payer maintenant <ArrowRight size={17} />
-          </a>
+            Retour à la boutique
+          </button>
 
-          {/* Badges sécurité */}
           <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
             <span className="flex items-center gap-1.5">
               <ShieldCheck size={13} className="text-neo" /> Chiffrement SSL
@@ -130,20 +120,93 @@ const Checkout: React.FC = () => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   }
 
+  const wcUrl    = process.env.NEXT_PUBLIC_WC_URL;
+  const wcKey    = process.env.NEXT_PUBLIC_WC_KEY;
+  const wcSecret = process.env.NEXT_PUBLIC_WC_SECRET;
+
+  // ─── Étape 3 : encaisser avec le token reçu de l'iframe ─────────────────────
+  async function payWithToken(temporaryToken: string) {
+    const ctx = pendingRef.current;
+    if (!ctx || finalizedRef.current) return;
+    finalizedRef.current = true;
+    try {
+      const payRes = await fetch('/api/moneris/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amountCents: Math.round(ctx.total * 100),
+          temporaryToken,
+          orderId: ctx.orderId,
+          customer: { firstName: form.firstName, lastName: form.lastName, email: form.email, phone: form.phone },
+        }),
+      });
+      const pay = await payRes.json();
+      if (!payRes.ok || !pay.approved) {
+        throw new Error(pay.error || 'Le paiement a été refusé.');
+      }
+
+      // Marquer la commande WooCommerce comme payée
+      await fetch(
+        `${wcUrl}/wp-json/wc/v3/orders/${ctx.orderId}?consumer_key=${wcKey}&consumer_secret=${wcSecret}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'processing', set_paid: true, transaction_id: pay.paymentId ?? '' }),
+        }
+      ).catch(() => { /* paiement déjà encaissé; non bloquant */ });
+
+      clearCart();
+      setOrderInfo({ orderId: ctx.orderId, total: ctx.total });
+      setStatus('success');
+    } catch (e: unknown) {
+      finalizedRef.current = false;
+      setErrorMsg(e instanceof Error ? e.message : 'Erreur lors du paiement.');
+      setStatus('error');
+    }
+  }
+
+  // ─── Écoute la réponse de l'iframe Hosted Tokenization ──────────────────────
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (!e.origin.includes('moneris.com')) return;
+      let resp: { responseCode?: string[] | string; dataKey?: string; errorMessage?: string };
+      try {
+        resp = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      } catch { return; }
+      if (!resp || (resp.dataKey === undefined && resp.responseCode === undefined)) return;
+
+      const codes = Array.isArray(resp.responseCode) ? resp.responseCode : [resp.responseCode];
+      const success = !!resp.dataKey && codes.every((c) => Number(c) < 50);
+
+      if (success && resp.dataKey) {
+        payWithToken(resp.dataKey);
+      } else {
+        finalizedRef.current = false;
+        setErrorMsg(resp.errorMessage || 'Carte invalide. Vérifie le numéro, la date et le code de sécurité.');
+        setStatus('error');
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!HT_PROFILE_ID) {
+      setErrorMsg('Configuration de paiement incomplète (Profile ID Moneris manquant).');
+      setStatus('error');
+      return;
+    }
     setStatus('loading');
     setErrorMsg('');
-
-    const wcKey    = process.env.NEXT_PUBLIC_WC_KEY_RW    || process.env.NEXT_PUBLIC_WC_KEY;
-    const wcSecret = process.env.NEXT_PUBLIC_WC_SECRET_RW || process.env.NEXT_PUBLIC_WC_SECRET;
-    const wcUrl    = process.env.NEXT_PUBLIC_WC_URL;
+    finalizedRef.current = false;
 
     const orderData: Record<string, unknown> = {
       status: 'pending',
       currency: 'CAD',
-      payment_method: 'moneris_checkout_woocommerce',
-      payment_method_title: 'Moneris Checkout',
+      payment_method: 'moneris',
+      payment_method_title: 'Moneris',
       ...(coupon ? { coupon_lines: [{ code: coupon.code }] } : {}),
       billing: {
         first_name: form.firstName,
@@ -173,6 +236,7 @@ const Checkout: React.FC = () => {
     };
 
     try {
+      // 1) Créer la commande WooCommerce (statut: en attente de paiement)
       const res = await fetch(
         `${wcUrl}/wp-json/wc/v3/orders?consumer_key=${wcKey}&consumer_secret=${wcSecret}`,
         {
@@ -188,27 +252,18 @@ const Checkout: React.FC = () => {
       }
 
       const order = await res.json();
+      const orderId: number = order.id;
 
-      const payUrl: string =
-        order.payment_url ||
-        `${wcUrl}/checkout/order-pay/${order.id}/?pay_for_order=true&key=${order.order_key}`;
+      // 2) Mémoriser le contexte puis demander à l'iframe de tokeniser la carte.
+      //    La réponse arrive dans le gestionnaire de message (-> payWithToken).
+      pendingRef.current = { orderId, total };
+      setOrderInfo({ orderId, total });
 
-      clearCart();
-      setPayInfo({ url: payUrl, orderId: order.id, total });
-      setStatus('redirecting');
-      setCountdown(4);
-
-      // Countdown 4→0 puis redirect automatique
-      let count = 4;
-      countdownRef.current = setInterval(() => {
-        count -= 1;
-        setCountdown(count);
-        if (count <= 0) {
-          clearInterval(countdownRef.current!);
-          window.location.href = payUrl;
-        }
-      }, 1000);
+      const frame = iframeRef.current?.contentWindow;
+      if (!frame) throw new Error('Formulaire de carte non chargé. Recharge la page.');
+      frame.postMessage('tokenize', HT_ORIGIN);
     } catch (err: unknown) {
+      finalizedRef.current = false;
       setErrorMsg(err instanceof Error ? err.message : 'Une erreur est survenue.');
       setStatus('error');
     }
@@ -271,16 +326,18 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
 
-              {/* Paiement */}
+              {/* Paiement — formulaire de carte sécurisé (iframe Moneris) */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-2">Paiement</h2>
-                <div className="flex items-center gap-3 bg-neo/5 border border-neo/20 rounded-xl p-4">
-                  <Lock size={20} className="text-neo shrink-0" />
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">Moneris Checkout</p>
-                    <p className="text-xs text-gray-500">Ta commande sera créée et tu seras redirigé vers le formulaire de paiement sécurisé Moneris.</p>
-                  </div>
-                </div>
+                <h2 className="text-lg font-bold text-gray-900 mb-1">Paiement par carte</h2>
+                <p className="text-xs text-gray-500 mb-4 flex items-center gap-1.5">
+                  <Lock size={13} className="text-neo" /> Tes informations de carte sont saisies dans un formulaire sécurisé Moneris et ne transitent jamais par nos serveurs.
+                </p>
+                <iframe
+                  ref={iframeRef}
+                  title="Paiement sécurisé Moneris"
+                  src={HT_IFRAME_SRC}
+                  className="w-full min-h-[230px] border border-gray-200 rounded-xl"
+                />
               </div>
 
               {status === 'error' && (

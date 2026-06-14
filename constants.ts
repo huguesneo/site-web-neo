@@ -59,8 +59,8 @@ export const TEAM_MEMBERS: TeamMember[] = [
     role: "Naturopathe",
     specialty: "Santé de la femme",
     image: "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6985ce942dd985f9ab75a453.jpg",
-    bio: "Passionnée par la santé hormonale, Jessica accompagne les femmes vers un équilibre retrouvé à travers toutes les étapes de la vie.",
-    strengths: ["Hormones féminines", "Fertilité", "Énergie & Vitalité"],
+    bio: "Naturopathe passionnée, je me spécialise dans l’accompagnement des femmes en période postnatale ainsi que des familles avec de jeunes enfants. J’adopte une approche globale qui respecte l’équilibre entre le corps, les émotions et les hormones. Mon objectif est d’aider les mamans à retrouver leur vitalité et à mieux vivre les défis du quotidien grâce à des outils naturels et personnalisés.",
+    strengths: ["Gestion du stress", "Équilibre hormonal", "Énergie & Vitalité"],
   },
   {
     id: "tamara",
@@ -75,10 +75,10 @@ export const TEAM_MEMBERS: TeamMember[] = [
     id: "brice",
     name: "Brice Duvalet",
     role: "Naturothérapeute",
-    specialty: "Hygiène de vie",
+    specialty: "Optimisation de la vitalité et de la digestion",
     image: "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6985ce940708e45c92112c76.jpg",
-    bio: "Expert en changement d'habitudes, Brice vous aide à intégrer durablement les piliers de la santé dans votre quotidien.",
-    strengths: ["Sommeil", "Nutrition sportive", "Coaching de vie"],
+    bio: "Ancien athlète de haut niveau et diplômé en psychologie, je combine une compréhension profonde du corps et du mindset pour accompagner mes clients vers des résultats concrets. La naturopathie m'a révélé qu'on peut régler énormément de problématiques à la source, de manière naturelle, en agissant sur l'alimentation, l'hygiène de vie et la supplémentation ciblée. Ce qui me passionne : guider chaque personne dans sa transformation sans rigidité, en respectant son rythme, pour qu'elle atteigne ses objectifs et se retrouve pleinement en tant qu'individu.",
+    strengths: ["Mindset", "Gestion du cortisol", "Digestion"],
   },
   {
     id: "cloe",
@@ -92,11 +92,11 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "lyliane",
     name: "Lyliane Champagne",
-    role: "Responsable Communication",
-    specialty: "Rayonnement",
+    role: "Accompagnement & Expérience client",
+    specialty: "Relation client",
     image: "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6985cfa90a7fd143b0b18b25.jpg",
-    bio: "Lyliane porte la voix de NEO Performance pour éduquer et inspirer notre communauté grandissante.",
-    strengths: ["Créativité", "Pédagogie", "Communication"],
+    bio: "Passionnée par l’humain et l’optimisation du bien-être, je me spécialise dans la compréhension profonde des besoins et du mode de vie de chaque client. Mon rôle est de créer une connexion authentique et de m’assurer que chaque personne se sente pleinement comprise, soutenue et guidée à travers son parcours. J’encadre également l’équipe des conseillers en accompagnement afin de maintenir un standard élevé d’écoute, de qualité et d’expérience client. Grande voyageuse, j’apporte une ouverture et une sensibilité qui enrichissent chaque interaction.",
+    strengths: ["Expérience & accompagnement client", "Encadrement d’équipe", "Communication"],
   },
 ];
 
