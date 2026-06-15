@@ -39,7 +39,7 @@ INFORMATIONS SUR NEO PERFORMANCE :
 - Catégories : suppléments, santé générale, et plus
 
 📅 RENDEZ-VOUS
-- Consultation initiale gratuite de 30 minutes disponible
+- Consultation initiale gratuite de 45 minutes disponible
 - Booking en ligne sur le site (/consultation)
 - Deux formats : virtuel (Google Meet) ou en clinique à Brossard
 

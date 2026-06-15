@@ -19,7 +19,7 @@ const Consultation: React.FC = () => {
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Consultation Gratuite</h1>
           <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-            Réserve ton appel de 30 minutes avec un expert NEO. On prend le temps de comprendre ta situation et de voir si on est le bon fit pour toi.
+            Réserve ton appel de 45 minutes avec un expert NEO. On prend le temps de comprendre ta situation et de voir si on est le bon fit pour toi.
           </p>
         </div>
       </div>

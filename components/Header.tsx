@@ -122,7 +122,7 @@ const Header: React.FC = () => {
               Prendre rendez-vous
             </Button>
             <p className="text-center text-xs text-gray-400">
-              Consultation gratuite de 30 minutes
+              Consultation gratuite de 45 minutes
             </p>
           </div>
         </div>

@@ -29,7 +29,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: "Accueil", path: "/" },
   { label: "Notre Approche", path: "/approche" },
   { label: "L'Équipe", path: "/equipe" },
-  { label: "Blog", path: "/blog" },
+  { label: "Blogue", path: "/blog" },
   { label: "Boutique", path: "/boutique" },
   { label: "Nous Joindre", path: "/contact" },
 ];

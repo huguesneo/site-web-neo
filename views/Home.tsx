@@ -417,7 +417,7 @@ const Home: React.FC = () => {
              </Button>
           </div>
           <p className="mt-6 text-sm text-gray-500 flex items-center justify-center gap-2">
-            <CheckCircle2 size={16} className="text-neo" /> Aucun engagement requis. 30 minutes offertes.
+            <CheckCircle2 size={16} className="text-neo" /> Aucun engagement requis. 45 minutes offertes.
           </p>
         </div>
       </section>
