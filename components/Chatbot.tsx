@@ -1,8 +1,12 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { MessageCircle, X, Send, Loader2, ArrowRight } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { MessageCircle, X, Send, Loader2, ArrowRight, Mail, ChevronLeft } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Webhook Make.com qui reçoit les demandes de contact (partagé avec la page Contact)
+const CONTACT_WEBHOOK = 'https://hook.us1.make.com/9zzcxgr29wn6l6feb2p6qxjgj6teklxi';
 
 // ─── Prompt système NEO Performance ───────────────────────────────────────────
 
@@ -43,6 +47,16 @@ INFORMATIONS SUR NEO PERFORMANCE :
 - Booking en ligne sur le site (/consultation)
 - Deux formats : virtuel (Google Meet) ou en clinique à Brossard
 
+QUI T'ÉCRIT :
+- La très grande majorité du temps, ce sont de NOUVEAUX clients qui découvrent NEO : oriente-les chaleureusement vers une consultation gratuite ou la boutique selon leur besoin.
+- Parfois ce sont des CLIENTS ACTUELS avec une demande administrative ou personnelle, par exemple : « Est-ce que je pourrais avoir mes reçus d'assurance ? », une question sur une commande (statut, livraison, retour, remboursement), ou une plainte. Adapte ton ton : pour une plainte, sois empathique et rassurant ; pour une demande de reçu, de commande ou de dossier personnel, reconnais la demande avec bienveillance.
+- Tu n'as PAS accès aux dossiers clients, aux commandes, aux paiements ni aux reçus d'assurance. Tu ne peux donc pas traiter ces demandes toi-même.
+
+QUAND CONNECTER AVEC UN HUMAIN :
+- Dès qu'une demande nécessite un accès au dossier d'un client (reçus d'assurance, facture, commande précise, remboursement, modification de rendez-vous existant), une plainte, ou toute question à laquelle tu ne peux pas répondre avec certitude, tu DOIS proposer de connecter la personne avec un humain.
+- Dans ce cas, réponds avec EXACTEMENT cette phrase, suivie du marqueur, sur la même ligne : « Pour mieux répondre à ta question, nous allons te connecter avec un humain. [LIEN_HUMAIN] »
+- N'invente jamais d'information sur un dossier, une commande, un reçu ou un remboursement.
+
 RÈGLES DE COMPORTEMENT :
 1. Sois chaleureux, naturel et humain — pas robotique
 2. Réponds de façon concise (2-4 phrases max sauf si on te demande plus de détails)
@@ -50,7 +64,7 @@ RÈGLES DE COMPORTEMENT :
 4. Si quelqu'un parle d'un symptôme ou d'un problème de santé, valide leur ressenti, explique brièvement comment NEO peut aider, et propose une consultation
 5. Ne donne jamais de conseils médicaux précis ou de diagnostics — oriente toujours vers une consultation
 6. Pour les questions sur les produits de la boutique, oriente vers la boutique ([LIEN_BOUTIQUE])
-7. Si tu ne sais pas quelque chose, dis-le honnêtement et propose de contacter l'équipe directement
+7. Si tu ne sais pas quelque chose ou que la demande touche un dossier client, utilise le marqueur [LIEN_HUMAIN] comme expliqué plus haut
 8. Utilise des emojis avec parcimonie pour rester professionnel mais accessible
 9. Tutoie le client (c'est la culture de NEO)`;
 
@@ -61,6 +75,19 @@ interface Message {
   content: string;
 }
 
+interface ChatbotProps {
+  /** Mode intégré dans une page (toujours ouvert, remplit son conteneur, sans bouton flottant) */
+  embedded?: boolean;
+}
+
+const EMPTY_HUMAN_FORM = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  subject: '',
+};
+
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 const SUGGESTED_QUESTIONS = [
@@ -69,12 +96,17 @@ const SUGGESTED_QUESTIONS = [
   "Je veux prendre rendez-vous",
 ];
 
-export default function Chatbot() {
-  const [open, setOpen] = useState(false);
+export default function Chatbot({ embedded = false }: ChatbotProps) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(embedded);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
+  // Formulaire « parler à un humain » dans la fenêtre de clavardage
+  const [humanForm, setHumanForm] = useState<'closed' | 'open' | 'sending' | 'sent'>('closed');
+  const [humanFields, setHumanFields] = useState(EMPTY_HUMAN_FORM);
+  const [humanConsent, setHumanConsent] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -148,10 +180,63 @@ export default function Chatbot() {
     }
   }
 
+  function handleHumanFieldChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setHumanFields((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  async function submitHumanForm(e: React.FormEvent) {
+    e.preventDefault();
+    if (humanForm === 'sending' || !humanConsent) return;
+    setHumanForm('sending');
+
+    // On joint l'historique de la conversation pour donner du contexte à l'équipe
+    const transcript = messages
+      .map((m) => `${m.role === 'user' ? 'Client' : 'Léo'}: ${m.content}`)
+      .join('\n');
+
+    try {
+      await fetch(CONTACT_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prenom: humanFields.firstName,
+          nom: humanFields.lastName,
+          courriel: humanFields.email,
+          telephone: humanFields.phone,
+          sujet: humanFields.subject,
+          message: `Demande transmise via le clavardage Léo.\n\nConversation :\n${transcript}`,
+          source: 'chatbot-leo',
+        }),
+      });
+    } catch (err) {
+      console.error('[Chatbot] Webhook contact error:', err);
+    }
+
+    setHumanForm('sent');
+    setMessages((prev) => [...prev, {
+      role: 'assistant',
+      content: `Merci ${humanFields.firstName || ''} ! 🙌 Ta demande a bien été transmise à notre équipe. Un humain te recontactera sous peu par courriel ou téléphone.`.replace('  ', ' '),
+    }]);
+    setHumanFields(EMPTY_HUMAN_FORM);
+    setHumanConsent(false);
+  }
+
   // Rendu du contenu avec liens cliquables
   function renderContent(text: string) {
-    const parts = text.split(/(\[LIEN_RDV\]|\[LIEN_BOUTIQUE\])/g);
+    const parts = text.split(/(\[LIEN_RDV\]|\[LIEN_BOUTIQUE\]|\[LIEN_HUMAIN\])/g);
     return parts.map((part, i) => {
+      if (part === '[LIEN_HUMAIN]') {
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => { setHumanForm('open'); }}
+            className="inline-flex items-center gap-1 bg-neo text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-neo/90 transition-colors mx-1 align-middle"
+          >
+            <Mail size={12} /> Envoie-nous un courriel
+          </button>
+        );
+      }
       if (part === '[LIEN_RDV]') {
         return (
           <Link key={i} href="/consultation" onClick={() => setOpen(false)}
@@ -172,47 +257,81 @@ export default function Chatbot() {
     });
   }
 
-  return (
-    <>
-      {/* Bouton flottant */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
-          open ? 'bg-gray-900 scale-90' : 'bg-neo hover:scale-110'
-        }`}
-        aria-label="Chat avec Léo"
-      >
-        {open
-          ? <X size={22} className="text-white" />
-          : <MessageCircle size={24} className="text-white" />
-        }
-        {/* Badge notification quand fermé */}
-        {!open && !started && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white" />
-        )}
-      </button>
+  const panel = (
+    <div className={`bg-white flex flex-col overflow-hidden ${
+      embedded
+        ? 'rounded-3xl border border-gray-100 shadow-xl h-full w-full'
+        : 'rounded-3xl shadow-2xl border border-gray-100'
+    }`} style={embedded ? undefined : { height: '520px' }}>
 
-      {/* Fenêtre de chat */}
-      <div className={`fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-24px)] transition-all duration-300 origin-bottom-right ${
-        open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
-      }`}>
-        <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden" style={{ height: '520px' }}>
-
-          {/* Header */}
-          <div className="bg-gradient-to-r from-neo to-neo/80 px-5 py-4 flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-black text-sm">
-              L
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm">Léo</p>
-              <p className="text-white/70 text-xs">Assistant virtuel de NEO Performance</p>
-            </div>
-            <div className="ml-auto flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-white/70 text-xs">En ligne</span>
-            </div>
+      {/* Header */}
+      <div className="bg-gradient-to-r from-neo to-neo/80 px-5 py-4 flex items-center gap-3 shrink-0">
+        {humanForm === 'open' ? (
+          <button
+            type="button"
+            onClick={() => setHumanForm('closed')}
+            className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+            aria-label="Retour au clavardage"
+          >
+            <ChevronLeft size={20} />
+          </button>
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-black text-sm">
+            L
           </div>
+        )}
+        <div>
+          <p className="text-white font-bold text-sm">Léo</p>
+          <p className="text-white/70 text-xs">
+            {humanForm === 'open' ? 'Te connecter avec un humain' : 'Assistant virtuel de NEO Performance'}
+          </p>
+        </div>
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          <span className="text-white/70 text-xs">En ligne</span>
+        </div>
+      </div>
 
+      {humanForm === 'open' ? (
+        /* Formulaire « parler à un humain » */
+        <form onSubmit={submitHumanForm} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Laisse-nous tes coordonnées et un membre de l'équipe NEO Performance te recontactera rapidement. 💬
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <input name="firstName" required value={humanFields.firstName} onChange={handleHumanFieldChange}
+              placeholder="Prénom *"
+              className="w-full bg-gray-100 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 transition-all placeholder:text-gray-400" />
+            <input name="lastName" required value={humanFields.lastName} onChange={handleHumanFieldChange}
+              placeholder="Nom *"
+              className="w-full bg-gray-100 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 transition-all placeholder:text-gray-400" />
+          </div>
+          <input name="email" type="email" required value={humanFields.email} onChange={handleHumanFieldChange}
+            placeholder="Courriel *"
+            className="w-full bg-gray-100 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 transition-all placeholder:text-gray-400" />
+          <input name="phone" type="tel" value={humanFields.phone} onChange={handleHumanFieldChange}
+            placeholder="Téléphone"
+            className="w-full bg-gray-100 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 transition-all placeholder:text-gray-400" />
+          <input name="subject" required value={humanFields.subject} onChange={handleHumanFieldChange}
+            placeholder="Sujet * (ex. reçu d'assurance, commande…)"
+            className="w-full bg-gray-100 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 transition-all placeholder:text-gray-400" />
+
+          <label className="flex items-start gap-2 text-xs text-gray-500 leading-snug cursor-pointer">
+            <input type="checkbox" checked={humanConsent} onChange={(e) => setHumanConsent(e.target.checked)}
+              className="w-4 h-4 mt-0.5 text-neo rounded border-gray-300 focus:ring-neo shrink-0" />
+            <span>J'accepte d'être contacté par l'équipe NEO Performance.</span>
+          </label>
+
+          <button
+            type="submit"
+            disabled={humanForm === 'sending' || !humanConsent}
+            className="w-full justify-center mt-1 bg-neo text-white font-bold text-sm px-4 py-3 rounded-xl flex items-center gap-2 hover:bg-neo/90 transition-colors disabled:opacity-40"
+          >
+            {humanForm === 'sending' ? <><Loader2 size={16} className="animate-spin" /> Envoi en cours…</> : <><Send size={16} /> Envoyer le message</>}
+          </button>
+        </form>
+      ) : (
+        <>
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 scroll-smooth">
             {messages.map((msg, i) => (
@@ -284,7 +403,46 @@ export default function Chatbot() {
               Ce clavardage utilise l'IA et peut faire des erreurs
             </p>
           </div>
-        </div>
+        </>
+      )}
+    </div>
+  );
+
+  // Mode intégré : on rend juste le panneau, qui remplit son conteneur
+  if (embedded) {
+    return panel;
+  }
+
+  // On masque la bulle flottante sur la page Contact, où Léo est déjà intégré
+  if (pathname === '/contact') {
+    return null;
+  }
+
+  return (
+    <>
+      {/* Bouton flottant */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
+          open ? 'bg-gray-900 scale-90' : 'bg-neo hover:scale-110'
+        }`}
+        aria-label="Chat avec Léo"
+      >
+        {open
+          ? <X size={22} className="text-white" />
+          : <MessageCircle size={24} className="text-white" />
+        }
+        {/* Badge notification quand fermé */}
+        {!open && !started && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white" />
+        )}
+      </button>
+
+      {/* Fenêtre de chat */}
+      <div className={`fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-24px)] transition-all duration-300 origin-bottom-right ${
+        open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
+      }`}>
+        {panel}
       </div>
     </>
   );

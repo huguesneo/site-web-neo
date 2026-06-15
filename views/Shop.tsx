@@ -21,9 +21,12 @@ const Shop: React.FC = () => {
 
   const categories = ["Tout", ...Array.from(new Set(products.map((p) => p.category)))];
 
+  const normalize = (str: string) =>
+    str.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
   const filteredProducts = products.filter(product => {
     const matchCategory = activeCategory === "Tout" || product.category === activeCategory;
-    const matchSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = normalize(product.name).includes(normalize(searchQuery));
     return matchCategory && matchSearch;
   });
 

@@ -83,7 +83,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   {
     id: "cloe",
     name: "Cloé Morin Gosselin",
-    role: "Responsable Service Client",
+    role: "Adjointe administrative",
     specialty: "Accueil & Orientation",
     image: "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6985ce942dd985140175a450.jpg",
     bio: "Le premier sourire de NEO. Cloé s'assure que votre expérience soit fluide, rassurante et exceptionnelle dès le premier contact.",

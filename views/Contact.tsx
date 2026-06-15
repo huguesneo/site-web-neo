@@ -1,51 +1,11 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Section from '../components/Section';
-import Button from '../components/Button';
-import { MapPin, Phone, Mail, Clock, Send, CheckCircle2 } from 'lucide-react';
+import Chatbot from '../components/Chatbot';
+import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 
 const Contact: React.FC = () => {
-  const [formState, setFormState] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    subject: '',
-    message: ''
-  });
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await fetch('https://hook.us1.make.com/9zzcxgr29wn6l6feb2p6qxjgj6teklxi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prenom: formState.firstName,
-          nom: formState.lastName,
-          courriel: formState.email,
-          telephone: formState.phone,
-          sujet: formState.subject,
-          message: formState.message,
-        }),
-      });
-      setIsSubmitted(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormState({
-      ...formState,
-      [e.target.name]: e.target.value
-    });
-  };
-
   return (
     <>
       {/* HEADER SECTION */}
@@ -134,131 +94,20 @@ const Contact: React.FC = () => {
                 </div>
               </div>
 
-              {/* RIGHT COLUMN: STANDARD FORM */}
-              <div className="p-6 sm:p-10 lg:p-12 bg-white h-full border-t lg:border-t-0 lg:border-l border-gray-100 flex flex-col justify-center">
-                
-                <div className="w-full mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-3">Envoyez-nous un message</h2>
+              {/* RIGHT COLUMN: CLAVARDAGE AVEC LÉO */}
+              <div className="p-6 sm:p-10 lg:p-12 bg-white border-t lg:border-t-0 lg:border-l border-gray-100 flex flex-col">
+
+                <div className="w-full mb-6 shrink-0">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-3">Clavarder avec nous</h2>
                     <p className="text-gray-600 leading-relaxed text-sm md:text-base">
-                        Pour toute question, remplis le formulaire ci-dessous.
+                        Pour toute question, clavarde avec Léo ci-dessous.
                         Pour une consultation gratuite, réserve directement <Link href="/consultation" className="text-neo font-bold underline decoration-neo/30 underline-offset-4 hover:text-neo-600">ton rendez-vous ici</Link>.
                     </p>
                 </div>
 
-                {isSubmitted ? (
-                  <div className="bg-green-50 border border-green-100 rounded-2xl p-8 text-center animate-fade-in">
-                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle2 size={32} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Message envoyé !</h3>
-                    <p className="text-gray-600 mb-6">
-                      Merci de nous avoir contactés. Notre équipe te répondra dans les plus brefs délais (généralement sous 24h).
-                    </p>
-                    <Button onClick={() => setIsSubmitted(false)} variant="outline">
-                      Envoyer un autre message
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    <div className="grid md:grid-cols-2 gap-5">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Prénom *</label>
-                        <input 
-                          type="text" 
-                          name="firstName"
-                          required
-                          className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none transition-all"
-                          placeholder="Votre prénom"
-                          value={formState.firstName}
-                          onChange={handleChange}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nom *</label>
-                        <input 
-                          type="text" 
-                          name="lastName"
-                          required
-                          className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none transition-all"
-                          placeholder="Votre nom"
-                          value={formState.lastName}
-                          onChange={handleChange}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Courriel *</label>
-                      <input 
-                        type="email" 
-                        name="email"
-                        required
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none transition-all"
-                        placeholder="exemple@email.com"
-                        value={formState.email}
-                        onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-5">
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Téléphone</label>
-                          <input 
-                            type="tel" 
-                            name="phone"
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none transition-all"
-                            placeholder="(514) 123-4567"
-                            value={formState.phone}
-                            onChange={handleChange}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Sujet</label>
-                          <select 
-                            name="subject"
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none transition-all appearance-none"
-                            value={formState.subject}
-                            onChange={handleChange}
-                          >
-                            <option value="">Sélectionner un sujet</option>
-                            <option value="info">Information générale</option>
-                            <option value="rdv">Problème prise de RDV</option>
-                            <option value="presse">Presse / Partenariat</option>
-                            <option value="autre">Autre</option>
-                          </select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Message *</label>
-                      <textarea 
-                        name="message"
-                        required
-                        rows={4}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none transition-all resize-none"
-                        placeholder="Dis-nous comment on peut t'aider."
-                        value={formState.message}
-                        onChange={handleChange}
-                      ></textarea>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="checkbox" 
-                        id="consent" 
-                        className="w-5 h-5 text-neo rounded border-gray-300 focus:ring-neo"
-                      />
-                      <label htmlFor="consent" className="text-xs text-gray-500">
-                        J'accepte d'être contacté par l'équipe NEO Performance.
-                      </label>
-                    </div>
-
-                    <Button type="submit" className="w-full justify-center mt-2 group" disabled={isLoading}>
-                      {isLoading ? 'Envoi en cours…' : 'Envoyer le message'}
-                      {!isLoading && <Send size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
-                    </Button>
-                  </form>
-                )}
+                <div className="flex-1 min-h-[600px]">
+                  <Chatbot embedded />
+                </div>
 
               </div>
             </div>

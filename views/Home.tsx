@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import Counter from '../components/Counter';
 import TeamCard from '../components/TeamCard';
 import { IMAGES, STATS, TEAM_MEMBERS, TESTIMONIALS } from '../constants';
-import { ArrowRight, CheckCircle2, Star, PlayCircle, Bot, ScanBarcode, Utensils, Smartphone, Users, Lock, Activity } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Star, PlayCircle, Bot, ScanBarcode, Utensils, Smartphone, Users, Lock, Activity, Zap, Moon, Flame, Leaf } from 'lucide-react';
 
 const Home: React.FC = () => {
   const router = useRouter();
@@ -132,14 +132,65 @@ const Home: React.FC = () => {
                 </div>
             </div>
             
-            <div className="w-full md:w-1/3 flex justify-center relative z-10">
-                {/* Visual representation of quiz */}
-                <Link href="/quiz" className="aspect-square w-full max-w-[280px] rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 hover:border-neo transition-all duration-500 relative overflow-hidden flex flex-col items-center justify-center group cursor-pointer hover:bg-neo/5">
-                     <div className="w-20 h-20 rounded-full bg-white shadow-md flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                        <Activity size={32} className="text-neo" />
+            <div className="w-full md:w-2/5 flex justify-center relative z-10">
+                {/* Aperçu du rapport métabolique */}
+                <Link href="/quiz" className="group block w-full max-w-[340px] relative cursor-pointer">
+                     {/* Lueur décorative */}
+                     <div className="absolute -inset-3 bg-gradient-to-tr from-neo/25 to-yellow-400/10 rounded-[2rem] blur-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                     <div className="relative bg-white rounded-3xl border border-gray-100 shadow-xl p-6 transition-transform duration-500 group-hover:-translate-y-1.5">
+                        {/* En-tête */}
+                        <div className="flex items-center justify-between mb-6">
+                           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neo bg-neo/10 px-2.5 py-1 rounded-full">
+                              <Activity size={12} /> Aperçu du rapport
+                           </span>
+                           <span className="text-[11px] font-semibold text-gray-400">Gratuit • 2 min</span>
+                        </div>
+
+                        {/* Indice métabolique */}
+                        <div className="flex items-center gap-4 mb-7">
+                           <div className="relative w-16 h-16 shrink-0">
+                              <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
+                                 <circle cx="18" cy="18" r="15.5" fill="none" stroke="#eef3f2" strokeWidth="3" />
+                                 <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" className="text-neo" strokeWidth="3" strokeDasharray="97.4" strokeDashoffset="38" strokeLinecap="round" />
+                              </svg>
+                              <span className="absolute inset-0 flex items-center justify-center font-bold text-gray-900 text-lg leading-none">
+                                 61<span className="text-[10px] text-gray-400 ml-0.5">%</span>
+                              </span>
+                           </div>
+                           <div>
+                              <p className="font-bold text-gray-900 leading-tight">Métabolisme ralenti</p>
+                              <p className="text-xs text-gray-500 mt-0.5">3 blocages détectés</p>
+                           </div>
+                        </div>
+
+                        {/* Signaux */}
+                        <div className="space-y-3.5">
+                           {[
+                             { icon: Zap, label: "Énergie", level: 30, tone: "low" },
+                             { icon: Moon, label: "Sommeil", level: 50, tone: "mid" },
+                             { icon: Flame, label: "Cortisol", level: 25, tone: "low" },
+                             { icon: Leaf, label: "Digestion", level: 45, tone: "mid" },
+                           ].map(({ icon: Icon, label, level, tone }) => (
+                             <div key={label} className="flex items-center gap-3">
+                                <Icon size={15} className={tone === "low" ? "text-amber-500 shrink-0" : "text-neo shrink-0"} />
+                                <span className="text-xs font-semibold text-gray-600 w-16 shrink-0">{label}</span>
+                                <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                                   <div
+                                     className={`h-full rounded-full ${tone === "low" ? "bg-amber-400" : "bg-neo"} transition-[width] duration-700 ease-out`}
+                                     style={{ width: `${level}%` }}
+                                   ></div>
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+
+                        {/* CTA */}
+                        <div className="mt-7 flex items-center justify-center gap-2 text-sm font-bold text-neo group-hover:gap-3 transition-all duration-300">
+                           Voir mon rapport complet
+                           <ArrowRight size={16} />
+                        </div>
                      </div>
-                     <span className="font-bold text-gray-900 group-hover:text-neo transition-colors">Démarrer le test</span>
-                     <span className="text-xs text-gray-500 mt-1">Gratuit • 2 min</span>
                 </Link>
             </div>
         </div>
