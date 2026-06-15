@@ -292,8 +292,8 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
         </div>
       </div>
 
-      {humanForm === 'open' ? (
-        /* Formulaire « parler à un humain » */
+      {humanForm === 'open' || humanForm === 'sending' ? (
+        /* Formulaire « parler à un humain » (reste affiché pendant l'envoi) */
         <form onSubmit={submitHumanForm} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
           <p className="text-sm text-gray-600 leading-relaxed">
             Laisse-nous tes coordonnées et un membre de l'équipe NEO Performance te recontactera rapidement. 💬
