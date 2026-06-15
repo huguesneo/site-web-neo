@@ -72,12 +72,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap"
           rel="stylesheet"
         />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        {/* Couvre l'écran AVANT le 1er rendu sur l'accueil pour éviter de voir le site avant l'intro */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{
+  if(location.pathname!=='/')return;
+  if(sessionStorage.getItem('neo_intro_seen'))return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var d=document.createElement('div');
+  d.id='neo-intro-precover';
+  d.style.cssText='position:fixed;inset:0;z-index:9998;background:#0F0F0F';
+  (document.body||document.documentElement).appendChild(d);
+  setTimeout(function(){var e=document.getElementById('neo-intro-precover');if(e)e.remove();},6000);
+}catch(e){}})();`,
+          }}
         />
       </head>
       <body className="flex flex-col min-h-screen bg-white font-sans text-gray-900 antialiased selection:bg-neo/30 selection:text-neo-900">

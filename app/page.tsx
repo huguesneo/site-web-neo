@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Home from '@/views/Home';
+import IntroAnimation from '@/components/IntroAnimation';
 
 export const metadata: Metadata = {
   title: 'NEO Performance | Optimisation Métabolique & Composition Corporelle',
@@ -18,5 +19,10 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <Home />;
+  return (
+    <>
+      <IntroAnimation />
+      <Home />
+    </>
+  );
 }
