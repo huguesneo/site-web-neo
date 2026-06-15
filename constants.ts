@@ -32,6 +32,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: "Blogue", path: "/blog" },
   { label: "Boutique", path: "/boutique" },
   { label: "Nous Joindre", path: "/contact" },
+  { label: "Espace client", path: "/espace-client" },
 ];
 
 export const TEAM_MEMBERS: TeamMember[] = [
