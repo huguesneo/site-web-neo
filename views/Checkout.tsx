@@ -11,13 +11,38 @@ const HT_HOST = HT_IS_PROD ? 'https://www3.moneris.com' : 'https://esqa.moneris.
 const HT_ORIGIN = `${HT_HOST}/HPPtoken/index.php`;
 const HT_PROFILE_ID = process.env.NEXT_PUBLIC_MONERIS_HT_PROFILE_ID || '';
 
-// URL de l'iframe : champs carte (numéro + expiration + CVV) stylés sobrement.
-const HT_IFRAME_SRC =
-  `${HT_HOST}/HPPtoken/index.php?id=${HT_PROFILE_ID}&pmmsg=true` +
-  `&enable_exp=1&enable_cvd=1&display_labels=1` +
-  `&css_body=font-family:sans-serif;` +
-  `&css_textbox=border:1px solid %23d1d5db;border-radius:10px;padding:10px;width:90%25;` +
-  `&css_input_label=color:%23374151;font-size:13px;`;
+// URL de l'iframe Hosted Tokenization : labels FR, champs stylés, responsive.
+// Doc Moneris : pan_label/exp_label/cvd_label (texte), css_* (style), enable_*_formatting.
+const HT_FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const HT_INPUT_CSS =
+  `box-sizing:border-box;width:100%;margin:0 0 4px;padding:13px 14px;` +
+  `font-size:16px;font-family:${HT_FONT};color:#111827;background:#fff;` +
+  `border:1px solid #d1d5db;border-radius:12px;outline:none;`;
+const HT_LABEL_CSS =
+  `display:block;margin:14px 0 6px;font-size:13px;font-weight:600;` +
+  `color:#374151;font-family:${HT_FONT};`;
+
+const HT_IFRAME_SRC = (() => {
+  const p = new URLSearchParams({
+    id: HT_PROFILE_ID,
+    pmmsg: 'true',
+    enable_exp: '1',
+    enable_cvd: '1',
+    enable_cc_formatting: '1',
+    enable_exp_formatting: '1',
+    display_labels: '1',
+    pan_label: 'Numéro de carte',
+    exp_label: "Date d'expiration (MM/AA)",
+    cvd_label: 'Code de sécurité (CVD)',
+    css_body: `margin:0;padding:0;background:transparent;font-family:${HT_FONT};`,
+    css_input_label: HT_LABEL_CSS,
+    css_textbox: HT_INPUT_CSS,
+    css_textbox_pan: HT_INPUT_CSS,
+    css_textbox_exp: HT_INPUT_CSS,
+    css_textbox_cvd: HT_INPUT_CSS,
+  });
+  return `${HT_HOST}/HPPtoken/index.php?${p.toString()}`;
+})();
 
 interface FormData {
   firstName: string;
@@ -346,7 +371,8 @@ const Checkout: React.FC = () => {
                   ref={iframeRef}
                   title="Paiement sécurisé Moneris"
                   src={HT_IFRAME_SRC}
-                  className="w-full min-h-[230px] border border-gray-200 rounded-xl"
+                  scrolling="no"
+                  className="w-full h-[290px] border-0 bg-transparent"
                 />
               </div>
 
