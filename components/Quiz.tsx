@@ -877,7 +877,7 @@ const Quiz: React.FC = () => {
               </div>
             </div>
 
-            <CTA label="Réserver ma consultation découverte (gratuite)" onClick={() => goTo('calendar')} sub="30 min · sans engagement" />
+            <CTA label="Réserver ma consultation découverte (gratuite)" onClick={() => goTo('calendar')} sub="45 min · sans engagement" />
           </Wrap>
         );
       }
@@ -891,7 +891,7 @@ const Quiz: React.FC = () => {
               </div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Parlons de ton profil, sans engagement</h2>
               <p className="text-gray-500 font-medium max-w-lg mx-auto">
-                30 minutes avec un membre de notre équipe pour comprendre tes résultats et voir si on peut t'aider — gratuitement.
+                45 minutes avec un membre de notre équipe pour comprendre tes résultats et voir si on peut t'aider — gratuitement.
               </p>
             </div>
 
@@ -918,7 +918,7 @@ const Quiz: React.FC = () => {
                 scrolling="yes" title="Réservation NEO" />
             </div>
             <p className="text-center text-gray-400 text-sm mt-4 font-medium flex items-center justify-center gap-1.5">
-              <Clock size={14} className="text-neo" /> 30 min · en ligne ou par téléphone · 100 % gratuit
+              <Clock size={14} className="text-neo" /> 45 min · en ligne ou par téléphone · 100 % gratuit
             </p>
           </Wrap>
         );

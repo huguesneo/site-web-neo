@@ -56,7 +56,7 @@ const Home: React.FC = () => {
             {/* CTAs */}
             <div className="opacity-0 animate-fade-in-up [animation-delay:800ms] flex flex-col sm:flex-row gap-4 mb-12">
               <Button to="/consultation" variant="primary" className="shadow-xl shadow-neo/30 hover:shadow-neo/50 scale-100 hover:scale-105 transition-all">
-                Consultation gratuite (30 min)
+                Consultation gratuite (45 min)
               </Button>
               <Button to="/approche" variant="white" className="border border-gray-100 hover:bg-gray-50 text-gray-700">
                 <PlayCircle size={20} className="mr-2 text-neo" />
