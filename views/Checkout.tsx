@@ -58,7 +58,11 @@ const Checkout: React.FC = () => {
   const [orderInfo, setOrderInfo] = useState<{ orderId: number; total: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   // Contexte de la commande en cours, lu par le gestionnaire de message de l'iframe
-  const pendingRef = useRef<{ orderId: number; total: number } | null>(null);
+  const pendingRef = useRef<{
+    orderId: number;
+    total: number;
+    customer: { firstName: string; lastName: string; email: string; phone: string };
+  } | null>(null);
   const finalizedRef = useRef(false);
 
   const discount = coupon?.discountValue ?? 0;
@@ -70,6 +74,33 @@ const Checkout: React.FC = () => {
       router.push('/boutique');
     }
   }, [hydrated, items.length, status, router]);
+
+  // ─── Écoute la réponse de l'iframe Hosted Tokenization ──────────────────────
+  // (placé ici, avant tout return anticipé, pour respecter l'ordre des hooks)
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (!e.origin.includes('moneris.com')) return;
+      let resp: { responseCode?: string[] | string; dataKey?: string; errorMessage?: string };
+      try {
+        resp = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      } catch { return; }
+      if (!resp || (resp.dataKey === undefined && resp.responseCode === undefined)) return;
+
+      const codes = Array.isArray(resp.responseCode) ? resp.responseCode : [resp.responseCode];
+      const success = !!resp.dataKey && codes.every((c) => Number(c) < 50);
+
+      if (success && resp.dataKey) {
+        payWithToken(resp.dataKey);
+      } else {
+        finalizedRef.current = false;
+        setErrorMsg(resp.errorMessage || 'Carte invalide. Vérifie le numéro, la date et le code de sécurité.');
+        setStatus('error');
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (hydrated && items.length === 0 && status === 'idle') {
     return null;
@@ -137,7 +168,7 @@ const Checkout: React.FC = () => {
           amountCents: Math.round(ctx.total * 100),
           temporaryToken,
           orderId: ctx.orderId,
-          customer: { firstName: form.firstName, lastName: form.lastName, email: form.email, phone: form.phone },
+          customer: ctx.customer,
         }),
       });
       const pay = await payRes.json();
@@ -165,31 +196,6 @@ const Checkout: React.FC = () => {
     }
   }
 
-  // ─── Écoute la réponse de l'iframe Hosted Tokenization ──────────────────────
-  useEffect(() => {
-    function onMessage(e: MessageEvent) {
-      if (!e.origin.includes('moneris.com')) return;
-      let resp: { responseCode?: string[] | string; dataKey?: string; errorMessage?: string };
-      try {
-        resp = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-      } catch { return; }
-      if (!resp || (resp.dataKey === undefined && resp.responseCode === undefined)) return;
-
-      const codes = Array.isArray(resp.responseCode) ? resp.responseCode : [resp.responseCode];
-      const success = !!resp.dataKey && codes.every((c) => Number(c) < 50);
-
-      if (success && resp.dataKey) {
-        payWithToken(resp.dataKey);
-      } else {
-        finalizedRef.current = false;
-        setErrorMsg(resp.errorMessage || 'Carte invalide. Vérifie le numéro, la date et le code de sécurité.');
-        setStatus('error');
-      }
-    }
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -256,7 +262,11 @@ const Checkout: React.FC = () => {
 
       // 2) Mémoriser le contexte puis demander à l'iframe de tokeniser la carte.
       //    La réponse arrive dans le gestionnaire de message (-> payWithToken).
-      pendingRef.current = { orderId, total };
+      pendingRef.current = {
+        orderId,
+        total,
+        customer: { firstName: form.firstName, lastName: form.lastName, email: form.email, phone: form.phone },
+      };
       setOrderInfo({ orderId, total });
 
       const frame = iframeRef.current?.contentWindow;
