@@ -6,7 +6,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // ─── Prompt système NEO Performance ───────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Tu es l'assistant virtuel de NEO Performance, une clinique naturopathique basée à Brossard, Québec, Canada. Tu t'appelles "Neo".
+const SYSTEM_PROMPT = `Tu es l'assistant virtuel de NEO Performance, une clinique naturopathique basée à Brossard, Québec, Canada. Tu t'appelles "Léo".
 
 MISSION : Répondre aux questions sur NEO Performance de façon chaleureuse, professionnelle et naturelle, comme un vrai membre de l'équipe. Tu parles français uniquement (sauf si le client t'écrit en anglais).
 
@@ -83,7 +83,7 @@ export default function Chatbot() {
       setStarted(true);
       setMessages([{
         role: 'assistant',
-        content: 'Bonjour ! 👋 Je suis Neo, l\'assistant de NEO Performance. Comment puis-je t\'aider aujourd\'hui ?'
+        content: 'Bonjour ! 👋 Je suis Léo, l\'assistant virtuel de NEO Performance. Comment puis-je t\'aider aujourd\'hui ?'
       }]);
     }
   }, [open, started]);
@@ -180,7 +180,7 @@ export default function Chatbot() {
         className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
           open ? 'bg-gray-900 scale-90' : 'bg-neo hover:scale-110'
         }`}
-        aria-label="Chat avec Neo"
+        aria-label="Chat avec Léo"
       >
         {open
           ? <X size={22} className="text-white" />
@@ -201,11 +201,11 @@ export default function Chatbot() {
           {/* Header */}
           <div className="bg-gradient-to-r from-neo to-neo/80 px-5 py-4 flex items-center gap-3 shrink-0">
             <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-black text-sm">
-              N
+              L
             </div>
             <div>
-              <p className="text-white font-bold text-sm">Neo</p>
-              <p className="text-white/70 text-xs">Assistant NEO Performance</p>
+              <p className="text-white font-bold text-sm">Léo</p>
+              <p className="text-white/70 text-xs">Assistant virtuel de NEO Performance</p>
             </div>
             <div className="ml-auto flex items-center gap-1.5">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
@@ -218,7 +218,7 @@ export default function Chatbot() {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-neo/10 text-neo flex items-center justify-center text-xs font-black mr-2 mt-1 shrink-0">N</div>
+                  <div className="w-7 h-7 rounded-full bg-neo/10 text-neo flex items-center justify-center text-xs font-black mr-2 mt-1 shrink-0">L</div>
                 )}
                 <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                   msg.role === 'user'
@@ -232,7 +232,7 @@ export default function Chatbot() {
 
             {loading && (
               <div className="flex justify-start">
-                <div className="w-7 h-7 rounded-full bg-neo/10 text-neo flex items-center justify-center text-xs font-black mr-2 mt-1 shrink-0">N</div>
+                <div className="w-7 h-7 rounded-full bg-neo/10 text-neo flex items-center justify-center text-xs font-black mr-2 mt-1 shrink-0">L</div>
                 <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
@@ -260,24 +260,29 @@ export default function Chatbot() {
           )}
 
           {/* Input */}
-          <div className="px-4 py-3 border-t border-gray-100 shrink-0 flex items-center gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Pose ta question…"
-              disabled={loading}
-              className="flex-1 bg-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 transition-all placeholder:text-gray-400 disabled:opacity-50"
-            />
-            <button
-              onClick={() => sendMessage(input)}
-              disabled={!input.trim() || loading}
-              className="w-10 h-10 bg-neo rounded-xl flex items-center justify-center text-white disabled:opacity-40 hover:bg-neo/90 transition-colors shrink-0"
-            >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-            </button>
+          <div className="px-4 pt-3 pb-2 border-t border-gray-100 shrink-0">
+            <div className="flex items-center gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Pose ta question"
+                disabled={loading}
+                className="flex-1 bg-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 transition-all placeholder:text-gray-400 disabled:opacity-50"
+              />
+              <button
+                onClick={() => sendMessage(input)}
+                disabled={!input.trim() || loading}
+                className="w-10 h-10 bg-neo rounded-xl flex items-center justify-center text-white disabled:opacity-40 hover:bg-neo/90 transition-colors shrink-0"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              </button>
+            </div>
+            <p className="text-center text-[10px] text-gray-400 mt-2">
+              Ce clavardage utilise l'IA et peut faire des erreurs
+            </p>
           </div>
         </div>
       </div>
