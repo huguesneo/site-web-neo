@@ -13,6 +13,13 @@ const Header: React.FC = () => {
   const pathname = usePathname();
   const { count } = useCart();
 
+  // Pages dont le hero (haut de page) est foncé : le texte du menu doit y être
+  // clair tant qu'on n'a pas scrollé (sinon illisible sur fond sombre).
+  const DARK_HERO_ROUTES = ['/approche', '/contact'];
+  const onDarkHero = DARK_HERO_ROUTES.includes(pathname);
+  // Vrai quand le header est transparent par-dessus un hero foncé.
+  const lightText = onDarkHero && !isScrolled && !isMobileMenuOpen;
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -55,7 +62,7 @@ const Header: React.FC = () => {
               key={link.path}
               href={link.path}
               className={`text-sm font-medium transition-colors hover:text-neo ${
-                pathname === link.path ? 'text-neo' : 'text-gray-700'
+                pathname === link.path ? 'text-neo' : lightText ? 'text-white' : 'text-gray-700'
               }`}
             >
               {link.label}
@@ -65,7 +72,7 @@ const Header: React.FC = () => {
 
         {/* Desktop CTA */}
         <div className="hidden lg:flex items-center gap-3">
-          <Link href="/panier" className="relative p-2 text-gray-700 hover:text-neo transition-colors">
+          <Link href="/panier" className={`relative p-2 hover:text-neo transition-colors ${lightText ? 'text-white' : 'text-gray-700'}`}>
             <ShoppingCart size={22} />
             {count > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-neo text-white text-[10px] font-bold w-4.5 h-4.5 rounded-full flex items-center justify-center min-w-[18px] min-h-[18px] px-1">
@@ -79,7 +86,7 @@ const Header: React.FC = () => {
         </div>
 
         {/* Mobile Cart */}
-        <Link href="/panier" className="lg:hidden relative z-50 p-2 text-gray-800 hover:text-neo transition-colors mr-1">
+        <Link href="/panier" className={`lg:hidden relative z-50 p-2 hover:text-neo transition-colors mr-1 ${lightText ? 'text-white' : 'text-gray-800'}`}>
           <ShoppingCart size={22} />
           {count > 0 && (
             <span className="absolute top-0 right-0 bg-neo text-white text-[10px] font-bold rounded-full min-w-[18px] min-h-[18px] px-1 flex items-center justify-center">
@@ -90,7 +97,7 @@ const Header: React.FC = () => {
 
         {/* Mobile Toggle */}
         <button
-          className="lg:hidden relative z-50 p-2 text-gray-800 focus:outline-none hover:text-neo transition-colors"
+          className={`lg:hidden relative z-50 p-2 focus:outline-none hover:text-neo transition-colors ${lightText ? 'text-white' : 'text-gray-800'}`}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
         >
