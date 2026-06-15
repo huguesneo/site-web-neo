@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
+import { Flame, Leaf, Activity, Star, ShieldCheck, Clock, HeartHandshake } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type StepId =
@@ -123,13 +124,6 @@ const Quiz: React.FC = () => {
   const [barsOn, setBarsOn] = useState(false);
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', tel: '' });
   const [submitting, setSubmitting] = useState(false);
-
-  const [userCount] = useState(() => {
-    const h = new Date().getHours();
-    if (h < 6) return Math.floor(Math.random() * 4) + 2;
-    if (h < 12) return Math.floor(Math.random() * 16) + 15;
-    return Math.floor(Math.random() * 21) + 25;
-  });
 
   const goTo = useCallback((next: StepId) => {
     setAnimKey(k => k + 1);
@@ -318,11 +312,10 @@ const Quiz: React.FC = () => {
     'Améliorer ma digestion': 'confort digestif optimal',
   };
   const fomoData = () => {
-    const n = Math.floor(Math.random() * 4) + 3;
-    if (isGood) return { profile: 'MÉTABOLISME OPTIMAL', text: `Ton profil est rare — seulement ${n} personnes ont obtenu ce score ce mois-ci.`, urgency: 'Nous avons 1 place en accompagnement haute performance.' };
-    if (worst.includes('Cortisol')) return { profile: 'RÉSISTANCE AU CORTISOL', text: `Ton corps réagit exactement comme ${n+2} autres personnes cette semaine. C'est notre expertise #1 en clinique.`, urgency: "L'équipe peut prendre 1 seul profil similaire cette semaine." };
-    if (worst.includes('Digestif')) return { profile: 'INFLAMMATION DIGESTIVE', text: `${n} personnes avec tes signaux exacts ont consulté nos naturopathes dans les 6 derniers jours.`, urgency: "L'équipe peut prendre 1 seul profil similaire cette semaine." };
-    return { profile: 'RALENTISSEMENT HORMONAL', text: `Notre équipe clinique a accompagné la même signature hormonale chez ${n+1} clientes ce mois-ci.`, urgency: "L'équipe peut prendre 1 seul profil similaire cette semaine." };
+    if (isGood) return { profile: 'MÉTABOLISME OPTIMAL', text: "Ton profil est solide. L'enjeu pour toi : passer de « ça va » à une vraie optimisation haute performance.", reassure: "C'est exactement le type de profil que nos spécialistes aiment faire progresser." };
+    if (worst.includes('Cortisol')) return { profile: 'RÉSISTANCE AU CORTISOL', text: "Ta signature pointe vers une dominance du cortisol qui maintient ton corps en mode survie. C'est notre expertise #1 en clinique.", reassure: "Des centaines de profils comme le tien ont été accompagnés par notre équipe." };
+    if (worst.includes('Digestif')) return { profile: 'INFLAMMATION DIGESTIVE', text: "Tes signaux digestifs montrent une assimilation perturbée qui freine la conversion d'énergie. C'est un terrain que nos naturopathes connaissent bien.", reassure: "Nos naturopathes accompagnent ce type de profil au quotidien." };
+    return { profile: 'RALENTISSEMENT HORMONAL', text: "Ta signature hormonale indique un signal cellulaire affaibli qui ralentit ta combustion. C'est précisément ce que notre équipe clinique optimise.", reassure: "Notre équipe accompagne régulièrement cette signature hormonale." };
   };
 
   const renderStep = () => {
@@ -330,19 +323,55 @@ const Quiz: React.FC = () => {
       case 0:
         return (
           <Wrap animKey={animKey}>
-            <div className="text-center py-8">
-              <div className="inline-flex items-center gap-2 bg-red-50 text-red-500 px-4 py-2 rounded-full text-sm font-bold mb-6">
-                🔥 {userCount} personnes font cette analyse actuellement
+            <div className="text-center py-4">
+              <div className="inline-flex items-center gap-2 bg-neo/10 text-neo px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
+                <Activity size={14} /> Analyse fondée sur +15 000 profils
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 leading-tight">
+              <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-[1.1]">
                 Décrypte ton<br/>
-                <span className="text-neo">code métabolique</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-neo to-neo-600">code métabolique</span>
               </h1>
               <p className="text-gray-500 text-lg leading-relaxed font-medium mb-8 max-w-md mx-auto">
                 Comprends pourquoi ton corps résiste et découvre exactement ce qui bloque tes résultats — en moins de 3 minutes.
               </p>
+
+              {/* Aperçu de ce que l'analyse révèle */}
+              <div className="grid grid-cols-3 gap-3 max-w-md mx-auto mb-8">
+                {[
+                  { icon: Flame, label: 'Cortisol' },
+                  { icon: Leaf, label: 'Digestion' },
+                  { icon: Activity, label: 'Hormones' },
+                ].map(({ icon: Icon, label }) => (
+                  <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm py-4 px-2 flex flex-col items-center gap-2">
+                    <div className="w-10 h-10 rounded-xl bg-neo/10 flex items-center justify-center">
+                      <Icon size={18} className="text-neo" />
+                    </div>
+                    <span className="text-xs font-bold text-gray-700">{label}</span>
+                  </div>
+                ))}
+              </div>
+
               <CTA label="Démarrer mon analyse →" onClick={() => goTo(1)} />
-              <p className="text-gray-400 text-sm mt-4 font-medium">🔒 Gratuit · Confidentiel · 3 minutes</p>
+              <p className="text-gray-400 text-sm mt-4 font-medium flex items-center justify-center gap-1.5">
+                <ShieldCheck size={15} className="text-neo" /> Gratuit · Confidentiel · Sans engagement
+              </p>
+
+              {/* Preuve sociale réelle */}
+              <div className="flex items-center justify-center gap-3 mt-9 text-sm text-gray-500 font-medium">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                      <img src={`https://picsum.photos/seed/${i + 50}/100`} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                  ))}
+                </div>
+                <div className="text-left">
+                  <div className="flex text-yellow-400">
+                    {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="currentColor" strokeWidth={0} />)}
+                  </div>
+                  <span><strong className="text-gray-900">4.9/5</strong> · 4000+ avis</span>
+                </div>
+              </div>
             </div>
           </Wrap>
         );
@@ -740,18 +769,18 @@ const Quiz: React.FC = () => {
             </div>
 
             <div className="rounded-3xl p-10 text-center" style={{ background: 'linear-gradient(145deg, #0f172a, #1e293b)' }}>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Dernière étape cruciale</h2>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Maintenant, que fait-on de tout ça ?</h2>
               <p className="text-gray-400 mb-8 text-base leading-relaxed max-w-lg mx-auto font-medium">
-                Serais-tu prête à délaisser les solutions miracles pour une vraie approche scientifique d'optimisation ?
+                Tu connais tes blocages. La prochaine étape, c'est de voir le plan concret pour les débloquer — adapté à ton profil.
               </p>
               <button onClick={() => goTo('roadmap')}
-                className="w-full py-5 rounded-full bg-neo text-white font-bold text-lg uppercase tracking-wide shadow-xl shadow-neo/30 hover:bg-neo-600 hover:-translate-y-0.5 transition-all duration-200 mb-4 animate-pulse-slow">
-                OUI, ABSOLUMENT
-                <span className="block text-xs font-semibold tracking-wider mt-1.5 opacity-80">Je veux comprendre mon plan d'action</span>
+                className="w-full py-5 rounded-full bg-neo text-white font-bold text-lg uppercase tracking-wide shadow-xl shadow-neo/30 hover:bg-neo-600 hover:-translate-y-0.5 transition-all duration-200 mb-4">
+                Voir mon plan d'action
+                <span className="block text-xs font-semibold tracking-wider mt-1.5 opacity-80">Personnalisé selon tes réponses</span>
               </button>
               <button onClick={() => goTo('value-non')}
-                className="w-full py-4 rounded-full border-2 border-gray-700 text-gray-500 font-semibold text-sm hover:text-white hover:border-gray-500 transition-all">
-                NON, je préfère essayer encore seule
+                className="w-full py-4 rounded-full border-2 border-gray-700 text-gray-400 font-semibold text-sm hover:text-white hover:border-gray-500 transition-all">
+                Donne-moi d'abord 3 conseils gratuits
               </button>
             </div>
           </Wrap>
@@ -838,15 +867,17 @@ const Quiz: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider mb-1">
-                    ANALYSE DÉVERROUILLÉE : <span className="text-neo">{fomo.profile}</span>
+                    TON PROFIL : <span className="text-neo">{fomo.profile}</span>
                   </p>
                   <p className="text-sm text-gray-700 font-medium leading-relaxed">{fomo.text}</p>
-                  <span className="inline-block mt-2 font-bold text-xs px-3 py-1 rounded-lg" style={{ color: S, background: '#fff1f2' }}>{fomo.urgency}</span>
+                  <span className="inline-flex items-center gap-1.5 mt-2 font-bold text-xs px-3 py-1 rounded-lg text-neo bg-neo/10">
+                    <HeartHandshake size={13} /> {fomo.reassure}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <CTA label="Planifie ta consultation (offerte)" onClick={() => goTo('calendar')} />
+            <CTA label="Réserver ma consultation découverte (gratuite)" onClick={() => goTo('calendar')} sub="30 min · sans engagement" />
           </Wrap>
         );
       }
@@ -854,15 +885,41 @@ const Quiz: React.FC = () => {
       case 'calendar':
         return (
           <Wrap animKey={animKey} wide>
-            <div className="text-center mb-6">
-              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">Sécurise ton créneau</h2>
-              <p className="text-gray-500 font-medium">Consultation de stratégie offerte — places limitées</p>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 bg-neo/10 text-neo px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                <HeartHandshake size={14} /> Consultation découverte
+              </div>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Parlons de ton profil, sans engagement</h2>
+              <p className="text-gray-500 font-medium max-w-lg mx-auto">
+                30 minutes avec un membre de notre équipe pour comprendre tes résultats et voir si on peut t'aider — gratuitement.
+              </p>
             </div>
+
+            {/* Ce qui se passe pendant l'appel — réduit le risque perçu */}
+            <div className="grid md:grid-cols-3 gap-4 mb-8">
+              {[
+                { icon: Activity, t: 'On revoit ton analyse', d: 'On décode ensemble ton profil métabolique en détail.' },
+                { icon: HeartHandshake, t: 'Des pistes concrètes', d: 'Tu repars avec des recommandations claires, applicables tout de suite.' },
+                { icon: ShieldCheck, t: 'Zéro pression', d: "Aucune obligation d'achat. Juste une vraie conversation." },
+              ].map(({ icon: Icon, t, d }) => (
+                <div key={t} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-left">
+                  <div className="w-10 h-10 rounded-xl bg-neo/10 flex items-center justify-center mb-3">
+                    <Icon size={18} className="text-neo" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1">{t}</h3>
+                  <p className="text-gray-500 text-xs leading-relaxed font-medium">{d}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100" style={{ height: 680 }}>
               <iframe src="https://api.leadconnectorhq.com/widget/booking/DIN6EPtG7eNU3Gf6ZRoC"
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 scrolling="yes" title="Réservation NEO" />
             </div>
+            <p className="text-center text-gray-400 text-sm mt-4 font-medium flex items-center justify-center gap-1.5">
+              <Clock size={14} className="text-neo" /> 30 min · en ligne ou par téléphone · 100 % gratuit
+            </p>
           </Wrap>
         );
 
