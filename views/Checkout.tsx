@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import Section from '../components/Section';
 
@@ -32,7 +32,7 @@ const HT_IFRAME_SRC = (() => {
     enable_exp_formatting: '1',
     display_labels: '1',
     pan_label: 'Numéro de carte',
-    exp_label: "Date d'expiration (MM/AA)",
+    exp_label: 'Expiration (MM/AA)',
     cvd_label: 'Code de sécurité (CVD)',
     css_body: `margin:0;padding:0;background:transparent;font-family:${HT_FONT};`,
     css_input_label: HT_LABEL_CSS,
@@ -71,8 +71,26 @@ const PROVINCES: { label: string; code: string }[] = [
 ];
 
 const Checkout: React.FC = () => {
-  const { items, subtotal, coupon, clearCart, hydrated } = useCart();
+  const { items, subtotal, coupon, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
   const router = useRouter();
+
+  const [couponInput, setCouponInput] = useState('');
+  const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [couponError, setCouponError] = useState('');
+
+  async function handleApplyCoupon() {
+    if (!couponInput.trim()) return;
+    setCouponStatus('loading');
+    setCouponError('');
+    try {
+      await applyCoupon(couponInput);
+      setCouponStatus('idle');
+      setCouponInput('');
+    } catch (e: unknown) {
+      setCouponError(e instanceof Error ? e.message : 'Code invalide.');
+      setCouponStatus('error');
+    }
+  }
 
   const [form, setForm] = useState<FormData>({
     firstName: '', lastName: '', email: '', phone: '',
@@ -404,6 +422,48 @@ const Checkout: React.FC = () => {
                       </span>
                     </div>
                   ))}
+                </div>
+
+                {/* Code promo */}
+                <div className="border-t border-gray-100 pt-4 mb-4">
+                  {coupon ? (
+                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+                      <span className="text-sm font-semibold text-green-700 flex items-center gap-1.5">
+                        <Tag size={14} /> {coupon.code}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="text-xs text-gray-500 hover:text-red-600 font-medium"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="text-xs font-medium text-gray-500 mb-1.5 block">Code promo</label>
+                      <div className="flex gap-2">
+                        <input
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyCoupon(); } }}
+                          placeholder="Entre ton code"
+                          className="flex-1 min-w-0 border border-gray-200 rounded-xl px-3 py-2.5 text-sm uppercase focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none text-gray-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={couponStatus === 'loading' || !couponInput.trim()}
+                          className="px-4 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {couponStatus === 'loading' ? '…' : 'Appliquer'}
+                        </button>
+                      </div>
+                      {couponStatus === 'error' && (
+                        <p className="text-xs text-red-600 mt-1.5">{couponError}</p>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 <div className="border-t border-gray-100 pt-4 flex flex-col gap-2 text-sm text-gray-600">
