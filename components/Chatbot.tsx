@@ -121,11 +121,15 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
   }, [open, started]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Faire défiler uniquement la boîte de messages, jamais la page entière
+    // (sinon en mode intégré la page Contact saute jusqu'au chatbot).
+    const container = messagesEndRef.current?.parentElement;
+    if (container) container.scrollTop = container.scrollHeight;
   }, [messages, loading]);
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 300);
+    // preventScroll: le focus ne doit pas faire défiler la page jusqu'au champ.
+    if (open) setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 300);
   }, [open]);
 
   async function sendMessage(text: string) {
