@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { fetchWCProducts, WCProduct } from '../services/wooApi';
 import { GHLProduct } from '../data/ghlProducts';
+import { SHOP_CATEGORY_RULES, SHOP_DEFAULT_CATEGORY, ShopCategory } from '../constants';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -12,10 +13,22 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }
 
+const normalize = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+/** Range un produit dans une des 5 catégories boutique selon ses tags WooCommerce. */
+function resolveCategory(p: WCProduct): ShopCategory {
+  const tags = new Set((p.categories ?? []).map((c) => normalize(c.name)));
+  for (const rule of SHOP_CATEGORY_RULES) {
+    if (rule.wcTags.some((t) => tags.has(normalize(t)))) return rule.category;
+  }
+  return SHOP_DEFAULT_CATEGORY;
+}
+
 function mapWCProduct(p: WCProduct): GHLProduct {
   const price = p.price || p.regular_price || '0.00';
   const image = p.images?.[0]?.src ?? '';
-  const category = p.categories?.[0]?.name ?? 'Général';
+  const category = resolveCategory(p);
   const description = stripHtml(p.description || p.short_description || '');
 
   return {

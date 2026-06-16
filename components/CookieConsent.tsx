@@ -20,8 +20,13 @@ export default function CookieConsent() {
   }, []);
 
   function save(choice: ConsentState) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ choice, date: new Date().toISOString() }));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ choice, date: new Date().toISOString() }));
+    } catch { /* stockage bloqué (navigation privée) */ }
     setVisible(false);
+    // Prévient les autres composants (ex. le pop-up conseil de Léo sur la boutique)
+    // pour qu'ils s'affichent seulement APRÈS le choix cookies, sans se télescoper.
+    window.dispatchEvent(new Event('neo:cookie-consent-resolved'));
   }
 
   if (!visible) return null;

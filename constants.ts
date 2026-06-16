@@ -133,3 +133,29 @@ export const TESTIMONIALS: Testimonial[] = [
 ];
 
 export const BOOKING_IFRAME_SRC = "https://api.leadconnectorhq.com/widget/booking/DIN6EPtG7eNU3Gf6ZRoC";
+
+// ─── BOUTIQUE : 5 catégories canoniques ─────────────────────────────────────────
+// Les produits WooCommerce ont des tags variés ; on les range dans ces 5 buckets.
+// L'ordre ci-dessous = l'ordre d'affichage des pastilles dans la boutique.
+export const SHOP_CATEGORIES = [
+  "Santé Globale & Vitalité",
+  "Digestion & Santé Intestinale",
+  "Énergie, Stress & Sommeil",
+  "Performance, Muscles & Métabolisme",
+  "Santé Ciblée (Hormones & Immunité)",
+] as const;
+
+export type ShopCategory = (typeof SHOP_CATEGORIES)[number];
+
+// Catégorie par défaut (fourre-tout) pour tout produit non couvert par une règle.
+export const SHOP_DEFAULT_CATEGORY: ShopCategory = "Santé Globale & Vitalité";
+
+// Règles de mappage : pour chaque produit, la PREMIÈRE règle dont un des
+// `wcTags` correspond à une catégorie WooCommerce du produit gagne.
+// (comparaison insensible à la casse / aux accents)
+export const SHOP_CATEGORY_RULES: Array<{ category: ShopCategory; wcTags: string[] }> = [
+  { category: "Digestion & Santé Intestinale", wcTags: ["Digestion", "Detox"] },
+  { category: "Énergie, Stress & Sommeil", wcTags: ["Cortisol"] },
+  { category: "Santé Ciblée (Hormones & Immunité)", wcTags: ["endocrinien / métabolisme", "thyroide"] },
+  { category: "Performance, Muscles & Métabolisme", wcTags: ["glycémie", "Protéine"] },
+];

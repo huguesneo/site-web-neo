@@ -5,10 +5,15 @@ import Button from '../components/Button';
 import { GHLProduct } from '../data/ghlProducts';
 import { useGHLProducts } from '../hooks/useGHLProducts';
 import { useCart } from '../contexts/CartContext';
+import { SHOP_CATEGORIES } from '../constants';
+import { OPEN_LEO_ADVISOR_EVENT } from '../components/Chatbot';
 import {
   Search, ArrowRight, Truck, ShieldCheck, ShoppingCart,
-  Loader2, AlertCircle, CheckCircle, X, Leaf,
+  Loader2, AlertCircle, CheckCircle, X, Leaf, ChevronDown, SlidersHorizontal,
+  Sparkles, MessageCircle,
 } from 'lucide-react';
+
+const LEO_POPUP_SEEN_KEY = 'neo_leo_advisor_popup_seen';
 
 const Shop: React.FC = () => {
   const { products, loading, error } = useGHLProducts();
@@ -18,8 +23,62 @@ const Shop: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<GHLProduct | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [cartToast, setCartToast] = useState<{ name: string; visible: boolean }>({ name: '', visible: false });
+  const [catMenuOpen, setCatMenuOpen] = useState(false);
+  const [leoPopupOpen, setLeoPopupOpen] = useState(false);
 
-  const categories = ["Tout", ...Array.from(new Set(products.map((p) => p.category)))];
+  // Pop-up d'accueil « Besoin d'aide pour choisir ? » — affiché une seule fois (jamais re-proposé).
+  // On l'affiche APRÈS la bannière cookies (Loi 25) pour éviter qu'elles se télescopent.
+  // Si le stockage est inaccessible (navigation privée), on l'affiche quand même.
+  React.useEffect(() => {
+    let alreadySeen = false;
+    try {
+      alreadySeen = localStorage.getItem(LEO_POPUP_SEEN_KEY) === '1';
+    } catch { /* stockage bloqué → on affiche quand même */ }
+    if (alreadySeen) return;
+
+    let cookieDecided = false;
+    try {
+      cookieDecided = !!localStorage.getItem('neo_cookie_consent');
+    } catch { cookieDecided = true; /* si on ne peut pas savoir, on ne bloque pas le pop-up */ }
+
+    let shown = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const show = (delay: number) => {
+      timers.push(setTimeout(() => {
+        if (!shown) { shown = true; setLeoPopupOpen(true); }
+      }, delay));
+    };
+
+    if (cookieDecided) {
+      // Cookies déjà gérés → on montre le pop-up rapidement
+      show(900);
+      return () => timers.forEach(clearTimeout);
+    }
+
+    // Cookies pas encore décidés → on attend le choix, avec un repli si la bannière est ignorée
+    const onCookieResolved = () => show(500);
+    window.addEventListener('neo:cookie-consent-resolved', onCookieResolved);
+    show(9000); // repli : si l'utilisateur ignore la bannière, on affiche quand même
+
+    return () => {
+      window.removeEventListener('neo:cookie-consent-resolved', onCookieResolved);
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
+  const dismissLeoPopup = () => {
+    setLeoPopupOpen(false);
+    try { localStorage.setItem(LEO_POPUP_SEEN_KEY, '1'); } catch { /* ignore */ }
+  };
+
+  const openLeoAdvisor = () => {
+    dismissLeoPopup();
+    window.dispatchEvent(new Event(OPEN_LEO_ADVISOR_EVENT));
+  };
+
+  // 5 catégories canoniques, dans l'ordre défini, en ne gardant que celles qui ont des produits
+  const present = new Set(products.map((p) => p.category));
+  const categories = ["Tout", ...SHOP_CATEGORIES.filter((c) => present.has(c))];
 
   const normalize = (str: string) =>
     str.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -69,31 +128,65 @@ const Shop: React.FC = () => {
       </div>
 
       {/* ───── FILTRES & RECHERCHE ───── */}
-      <div className="bg-white border-b border-gray-100 py-4">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col lg:flex-row justify-between items-center gap-3">
-          <div className="w-full lg:w-auto overflow-x-auto no-scrollbar">
-            <div className="flex gap-2 min-w-max">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
-                    activeCategory === cat
-                      ? 'bg-neo text-white shadow-md shadow-neo/30'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+      <div className="bg-white border-b border-gray-100 py-5 md:py-6">
+        <div className="max-w-3xl mx-auto px-5">
+          {/* ── MOBILE : sélecteur compact de catégorie ── */}
+          <div className="md:hidden mb-4">
+            <button
+              onClick={() => setCatMenuOpen(o => !o)}
+              className="w-full flex items-center justify-between gap-2 px-5 py-3.5 rounded-2xl bg-gray-100 text-sm font-bold text-gray-800 active:scale-[0.99] transition-transform"
+            >
+              <span className="flex items-center gap-2.5 min-w-0">
+                <SlidersHorizontal size={16} className="text-neo flex-shrink-0" />
+                <span className="truncate">
+                  {activeCategory === 'Tout' ? 'Toutes les catégories' : activeCategory}
+                </span>
+              </span>
+              <ChevronDown size={18} className={`flex-shrink-0 text-gray-400 transition-transform duration-200 ${catMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {catMenuOpen && (
+              <div className="mt-2 flex flex-col gap-1 bg-white border border-gray-100 rounded-2xl p-2 shadow-lg shadow-gray-200/60 animate-fade-in">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => { setActiveCategory(cat); setCatMenuOpen(false); }}
+                    className={`text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                      activeCategory === cat
+                        ? 'bg-neo text-white'
+                        : 'text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+                    }`}
+                  >
+                    {cat === 'Tout' ? 'Toutes les catégories' : cat}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="w-full lg:w-auto relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+
+          {/* ── DESKTOP : pastilles, toutes visibles d'un coup ── */}
+          <div className="hidden md:flex flex-wrap justify-center gap-2.5 mb-4">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-2 rounded-full text-xs font-bold leading-none transition-all duration-200 ${
+                  activeCategory === cat
+                    ? 'bg-neo text-white shadow-md shadow-neo/30'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Recherche — pleine largeur, sous les catégories */}
+          <div className="relative max-w-md mx-auto">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input
               type="text"
               placeholder="Rechercher un produit..."
-              className="w-full lg:w-72 pl-11 pr-4 py-2.5 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none text-sm transition-all"
+              className="w-full pl-11 pr-4 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none text-sm transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -253,6 +346,72 @@ const Shop: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ───── POP-UP ACCUEIL CONSEIL LÉO ───── */}
+      {leoPopupOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={dismissLeoPopup} />
+          <div className="relative z-10 bg-white rounded-[1.75rem] w-full max-w-sm overflow-hidden shadow-2xl animate-fade-in-up">
+            <button
+              onClick={dismissLeoPopup}
+              className="absolute top-3.5 right-3.5 z-20 w-8 h-8 bg-white/70 hover:bg-white rounded-full flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors"
+              aria-label="Fermer"
+            >
+              <X size={16} />
+            </button>
+
+            {/* Bandeau Léo */}
+            <div className="bg-gradient-to-br from-neo to-neo/80 px-7 pt-7 pb-9 text-center relative">
+              <div className="relative inline-block mb-3">
+                <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-white font-black text-2xl shadow-lg ring-1 ring-white/20">
+                  L
+                </div>
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-neo" />
+              </div>
+              <p className="text-white font-bold text-sm">Léo · Conseiller en suppléments</p>
+              <p className="text-white/70 text-xs mt-0.5">Sélectionné par nos naturopathes</p>
+            </div>
+
+            {/* Carte de contenu qui chevauche le bandeau */}
+            <div className="px-7 pt-6 pb-7 -mt-4 bg-white rounded-t-[1.75rem] relative text-center">
+              <h3 className="text-[1.35rem] font-bold text-gray-900 mb-2.5 leading-snug">
+                Besoin d'aide pour choisir tes suppléments ?
+              </h3>
+              <p className="text-gray-500 text-sm leading-relaxed mb-5">
+                Réponds à 2-3 questions rapides et Léo te recommande les produits parfaits pour <span className="text-gray-700 font-semibold">tes objectifs</span> — en moins d'une minute.
+              </p>
+
+              <div className="flex items-center justify-center gap-4 mb-6 text-[11px] font-semibold text-gray-400">
+                <span className="flex items-center gap-1.5"><Sparkles size={13} className="text-neo" /> Personnalisé</span>
+                <span className="flex items-center gap-1.5"><ShieldCheck size={13} className="text-neo" /> Sans engagement</span>
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={openLeoAdvisor}
+                  className="w-full bg-neo hover:bg-neo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-neo/25 active:scale-[0.98]"
+                >
+                  <MessageCircle size={17} /> Oui, demande à Léo
+                </button>
+                <button
+                  onClick={dismissLeoPopup}
+                  className="w-full text-gray-400 hover:text-gray-700 font-semibold text-sm py-1.5 transition-colors"
+                >
+                  Non merci, je regarde par moi-même
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───── BOUTON PERMANENT « CONSEIL LÉO » (remplace la bulle support à droite) ───── */}
+      <button
+        onClick={openLeoAdvisor}
+        className="fixed bottom-6 right-6 z-[120] flex items-center gap-2 bg-neo hover:bg-neo-600 text-white font-bold text-sm pl-4 pr-5 py-3.5 rounded-full shadow-2xl shadow-neo/30 hover:scale-105 transition-all active:scale-95"
+      >
+        <Sparkles size={17} /> Conseil de Léo
+      </button>
 
       {/* ───── TOAST PANIER ───── */}
       <div

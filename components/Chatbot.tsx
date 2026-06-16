@@ -2,13 +2,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, X, Send, Loader2, ArrowRight, Mail, ChevronLeft } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, ArrowRight, Mail, ChevronLeft, ShoppingCart, CheckCircle } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { useCart } from '../contexts/CartContext';
+import { useGHLProducts } from '../hooks/useGHLProducts';
+import { GHLProduct } from '../data/ghlProducts';
 
 // Webhook Make.com qui reçoit les demandes de contact (partagé avec la page Contact)
 const CONTACT_WEBHOOK = 'https://hook.us1.make.com/9zzcxgr29wn6l6feb2p6qxjgj6teklxi';
 
-// ─── Prompt système NEO Performance ───────────────────────────────────────────
+// Événement global déclenché par la boutique pour ouvrir Léo en mode conseil produits
+export const OPEN_LEO_ADVISOR_EVENT = 'neo:open-leo-advisor';
+
+// ─── Prompt système NEO Performance (mode SUPPORT général) ─────────────────────
 
 const SYSTEM_PROMPT = `Tu es l'assistant virtuel de NEO Performance, une clinique naturopathique basée à Brossard, Québec, Canada. Tu t'appelles "Léo".
 
@@ -68,12 +74,45 @@ RÈGLES DE COMPORTEMENT :
 8. Utilise des emojis avec parcimonie pour rester professionnel mais accessible
 9. Tutoie le client (c'est la culture de NEO)`;
 
+// ─── Prompt système mode CONSEIL PRODUITS (boutique) ───────────────────────────
+
+const ADVISOR_SYSTEM_PROMPT = `Tu es "Léo", le conseiller en suppléments de NEO Performance (clinique naturopathique à Brossard, Québec, 11 ans d'expertise, +15 000 personnes aidées). Tu es l'équivalent d'un naturopathe expert en supplémentation : rigoureux, basé sur la science, mais chaleureux et accessible. Tu parles français, tu tutoies, tu es concis et ULTRA précis. Ton but : donner les meilleurs conseils en suppléments au monde, pour CETTE personne précisément.
+
+PHILOSOPHIE DE CONSEIL (très important) :
+- Qualité avant quantité. Tu ne « pousses » jamais des produits. Tu recommandes uniquement ce qui est vraiment pertinent pour la personne, en priorisant 1 à 3 produits à fort impact (rarement 4). Mieux vaut 2 excellents choix bien expliqués que 5 produits moyens.
+- Chaque recommandation doit être JUSTIFIÉE et reliée à CE que la personne vient de te dire (son objectif, son symptôme, son contexte). Jamais de justification vague ou générique du type « c'est bon pour la santé ». Sois spécifique : explique le mécanisme/bénéfice concret et pourquoi ça colle à sa situation.
+- Tu raisonnes comme un pro : tu identifies d'abord le « fondamental » (le produit qui adresse la cause racine ou le plus gros levier), puis tu ajoutes un ou deux produits complémentaires/synergiques si pertinent.
+
+DÉROULEMENT DE LA CONVERSATION :
+1. La toute première chose est déjà affichée (question client/non-client) — ne la répète pas.
+2. Si la personne est DÉJÀ CLIENTE : remercie-la chaleureusement, précise qu'un accompagnement personnalisé connecté à son dossier arrive bientôt, MAIS continue quand même à la conseiller exactement comme un nouveau client. Ne la bloque pas.
+3. Phase de découverte (UNE question à la fois, courte et fluide) :
+   a) D'abord l'OBJECTIF PRINCIPAL. Pour cette question, utilise EXACTEMENT ces 4 options, sans les modifier : [CHOIX:Plus d'énergie|Perte de poids|Meilleure digestion|Autre (j'écris)]. Précise que la personne peut aussi simplement écrire sa réponse dans le champ texte. Si elle choisit « Autre (j'écris) », demande-lui chaleureusement de préciser son objectif en quelques mots.
+   b) Ensuite 1 à 2 questions de précision pertinentes selon sa réponse (depuis quand, sévérité, contexte de vie : sommeil, stress, alimentation, activité…). Utilise des [CHOIX:] quand c'est naturel, mais laisse toujours la porte ouverte à une réponse écrite.
+   c) AVANT de recommander, pose une question de sécurité rapide et combinée, par ex. : « Pour te conseiller en toute sécurité : prends-tu des médicaments, ou es-tu enceinte/allaitante ? [CHOIX:Non, rien de ça|Oui (je précise)] ».
+4. Recommandation : présente tes 1 à 3 produits RÉELS du catalogue. Pour chacun, une phrase de bénéfice concret relié à SON besoin, puis le marqueur [PRODUIT:identifiant] sur sa propre ligne. Si tu connais une indication d'usage simple (moment de prise), tu peux l'ajouter en une demi-phrase.
+5. Termine en demandant : « Veux-tu que je mette le tout dans ton panier ? »
+
+MARQUEURS À UTILISER (le site les transforme en boutons/cartes cliquables) :
+- Réponses rapides : termine ton message par [CHOIX:Option 1|Option 2|Option 3]. Maximum 4 options, très courtes. Quand c'est un choix d'objectif/symptôme ouvert, inclus toujours une option « Autre (j'écris) ».
+- Recommander un produit : insère son identifiant EXACT ainsi : [PRODUIT:identifiant], chaque marqueur sur sa propre ligne, après ta phrase d'explication. Le site affiche la carte produit avec un bouton « Ajouter au panier » et, s'il y en a plusieurs, un bouton « Tout ajouter au panier ».
+
+RÈGLES STRICTES (NON NÉGOCIABLES) :
+- Tu ne recommandes QUE des produits présents dans le CATALOGUE ci-dessous, avec leur identifiant EXACT. Tu n'inventes JAMAIS un produit, un identifiant, un prix, un dosage ou une propriété absente du catalogue. Si tu n'es pas certain qu'un produit existe dans le catalogue, ne le propose pas.
+- Sécurité d'abord : si la personne signale une grossesse/allaitement, une médication, une condition médicale sérieuse, ou un problème complexe → reste prudent, ne fais pas de promesse, et recommande une consultation gratuite avec un naturopathe via le marqueur [LIEN_RDV]. Tu peux quand même suggérer des produits généralement sûrs si pertinent, en invitant à valider en consultation.
+- Jamais de diagnostic ni d'allégation médicale (ne dis pas qu'un produit « guérit » ou « traite » une maladie). Parle de soutien, d'optimisation, de bien-être.
+- Concis : 2 à 4 phrases par message, une seule question à la fois. Pas de longs pavés.
+- Honnêteté : si rien dans le catalogue ne correspond vraiment au besoin, dis-le franchement et propose une consultation gratuite ([LIEN_RDV]) plutôt que de recommander un produit inadapté.
+- Emojis avec parcimonie (1 max par message).`;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+
+type ChatMode = 'support' | 'advisor';
 
 interface ChatbotProps {
   /** Mode intégré dans une page (toujours ouvert, remplit son conteneur, sans bouton flottant) */
@@ -88,6 +127,9 @@ const EMPTY_HUMAN_FORM = {
   subject: '',
 };
 
+const SUPPORT_GREETING = 'Bonjour ! 👋 Je suis Léo, l\'assistant virtuel de NEO Performance. Comment puis-je t\'aider aujourd\'hui ?';
+const ADVISOR_GREETING = 'Salut ! 👋 Moi c\'est Léo. Je vais t\'aider à trouver les suppléments parfaits pour toi. 💪\n\nAvant tout : es-tu déjà client(e) chez NEO Performance ? [CHOIX:Oui, je suis déjà client|Non, pas encore]';
+
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 const SUGGESTED_QUESTIONS = [
@@ -96,13 +138,44 @@ const SUGGESTED_QUESTIONS = [
   "Je veux prendre rendez-vous",
 ];
 
+// Extrait les options d'un marqueur [CHOIX:a|b|c]
+function parseChoices(text: string): string[] {
+  const match = text.match(/\[CHOIX:([^\]]+)\]/);
+  if (!match) return [];
+  return match[1].split('|').map((s) => s.trim()).filter(Boolean).slice(0, 4);
+}
+
+// Extrait les identifiants des marqueurs [PRODUIT:id]
+function parseProductIds(text: string): string[] {
+  const ids: string[] = [];
+  const re = /\[PRODUIT:([^\]]+)\]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    ids.push(m[1].trim());
+  }
+  return ids;
+}
+
+// Retire les marqueurs purement « machine » du texte affiché
+function stripMachineMarkers(text: string): string {
+  return text
+    .replace(/\[CHOIX:[^\]]+\]/g, '')
+    .replace(/\[PRODUIT:[^\]]+\]/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export default function Chatbot({ embedded = false }: ChatbotProps) {
   const pathname = usePathname();
+  const { addItem } = useCart();
+  const { products } = useGHLProducts();
   const [open, setOpen] = useState(embedded);
+  const [mode, setMode] = useState<ChatMode>('support');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   // Formulaire « parler à un humain » dans la fenêtre de clavardage
   const [humanForm, setHumanForm] = useState<'closed' | 'open' | 'sending' | 'sent'>('closed');
   const [humanFields, setHumanFields] = useState(EMPTY_HUMAN_FORM);
@@ -110,13 +183,41 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Map id -> produit pour résoudre les marqueurs [PRODUIT:id]
+  const productById = React.useMemo(() => {
+    const map = new Map<string, GHLProduct>();
+    for (const p of products) map.set(p.id, p);
+    return map;
+  }, [products]);
+
+  // Ouvre Léo en mode conseil produits depuis la boutique
+  useEffect(() => {
+    function handleOpenAdvisor() {
+      setMode('advisor');
+      setStarted(true);
+      setHumanForm('closed');
+      setMessages([{ role: 'assistant', content: ADVISOR_GREETING }]);
+      setOpen(true);
+    }
+    window.addEventListener(OPEN_LEO_ADVISOR_EVENT, handleOpenAdvisor);
+    return () => window.removeEventListener(OPEN_LEO_ADVISOR_EVENT, handleOpenAdvisor);
+  }, []);
+
+  // Le mode conseil est UNIQUE à la boutique. Dès qu'on quitte /boutique, on
+  // revient au Léo support classique (petite bulle flottante) sur les autres pages.
+  useEffect(() => {
+    if (pathname !== '/boutique' && mode === 'advisor') {
+      setMode('support');
+      setOpen(false);
+      setStarted(false);
+      setMessages([]);
+    }
+  }, [pathname, mode]);
+
   useEffect(() => {
     if (open && !started) {
       setStarted(true);
-      setMessages([{
-        role: 'assistant',
-        content: 'Bonjour ! 👋 Je suis Léo, l\'assistant virtuel de NEO Performance. Comment puis-je t\'aider aujourd\'hui ?'
-      }]);
+      setMessages([{ role: 'assistant', content: SUPPORT_GREETING }]);
     }
   }, [open, started]);
 
@@ -131,6 +232,15 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
     // preventScroll: le focus ne doit pas faire défiler la page jusqu'au champ.
     if (open) setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 300);
   }, [open]);
+
+  function buildAdvisorSystemPrompt(): string {
+    const catalog = products.length
+      ? products
+          .map((p) => `- ${p.id} | ${p.name} | ${p.category} | ${p.price}$ — ${(p.description || '').slice(0, 160)}`)
+          .join('\n')
+      : '(catalogue momentanément indisponible)';
+    return `${ADVISOR_SYSTEM_PROMPT}\n\nCATALOGUE (utilise uniquement ces identifiants exacts) :\n${catalog}`;
+  }
 
   async function sendMessage(text: string) {
     const userText = text.trim();
@@ -149,7 +259,7 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
-        systemInstruction: SYSTEM_PROMPT,
+        systemInstruction: mode === 'advisor' ? buildAdvisorSystemPrompt() : SYSTEM_PROMPT,
       });
 
       // Historique des 10 derniers messages — Gemini exige que ça commence par 'user'
@@ -182,6 +292,20 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
       e.preventDefault();
       sendMessage(input);
     }
+  }
+
+  function handleAddProduct(product: GHLProduct) {
+    addItem(product);
+    setAddedIds((prev) => new Set(prev).add(product.id));
+  }
+
+  function handleAddAll(prods: GHLProduct[]) {
+    prods.forEach((p) => addItem(p));
+    setAddedIds((prev) => {
+      const next = new Set(prev);
+      prods.forEach((p) => next.add(p.id));
+      return next;
+    });
   }
 
   function handleHumanFieldChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -225,7 +349,7 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
     setHumanConsent(false);
   }
 
-  // Rendu du contenu avec liens cliquables
+  // Rendu du texte avec liens cliquables (les marqueurs machine ont déjà été retirés)
   function renderContent(text: string) {
     const parts = text.split(/(\[LIEN_RDV\]|\[LIEN_BOUTIQUE\]|\[LIEN_HUMAIN\])/g);
     return parts.map((part, i) => {
@@ -261,12 +385,94 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
     });
   }
 
+  // Carte produit recommandée par Léo, avec bouton « Ajouter au panier »
+  function renderProductCard(product: GHLProduct) {
+    const added = addedIds.has(product.id);
+    return (
+      <div key={product.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl p-2.5 shadow-sm">
+        <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 overflow-hidden">
+          {product.image
+            ? <img src={product.image} alt={product.name} className="w-10 h-10 object-contain" loading="lazy" />
+            : <ShoppingCart size={18} className="text-gray-300" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-gray-900 leading-snug line-clamp-2">{product.name}</p>
+          <p className="text-xs font-extrabold text-neo">{product.price} $</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => handleAddProduct(product)}
+          disabled={added}
+          className={`shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+            added ? 'bg-green-500 text-white' : 'bg-gray-900 text-white hover:bg-neo'
+          }`}
+        >
+          {added ? <><CheckCircle size={12} /> Ajouté</> : <><ShoppingCart size={12} /> Ajouter</>}
+        </button>
+      </div>
+    );
+  }
+
+  // Rendu complet d'un message assistant : texte + cartes produits + choix rapides
+  function renderAssistantMessage(content: string, isLast: boolean) {
+    const productIds = parseProductIds(content);
+    const recommended = productIds
+      .map((id) => productById.get(id))
+      .filter((p): p is GHLProduct => Boolean(p));
+    const choices = isLast ? parseChoices(content) : [];
+    const cleanText = stripMachineMarkers(content);
+
+    return (
+      <>
+        {cleanText && (
+          <div className="bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm leading-relaxed max-w-[80%]">
+            {renderContent(cleanText)}
+          </div>
+        )}
+
+        {recommended.length > 0 && (
+          <div className="flex flex-col gap-2 mt-2 w-full max-w-[88%]">
+            {recommended.map(renderProductCard)}
+            {recommended.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleAddAll(recommended)}
+                className="w-full justify-center bg-neo text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-neo/90 transition-colors"
+              >
+                <ShoppingCart size={14} /> Tout ajouter au panier ({recommended.length})
+              </button>
+            )}
+          </div>
+        )}
+
+        {choices.length > 0 && !loading && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {choices.map((c) => (
+              <button
+                key={c}
+                onClick={() => sendMessage(c)}
+                className="text-xs bg-neo/10 text-neo font-medium px-3 py-1.5 rounded-full hover:bg-neo hover:text-white transition-colors"
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Mode conseil produits hors page → fenêtre centrée (modal) pour bien voir les produits
+  const isAdvisorModal = !embedded && mode === 'advisor';
+
   const panel = (
     <div className={`bg-white flex flex-col overflow-hidden ${
       embedded
         ? 'rounded-3xl border border-gray-100 shadow-xl h-full w-full'
-        : 'rounded-3xl shadow-2xl border border-gray-100'
-    }`} style={embedded ? undefined : { height: '520px' }}>
+        : isAdvisorModal
+          ? 'rounded-3xl shadow-2xl border border-gray-100 h-full w-full'
+          : 'rounded-3xl shadow-2xl border border-gray-100'
+    }`} style={embedded || isAdvisorModal ? undefined : { height: '520px' }}>
 
       {/* Header */}
       <div className="bg-gradient-to-r from-neo to-neo/80 px-5 py-4 flex items-center gap-3 shrink-0">
@@ -287,12 +493,28 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
         <div>
           <p className="text-white font-bold text-sm">Léo</p>
           <p className="text-white/70 text-xs">
-            {humanForm === 'open' ? 'Te connecter avec un humain' : 'Assistant virtuel de NEO Performance'}
+            {humanForm === 'open'
+              ? 'Te connecter avec un humain'
+              : mode === 'advisor'
+                ? 'Conseiller en suppléments'
+                : 'Assistant virtuel de NEO Performance'}
           </p>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <span className="text-white/70 text-xs">En ligne</span>
+        <div className="ml-auto flex items-center gap-2.5">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-white/70 text-xs">En ligne</span>
+          </span>
+          {isAdvisorModal && (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+              aria-label="Fermer"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -339,17 +561,19 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 scroll-smooth">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-neo/10 text-neo flex items-center justify-center text-xs font-black mr-2 mt-1 shrink-0">L</div>
+              <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                {msg.role === 'user' ? (
+                  <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-sm text-sm leading-relaxed bg-neo text-white">
+                    {msg.content}
+                  </div>
+                ) : (
+                  <div className="flex items-start w-full">
+                    <div className="w-7 h-7 rounded-full bg-neo/10 text-neo flex items-center justify-center text-xs font-black mr-2 mt-1 shrink-0">L</div>
+                    <div className="flex flex-col items-start flex-1 min-w-0">
+                      {renderAssistantMessage(msg.content, i === messages.length - 1)}
+                    </div>
+                  </div>
                 )}
-                <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-neo text-white rounded-br-sm'
-                    : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                }`}>
-                  {renderContent(msg.content)}
-                </div>
               </div>
             ))}
 
@@ -367,8 +591,8 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Questions suggérées (seulement au début) */}
-          {messages.length <= 1 && !loading && (
+          {/* Questions suggérées (mode support uniquement, au début) */}
+          {mode === 'support' && messages.length <= 1 && !loading && (
             <div className="px-4 pb-2 flex flex-wrap gap-2">
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
@@ -391,7 +615,7 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Pose ta question"
+                placeholder={mode === 'advisor' ? 'Écris ta réponse…' : 'Pose ta question'}
                 disabled={loading}
                 className="flex-1 bg-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 transition-all placeholder:text-gray-400 disabled:opacity-50"
               />
@@ -424,30 +648,48 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
 
   return (
     <>
-      {/* Bouton flottant */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
-          open ? 'bg-gray-900 scale-90' : 'bg-neo hover:scale-110'
-        }`}
-        aria-label="Chat avec Léo"
-      >
-        {open
-          ? <X size={22} className="text-white" />
-          : <MessageCircle size={24} className="text-white" />
-        }
-        {/* Badge notification quand fermé */}
-        {!open && !started && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white" />
-        )}
-      </button>
+      {/* Bouton flottant (masqué pendant le modal conseil et sur la boutique,
+          où le bouton « Conseil de Léo » le remplace) */}
+      {!isAdvisorModal && pathname !== '/boutique' && (
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
+            open ? 'bg-gray-900 scale-90' : 'bg-neo hover:scale-110'
+          }`}
+          aria-label="Chat avec Léo"
+        >
+          {open
+            ? <X size={22} className="text-white" />
+            : <MessageCircle size={24} className="text-white" />
+          }
+          {/* Badge notification quand fermé */}
+          {!open && !started && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white" />
+          )}
+        </button>
+      )}
 
-      {/* Fenêtre de chat */}
-      <div className={`fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-24px)] transition-all duration-300 origin-bottom-right ${
-        open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
-      }`}>
-        {panel}
-      </div>
+      {/* Mode conseil produits : fenêtre centrée pour bien voir les produits */}
+      {isAdvisorModal ? (
+        open && (
+          <div className="fixed inset-0 z-[140] flex items-center justify-center p-3 sm:p-5">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-backdrop-in" onClick={() => setOpen(false)} />
+            <div
+              className="relative z-10 w-full max-w-lg h-[90vh] max-h-[720px] animate-app-open"
+              style={{ transformOrigin: 'bottom right' }}
+            >
+              {panel}
+            </div>
+          </div>
+        )
+      ) : (
+        /* Mode support : fenêtre flottante en bas à droite */
+        <div className={`fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-24px)] transition-all duration-300 origin-bottom-right ${
+          open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
+        }`}>
+          {panel}
+        </div>
+      )}
     </>
   );
 }
