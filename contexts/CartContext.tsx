@@ -1,6 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { GHLProduct } from '../data/ghlProducts';
+import { useClientStatus } from '../hooks/useClientStatus';
+import { CLIENT_DISCOUNT_RATE } from '../constants';
 
 export interface CartItem {
   product: GHLProduct;
@@ -18,6 +20,8 @@ interface CartContextValue {
   items: CartItem[];
   count: number;
   subtotal: number;
+  isClient: boolean;        // session Supabase active → prix client
+  clientDiscount: number;   // rabais client en dollars (0 si non connecté)
   hydrated: boolean;
   coupon: AppliedCoupon | null;
   applyCoupon: (code: string) => Promise<void>;
@@ -58,8 +62,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     else localStorage.removeItem('neo_coupon');
   }, [coupon, hydrated]);
 
+  const { isClient } = useClientStatus();
+
   const subtotal = items.reduce((sum, i) => sum + parseFloat(i.product.price) * i.quantity, 0);
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
+  // Rabais client automatique (prix client) appliqué sur le prix régulier.
+  const clientDiscount = isClient ? subtotal * CLIENT_DISCOUNT_RATE : 0;
 
   async function applyCoupon(code: string) {
     const wcKey = process.env.NEXT_PUBLIC_WC_KEY;
@@ -136,7 +144,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <CartContext.Provider value={{ items, count, subtotal, hydrated, coupon, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
+    <CartContext.Provider value={{ items, count, subtotal, isClient, clientDiscount, hydrated, coupon, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
       {children}
     </CartContext.Provider>
   );

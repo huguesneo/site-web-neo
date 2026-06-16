@@ -22,16 +22,56 @@ const IS_PROD = process.env.MONERIS_ENV === 'prod';
 const API_HOST = IS_PROD ? 'https://api.moneris.io' : 'https://api.sb.moneris.io';
 const API_VERSION = '2024-09-17';
 
+const WC_BASE = process.env.NEXT_PUBLIC_WC_URL;
+const WC_KEY = process.env.NEXT_PUBLIC_WC_KEY;
+const WC_SECRET = process.env.NEXT_PUBLIC_WC_SECRET;
+
 interface PaymentBody {
-  amountCents: number;        // montant en CENTS (ex: 12345 = 123.45$)
+  // ⚠️ Aucun montant n'est accepté du navigateur : il est relu depuis WooCommerce.
   temporaryToken: string;     // token de la Hosted Tokenization
-  orderId?: string | number;
+  orderId: string | number;   // commande WooCommerce (source autoritative du montant)
   customer?: {
     firstName?: string;
     lastName?: string;
     email?: string;
     phone?: string;
   };
+}
+
+function wc(path: string): string {
+  const u = new URL(`${WC_BASE}/wp-json/wc/v3${path}`);
+  u.searchParams.set('consumer_key', WC_KEY as string);
+  u.searchParams.set('consumer_secret', WC_SECRET as string);
+  return u.toString();
+}
+
+/**
+ * Lit la commande WooCommerce et renvoie le montant AUTORITATIF en cents
+ * (prix réels + taxes + rabais, calculés par WooCommerce). Refuse une
+ * commande déjà payée. Ne renvoie jamais un montant venant du client.
+ */
+async function getAuthoritativeAmountCents(orderId: string | number): Promise<number> {
+  const res = await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`));
+  if (!res.ok) throw new Error(`Commande introuvable (${res.status}).`);
+  const order = await res.json();
+
+  if (order?.date_paid || order?.status === 'processing' || order?.status === 'completed') {
+    throw new Error('Cette commande est déjà payée.');
+  }
+  const total = parseFloat(order?.total);
+  if (!Number.isFinite(total) || total <= 0) {
+    throw new Error('Total de commande invalide.');
+  }
+  return Math.round(total * 100);
+}
+
+/** Marque la commande WooCommerce comme payée (côté serveur). */
+async function markOrderPaid(orderId: string | number, transactionId: string): Promise<void> {
+  await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'processing', set_paid: true, transaction_id: transactionId }),
+  }).catch(() => { /* paiement déjà encaissé ; non bloquant */ });
 }
 
 async function getAccessToken(): Promise<string> {
@@ -66,12 +106,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 });
   }
 
-  const { amountCents, temporaryToken, orderId, customer } = body;
-  if (!Number.isInteger(amountCents) || amountCents <= 0) {
-    return NextResponse.json({ error: 'Montant invalide.' }, { status: 400 });
+  if (!WC_BASE || !WC_KEY || !WC_SECRET) {
+    return NextResponse.json({ error: 'Configuration WooCommerce manquante côté serveur.' }, { status: 500 });
   }
+
+  const { temporaryToken, orderId, customer } = body;
   if (!temporaryToken) {
     return NextResponse.json({ error: 'Token de carte manquant.' }, { status: 400 });
+  }
+  if (orderId === undefined || orderId === null || orderId === '') {
+    return NextResponse.json({ error: 'Commande manquante.' }, { status: 400 });
+  }
+
+  // Montant relu depuis WooCommerce — jamais celui du navigateur. Fail-closed :
+  // si on ne peut pas obtenir un total fiable, on n'encaisse rien.
+  let amountCents: number;
+  try {
+    amountCents = await getAuthoritativeAmountCents(orderId);
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'Montant de commande indisponible.' },
+      { status: 400 }
+    );
   }
 
   try {
@@ -124,6 +180,9 @@ export async function POST(req: NextRequest) {
         { status: 402 }
       );
     }
+
+    // Paiement approuvé → on marque la commande payée côté serveur.
+    await markOrderPaid(orderId, data.paymentId ?? '');
 
     return NextResponse.json({
       approved: true,

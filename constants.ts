@@ -150,6 +150,17 @@ export type ShopCategory = (typeof SHOP_CATEGORIES)[number];
 // Catégorie par défaut (fourre-tout) pour tout produit non couvert par une règle.
 export const SHOP_DEFAULT_CATEGORY: ShopCategory = "Santé Globale & Vitalité";
 
+// ─── BOUTIQUE : prix client ─────────────────────────────────────────────────────
+// Les clients connectés (session Supabase active) bénéficient automatiquement
+// d'un rabais sur le prix régulier. Un seul endroit à modifier pour changer le %.
+export const CLIENT_DISCOUNT_RATE = 0.13;            // 13 %
+export const CLIENT_DISCOUNT_LABEL = "−13 %";
+
+/** Prix client = prix régulier moins le rabais client. */
+export function prixClient(regular: number): number {
+  return regular * (1 - CLIENT_DISCOUNT_RATE);
+}
+
 // Règles de mappage : pour chaque produit, la PREMIÈRE règle dont un des
 // `wcTags` correspond à une catégorie WooCommerce du produit gagne.
 // (comparaison insensible à la casse / aux accents)

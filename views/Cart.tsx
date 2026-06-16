@@ -1,13 +1,13 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Leaf, Tag, X, Loader2, CheckCircle } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Leaf, Tag, X, Loader2, CheckCircle, Sparkles } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import Button from '../components/Button';
 import Section from '../components/Section';
 
 const Cart: React.FC = () => {
-  const { items, subtotal, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
+  const { items, subtotal, isClient, clientDiscount, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
   const [couponInput, setCouponInput] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [couponError, setCouponError] = useState('');
@@ -39,9 +39,10 @@ const Cart: React.FC = () => {
     );
   }
 
-  const discount = coupon?.discountValue ?? 0;
-  const taxes = (subtotal - discount) * 0.14975;
-  const total = subtotal - discount + taxes;
+  const couponDiscount = coupon?.discountValue ?? 0;
+  const totalDiscount = clientDiscount + couponDiscount;
+  const taxes = (subtotal - totalDiscount) * 0.14975;
+  const total = subtotal - totalDiscount + taxes;
 
   return (
     <>
@@ -143,10 +144,16 @@ const Cart: React.FC = () => {
                   <span>Sous-total</span>
                   <span className="font-medium text-gray-900">{subtotal.toFixed(2)} $</span>
                 </div>
+                {isClient && clientDiscount > 0 && (
+                  <div className="flex justify-between text-neo">
+                    <span className="font-medium">Rabais client (−13 %)</span>
+                    <span className="font-medium">-{clientDiscount.toFixed(2)} $</span>
+                  </div>
+                )}
                 {coupon && (
                   <div className="flex justify-between text-green-600">
                     <span>Rabais ({coupon.code})</span>
-                    <span className="font-medium">-{discount.toFixed(2)} $</span>
+                    <span className="font-medium">-{couponDiscount.toFixed(2)} $</span>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -162,6 +169,18 @@ const Cart: React.FC = () => {
                   <span>{total.toFixed(2)} $</span>
                 </div>
               </div>
+
+              {!isClient && subtotal > 0 && (
+                <Link
+                  href="/espace-client"
+                  className="mt-5 flex items-center gap-2.5 rounded-xl bg-neo-50/70 border border-neo/10 px-3 py-2.5 hover:bg-neo-50 transition-colors"
+                >
+                  <Sparkles size={16} className="text-neo shrink-0" />
+                  <span className="text-[13px] text-gray-700 leading-tight">
+                    <span className="font-bold text-neo">Économisez {(subtotal * 0.13).toFixed(2)} $</span> en vous connectant à votre espace client.
+                  </span>
+                </Link>
+              )}
 
               <Link
                 href="/paiement"

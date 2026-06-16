@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { supabase } from '../services/supabaseClient';
 import Section from '../components/Section';
 
 // ─── Moneris Hosted Tokenization (iframe sécurisée) ─────────────────────────────
@@ -71,7 +72,7 @@ const PROVINCES: { label: string; code: string }[] = [
 ];
 
 const Checkout: React.FC = () => {
-  const { items, subtotal, coupon, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
+  const { items, subtotal, isClient, clientDiscount, coupon, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
   const router = useRouter();
 
   const [couponInput, setCouponInput] = useState('');
@@ -108,9 +109,12 @@ const Checkout: React.FC = () => {
   } | null>(null);
   const finalizedRef = useRef(false);
 
-  const discount = coupon?.discountValue ?? 0;
-  const taxes = (subtotal - discount) * 0.14975;
-  const total = subtotal - discount + taxes;
+  // Estimation affichée avant soumission. Le montant RÉEL facturé est celui que
+  // WooCommerce recalcule côté serveur (prix réels + taxes + rabais).
+  const couponDiscount = coupon?.discountValue ?? 0;
+  const totalDiscount = clientDiscount + couponDiscount;
+  const taxes = (subtotal - totalDiscount) * 0.14975;
+  const total = subtotal - totalDiscount + taxes;
 
   useEffect(() => {
     if (hydrated && items.length === 0 && status === 'idle') {
@@ -194,21 +198,17 @@ const Checkout: React.FC = () => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   }
 
-  const wcUrl    = process.env.NEXT_PUBLIC_WC_URL;
-  const wcKey    = process.env.NEXT_PUBLIC_WC_KEY;
-  const wcSecret = process.env.NEXT_PUBLIC_WC_SECRET;
-
   // ─── Étape 3 : encaisser avec le token reçu de l'iframe ─────────────────────
   async function payWithToken(temporaryToken: string) {
     const ctx = pendingRef.current;
     if (!ctx || finalizedRef.current) return;
     finalizedRef.current = true;
     try {
+      // Aucun montant envoyé : le serveur relit le total réel depuis WooCommerce.
       const payRes = await fetch('/api/moneris/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amountCents: Math.round(ctx.total * 100),
           temporaryToken,
           orderId: ctx.orderId,
           customer: ctx.customer,
@@ -218,16 +218,7 @@ const Checkout: React.FC = () => {
       if (!payRes.ok || !pay.approved) {
         throw new Error(pay.error || 'Le paiement a été refusé.');
       }
-
-      // Marquer la commande WooCommerce comme payée
-      await fetch(
-        `${wcUrl}/wp-json/wc/v3/orders/${ctx.orderId}?consumer_key=${wcKey}&consumer_secret=${wcSecret}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'processing', set_paid: true, transaction_id: pay.paymentId ?? '' }),
-        }
-      ).catch(() => { /* paiement déjà encaissé; non bloquant */ });
+      // La commande est marquée payée côté serveur après encaissement.
 
       clearCart();
       setOrderInfo({ orderId: ctx.orderId, total: ctx.total });
@@ -251,66 +242,63 @@ const Checkout: React.FC = () => {
     setErrorMsg('');
     finalizedRef.current = false;
 
-    const orderData: Record<string, unknown> = {
-      status: 'pending',
-      currency: 'CAD',
-      payment_method: 'moneris',
-      payment_method_title: 'Moneris',
-      ...(coupon ? { coupon_lines: [{ code: coupon.code }] } : {}),
-      billing: {
-        first_name: form.firstName,
-        last_name:  form.lastName,
-        email:      form.email,
-        phone:      form.phone,
-        address_1:  form.address,
-        city:       form.city,
-        state:      form.province,   // code ISO 2 lettres (QC, ON…)
-        postcode:   form.postalCode,
-        country:    'CA',            // code ISO pays
-      },
-      shipping: {
-        first_name: form.firstName,
-        last_name:  form.lastName,
-        address_1:  form.address,
-        city:       form.city,
-        state:      form.province,
-        postcode:   form.postalCode,
-        country:    'CA',
-      },
-      line_items: items.map((i) => ({
-        product_id: parseInt(i.product.id),
-        quantity:   i.quantity,
-      })),
-      customer_note: form.notes,
+    const billing = {
+      first_name: form.firstName,
+      last_name:  form.lastName,
+      email:      form.email,
+      phone:      form.phone,
+      address_1:  form.address,
+      city:       form.city,
+      state:      form.province,   // code ISO 2 lettres (QC, ON…)
+      postcode:   form.postalCode,
+      country:    'CA',            // code ISO pays
+    };
+    const shipping = {
+      first_name: form.firstName,
+      last_name:  form.lastName,
+      address_1:  form.address,
+      city:       form.city,
+      state:      form.province,
+      postcode:   form.postalCode,
+      country:    'CA',
     };
 
     try {
-      // 1) Créer la commande WooCommerce (statut: en attente de paiement)
-      const res = await fetch(
-        `${wcUrl}/wp-json/wc/v3/orders?consumer_key=${wcKey}&consumer_secret=${wcSecret}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData),
-        }
-      );
+      // Jeton de session : preuve qu'il s'agit d'un client connecté (→ rabais -13 %).
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token ?? null;
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || `Erreur ${res.status}`);
-      }
+      // 1) Créer la commande CÔTÉ SERVEUR. Le serveur vérifie la session,
+      //    applique les rabais et laisse WooCommerce calculer le vrai total.
+      const res = await fetch('/api/checkout/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map((i) => ({ product_id: parseInt(i.product.id), quantity: i.quantity })),
+          billing,
+          shipping,
+          customer_note: form.notes,
+          couponCode: coupon?.code ?? null,
+          accessToken,
+        }),
+      });
 
       const order = await res.json();
-      const orderId: number = order.id;
+      if (!res.ok) {
+        throw new Error(order.error || `Erreur ${res.status}`);
+      }
+
+      const orderId: number = order.id ?? order.orderId;
+      const authoritativeTotal: number = Number.isFinite(order.total) ? order.total : total;
 
       // 2) Mémoriser le contexte puis demander à l'iframe de tokeniser la carte.
       //    La réponse arrive dans le gestionnaire de message (-> payWithToken).
       pendingRef.current = {
         orderId,
-        total,
+        total: authoritativeTotal,
         customer: { firstName: form.firstName, lastName: form.lastName, email: form.email, phone: form.phone },
       };
-      setOrderInfo({ orderId, total });
+      setOrderInfo({ orderId, total: authoritativeTotal });
 
       const frame = iframeRef.current?.contentWindow;
       if (!frame) throw new Error('Formulaire de carte non chargé. Recharge la page.');
@@ -471,10 +459,16 @@ const Checkout: React.FC = () => {
                     <span>Sous-total</span>
                     <span className="font-medium text-gray-900">{subtotal.toFixed(2)} $</span>
                   </div>
+                  {isClient && clientDiscount > 0 && (
+                    <div className="flex justify-between text-neo">
+                      <span className="font-medium">Rabais client (−13 %)</span>
+                      <span className="font-medium">-{clientDiscount.toFixed(2)} $</span>
+                    </div>
+                  )}
                   {coupon && (
                     <div className="flex justify-between text-green-600">
                       <span>Rabais ({coupon.code})</span>
-                      <span className="font-medium">-{discount.toFixed(2)} $</span>
+                      <span className="font-medium">-{couponDiscount.toFixed(2)} $</span>
                     </div>
                   )}
                   <div className="flex justify-between">

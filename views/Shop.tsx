@@ -5,7 +5,8 @@ import Button from '../components/Button';
 import { GHLProduct } from '../data/ghlProducts';
 import { useGHLProducts } from '../hooks/useGHLProducts';
 import { useCart } from '../contexts/CartContext';
-import { SHOP_CATEGORIES } from '../constants';
+import { useClientStatus } from '../hooks/useClientStatus';
+import { SHOP_CATEGORIES, prixClient } from '../constants';
 import { OPEN_LEO_ADVISOR_EVENT } from '../components/Chatbot';
 import {
   Search, ArrowRight, Truck, ShieldCheck, ShoppingCart,
@@ -15,9 +16,68 @@ import {
 
 const LEO_POPUP_SEEN_KEY = 'neo_leo_advisor_popup_seen';
 
+const fmt = (n: number) => n.toFixed(2);
+
+// Prix sur la carte produit — compact. Montre le prix client comme appât pour
+// les visiteurs, ou le prix client appliqué (régulier barré) pour les clients.
+const CardPriceTag: React.FC<{ regular: number; isClient: boolean }> = ({ regular, isClient }) => {
+  const client = prixClient(regular);
+  if (isClient) {
+    return (
+      <div className="flex flex-col leading-none gap-1">
+        <span className="text-[11px] font-medium text-gray-400 line-through">{fmt(regular)} $</span>
+        <span className="text-lg font-extrabold text-neo tracking-tight">{fmt(client)} $</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col leading-none gap-1.5">
+      <span className="text-lg font-extrabold text-gray-900 tracking-tight">{fmt(regular)} $</span>
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neo whitespace-nowrap">
+        <Sparkles size={10} className="shrink-0" />
+        Client&nbsp;{fmt(client)}&nbsp;$
+      </span>
+    </div>
+  );
+};
+
+// Bloc prix dans le modal produit — plus généreux, met en avant l'économie.
+const ModalPriceBlock: React.FC<{ regular: number; isClient: boolean }> = ({ regular, isClient }) => {
+  const client = prixClient(regular);
+  const saving = regular - client;
+  if (isClient) {
+    return (
+      <div className="mb-5">
+        <div className="flex items-baseline gap-3">
+          <p className="text-3xl font-extrabold text-neo tracking-tight">{fmt(client)} $</p>
+          <p className="text-lg font-medium text-gray-400 line-through">{fmt(regular)} $</p>
+        </div>
+        <span className="mt-2.5 inline-flex items-center gap-1.5 bg-neo-50 text-neo text-[11px] font-bold px-2.5 py-1 rounded-full">
+          <CheckCircle size={12} /> Prix client appliqué · −13 %
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="mb-5">
+      <p className="text-3xl font-extrabold text-gray-900 tracking-tight">{fmt(regular)} $</p>
+      <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-neo-50/70 border border-neo/10 px-3 py-2.5">
+        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm">
+          <Sparkles size={15} className="text-neo" />
+        </div>
+        <div className="leading-tight">
+          <p className="text-[13px] font-extrabold text-neo">Prix client&nbsp;: {fmt(client)} $</p>
+          <p className="text-[11px] text-gray-500">Économisez {fmt(saving)} $ — réservé aux clients connectés</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Shop: React.FC = () => {
   const { products, loading, error } = useGHLProducts();
   const { addItem } = useCart();
+  const { isClient } = useClientStatus();
   const [activeCategory, setActiveCategory] = useState("Tout");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<GHLProduct | null>(null);
@@ -246,10 +306,8 @@ const Shop: React.FC = () => {
                       <h3 className="text-sm font-bold text-gray-900 leading-snug group-hover:text-neo transition-colors line-clamp-2 min-h-[2.6rem] mb-4">
                         {product.name}
                       </h3>
-                      <div className="mt-auto flex items-center justify-between pt-3 border-t border-gray-50">
-                        <span className="text-base font-extrabold text-gray-900 tracking-tight">
-                          {product.price} $
-                        </span>
+                      <div className="mt-auto flex items-end justify-between gap-2 pt-3 border-t border-gray-50">
+                        <CardPriceTag regular={parseFloat(product.price)} isClient={isClient} />
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -317,9 +375,7 @@ const Shop: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-900 leading-tight mb-1">
                 {selectedProduct.name}
               </h2>
-              <p className="text-3xl font-extrabold text-neo mb-5 tracking-tight">
-                {selectedProduct.price} $
-              </p>
+              <ModalPriceBlock regular={parseFloat(selectedProduct.price)} isClient={isClient} />
 
               <div className="h-px bg-gray-100 mb-5" />
 
@@ -335,7 +391,7 @@ const Shop: React.FC = () => {
                   className="w-full bg-neo hover:bg-neo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-neo/25 active:scale-[0.98]"
                 >
                   <ShoppingCart size={17} />
-                  Ajouter au panier — {selectedProduct.price} $
+                  Ajouter au panier — {fmt(isClient ? prixClient(parseFloat(selectedProduct.price)) : parseFloat(selectedProduct.price))} $
                 </button>
                 <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
                   <ShieldCheck size={11} className="text-gray-400" />
