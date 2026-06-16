@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import Section from '../components/Section';
 import Chatbot from '../components/Chatbot';
+import { Stagger, StaggerItem } from '../components/Reveal';
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 
 const Contact: React.FC = () => {
@@ -30,8 +31,8 @@ const Contact: React.FC = () => {
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Coordonnées</h2>
 
-                  <div className="space-y-5">
-                    <div className="flex items-center gap-4 group">
+                  <Stagger className="space-y-5">
+                    <StaggerItem y={18} className="flex items-center gap-4 group">
                       <div className="w-11 h-11 shrink-0 rounded-xl bg-white shadow-sm flex items-center justify-center text-neo group-hover:scale-110 transition-transform duration-300">
                         <Phone size={20} />
                       </div>
@@ -42,9 +43,9 @@ const Contact: React.FC = () => {
                         </a>
                         <p className="text-xs text-gray-500 mt-0.5">Lundi au Vendredi, 8h - 20h</p>
                       </div>
-                    </div>
+                    </StaggerItem>
 
-                    <div className="flex items-center gap-4 group">
+                    <StaggerItem y={18} className="flex items-center gap-4 group">
                       <div className="w-11 h-11 shrink-0 rounded-xl bg-white shadow-sm flex items-center justify-center text-neo group-hover:scale-110 transition-transform duration-300">
                         <MapPin size={20} />
                       </div>
@@ -60,9 +61,9 @@ const Contact: React.FC = () => {
                           Brossard, QC J4Z 1A7
                         </a>
                       </div>
-                    </div>
+                    </StaggerItem>
 
-                    <div className="flex items-center gap-4 group">
+                    <StaggerItem y={18} className="flex items-center gap-4 group">
                       <div className="w-11 h-11 shrink-0 rounded-xl bg-white shadow-sm flex items-center justify-center text-neo group-hover:scale-110 transition-transform duration-300">
                         <Mail size={20} />
                       </div>
@@ -73,8 +74,8 @@ const Contact: React.FC = () => {
                         </a>
                         <p className="text-xs text-gray-500 mt-0.5">Réponse sous 24h ouvrables</p>
                       </div>
-                    </div>
-                  </div>
+                    </StaggerItem>
+                  </Stagger>
                 </div>
 
                 <div className="mt-7 pt-7 border-t border-neo/10">

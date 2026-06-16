@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect } from 'react';
 import Section from '../components/Section';
+import { Stagger, StaggerItem } from '../components/Reveal';
 import { BOOKING_IFRAME_SRC } from '../constants';
 import { Video, ShieldCheck, Clock } from 'lucide-react';
 
@@ -27,17 +28,17 @@ const Consultation: React.FC = () => {
       <Section className="py-12">
         <div className="grid lg:grid-cols-3 gap-12">
           {/* Info Side */}
-          <div className="lg:col-span-1 space-y-8">
-            <div>
+          <Stagger className="lg:col-span-1 space-y-8">
+            <StaggerItem y={20}>
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Clock className="text-neo" /> Déroulement
               </h3>
               <p className="text-gray-600">
                 La consultation se fait 100% en ligne via Google Meet. On analyse ton historique, tes objectifs et ce qui bloque ton métabolisme en ce moment.
               </p>
-            </div>
-            
-            <div>
+            </StaggerItem>
+
+            <StaggerItem y={20}>
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Video className="text-neo" /> À quoi s'attendre
               </h3>
@@ -47,17 +48,17 @@ const Consultation: React.FC = () => {
                 <li>Présentation de notre approche</li>
                 <li>On te dit honnêtement si on peut t'aider</li>
               </ul>
-            </div>
+            </StaggerItem>
 
-            <div>
+            <StaggerItem y={20}>
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <ShieldCheck className="text-neo" /> Assurances
               </h3>
               <p className="text-gray-600">
                 Nos services sont couverts par la plupart des assurances privées (Naturopathie / Naturothérapie).
               </p>
-            </div>
-          </div>
+            </StaggerItem>
+          </Stagger>
 
           {/* Calendar Side */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">

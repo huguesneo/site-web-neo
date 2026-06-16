@@ -4,9 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Section from '../components/Section';
 import Button from '../components/Button';
-import Counter from '../components/Counter';
 import TeamCard from '../components/TeamCard';
-import { IMAGES, STATS, TEAM_MEMBERS, TESTIMONIALS } from '../constants';
+import StatsScroll from '../components/StatsScroll';
+import { motion } from 'motion/react';
+import { Reveal, Stagger, StaggerItem } from '../components/Reveal';
+import { Parallax } from '../components/Parallax';
+import { IMAGES, TEAM_MEMBERS, TESTIMONIALS } from '../constants';
 import { ArrowRight, CheckCircle2, Star, PlayCircle, Bot, ScanBarcode, Utensils, Smartphone, Users, Lock, Activity, Zap, Moon, Flame, Leaf } from 'lucide-react';
 
 const Home: React.FC = () => {
@@ -84,29 +87,8 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* STATS BAR - FULL WIDTH INTEGRATED */}
-      <div className="bg-neo text-white py-14 relative z-20 shadow-lg">
-         {/* Subtle texture overlay */}
-         <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent pointer-events-none"></div>
-         
-         <div className="container mx-auto px-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-4 text-center divide-x-0 md:divide-x divide-white/20">
-               {STATS.map((stat, idx) => (
-                 <div key={idx} className="group px-2">
-                   <div className="transform transition-transform duration-300 hover:scale-105">
-                     <Counter 
-                       end={stat.value} 
-                       suffix={stat.suffix} 
-                       prefix={stat.prefix} 
-                       className="text-4xl lg:text-6xl font-bold mb-3 block drop-shadow-sm tracking-tight"
-                     />
-                     <p className="text-white/90 font-bold tracking-widest text-xs uppercase">{stat.label}</p>
-                   </div>
-                 </div>
-               ))}
-            </div>
-         </div>
-      </div>
+      {/* NEO EN CHIFFRES - scrollytelling épinglé */}
+      <StatsScroll />
 
       {/* QUIZ TEASER SECTION */}
       <Section background="light" id="quiz-teaser">
@@ -205,7 +187,9 @@ const Home: React.FC = () => {
              <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-yellow-400/10 rounded-full blur-xl"></div>
              
              <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl relative z-10 transform transition-transform duration-700 group-hover:scale-[1.02]">
-               <img src={IMAGES.method} alt="Science et suppléments" className="w-full h-full object-cover" loading="lazy" />
+               <Parallax className="absolute inset-0" amount={28}>
+                 <img src={IMAGES.method} alt="Science et suppléments" className="w-full h-full object-cover scale-110" loading="lazy" />
+               </Parallax>
                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
              </div>
           </div>
@@ -216,28 +200,38 @@ const Home: React.FC = () => {
               Arrête de te battre contre ton corps. Commence à <span className="relative inline-block text-neo">
                 le comprendre
                 <svg className="absolute w-full h-3 -bottom-1 left-0 text-neo/30" viewBox="0 0 100 10" preserveAspectRatio="none">
-                  <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
+                  <motion.path
+                    d="M0 5 Q 50 10 100 5"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0 }}
+                    whileInView={{ pathLength: 1 }}
+                    viewport={{ once: true, margin: '-80px' }}
+                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                  />
                 </svg>
               </span>
             </h2>
             <p className="text-gray-600 text-lg mb-8 leading-relaxed">
               Stress, digestion difficile, déséquilibres hormonaux... Ton corps te parle. La plupart des programmes se concentre uniquement à compter les calories, ignorant la complexité de ta biochimie unique.
             </p>
-            <div className="space-y-4 mb-10">
+            <Stagger className="space-y-4 mb-10" gap={0.1}>
               {[
                 "Analyse complète de ton profil métabolique",
                 "Gestion du cortisol et hormonale",
                 "Optimisation digestive et de la flore",
                 "Accompagnement humain et ajustements constants"
               ].map((item, idx) => (
-                <div key={idx} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 group">
+                <StaggerItem key={idx} y={16} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 group">
                   <div className="w-10 h-10 rounded-full bg-neo/10 flex items-center justify-center shrink-0 group-hover:bg-neo group-hover:text-white transition-colors">
                     <CheckCircle2 size={20} />
                   </div>
                   <span className="text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{item}</span>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </Stagger>
             <Button to="/approche" variant="outline" className="group">
               Découvre notre méthode 
               <ArrowRight className="ml-2 w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
@@ -247,29 +241,31 @@ const Home: React.FC = () => {
       </Section>
 
       {/* PROGRAMME STEPS */}
-      <Section background="gray" className="text-center">
-        <div className="max-w-3xl mx-auto mb-16">
+      <Section background="gray" className="text-center" noAnimation>
+        <Reveal className="max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Le Programme d'Optimisation</h2>
           <p className="text-gray-600 text-lg">Un parcours clair en 4 étapes pour reprendre le contrôle.</p>
-        </div>
-        
-        <div className="grid md:grid-cols-4 gap-6">
+        </Reveal>
+
+        <Stagger className="grid md:grid-cols-4 gap-6">
           {[
             { step: "01", title: "Évaluation", desc: "Tests métaboliques, historique complet et objectifs. Ton naturopathe te connaît avant même de commencer." },
             { step: "02", title: "Ton plan", desc: "Structure alimentaire, suppléments et mode de vie. Tout ciblé sur tes trois piliers : cortisol, digestion, hormones." },
             { step: "03", title: "Accompagnement", desc: "Rencontres aux deux semaines, chat quotidien avec ton naturopathe et accès à Léo, notre IA." },
             { step: "04", title: "Résultats", desc: "Tests à la semaine 1, 6 et 13. À la semaine 15 : un métabolisme optimisé et les outils pour garder tes résultats." }
           ].map((item, idx) => (
-            <div key={idx} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 font-bold text-6xl text-neo select-none group-hover:scale-110 transition-transform">{item.step}</div>
-              <div className="w-12 h-12 rounded-xl bg-neo/10 text-neo flex items-center justify-center font-bold text-xl mb-6 group-hover:bg-neo group-hover:text-white transition-colors">
-                {item.step}
+            <StaggerItem key={idx} className="h-full">
+              <div className="h-full bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 font-bold text-6xl text-neo select-none group-hover:scale-110 transition-transform">{item.step}</div>
+                <div className="w-12 h-12 rounded-xl bg-neo/10 text-neo flex items-center justify-center font-bold text-xl mb-6 group-hover:bg-neo group-hover:text-white transition-colors">
+                  {item.step}
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">{item.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900">{item.title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </Section>
 
       {/* LÉO AI SECTION */}
@@ -291,25 +287,25 @@ const Home: React.FC = () => {
               Parce que ton naturopathe ne peut pas être dans ta poche au restaurant ou à l'épicerie. LÉO est une IA développée par NEO pour te guider en temps réel, basée sur ton profil unique.
             </p>
 
-            <div className="space-y-6">
+            <Stagger className="space-y-6">
               {[
-                { 
-                  icon: Utensils, 
-                  title: "Générateur de Recettes", 
-                  desc: "Crée des recettes délicieuses adaptées à TES objectifs et restrictions." 
+                {
+                  icon: Utensils,
+                  title: "Générateur de Recettes",
+                  desc: "Crée des recettes délicieuses adaptées à TES objectifs et restrictions."
                 },
-                { 
-                  icon: Smartphone, 
-                  title: "Assistant Restaurant", 
-                  desc: "Dis-lui où tu manges ! LÉO analyse le menu pour toi et te suggère le meilleur choix pour ton métabolisme." 
+                {
+                  icon: Smartphone,
+                  title: "Assistant Restaurant",
+                  desc: "Dis-lui où tu manges ! LÉO analyse le menu pour toi et te suggère le meilleur choix pour ton métabolisme."
                 },
-                { 
-                  icon: ScanBarcode, 
-                  title: "Scan Alimentaire", 
-                  desc: "Scanne un produit et reçois une analyse instantanée : LÉO t'explique s'il est réellement bénéfique pour toi." 
+                {
+                  icon: ScanBarcode,
+                  title: "Scan Alimentaire",
+                  desc: "Scanne un produit et reçois une analyse instantanée : LÉO t'explique s'il est réellement bénéfique pour toi."
                 }
               ].map((feature, idx) => (
-                <div key={idx} className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                <StaggerItem key={idx} className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
                   <div className="shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-neo to-neo-700 flex items-center justify-center text-white shadow-lg shadow-neo/20">
                     <feature.icon size={24} />
                   </div>
@@ -317,9 +313,9 @@ const Home: React.FC = () => {
                     <h4 className="font-bold text-white mb-1">{feature.title}</h4>
                     <p className="text-sm text-gray-400">{feature.desc}</p>
                   </div>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </Stagger>
           </div>
 
           <div className="relative flex justify-center">
@@ -369,8 +365,8 @@ const Home: React.FC = () => {
       </Section>
 
       {/* TEAM PREVIEW */}
-      <Section>
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
+      <Section noAnimation>
+        <Reveal className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
           <div>
             <span className="text-neo font-bold uppercase tracking-wider text-sm mb-2 block">Nos Experts</span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">L'Équipe NEO</h2>
@@ -379,38 +375,42 @@ const Home: React.FC = () => {
           <Link href="/equipe" className="group flex items-center text-neo font-bold hover:text-neo-700 transition-colors bg-neo/5 px-6 py-3 rounded-full">
             Voir toute l'équipe <ArrowRight className="ml-2 w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
           </Link>
-        </div>
+        </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {TEAM_MEMBERS.slice(0, 4).map((member, idx) => (
-            <div key={member.id} className={`opacity-0 animate-fade-in-up [animation-delay:${idx * 100}ms] fill-mode-forwards`}>
-              <TeamCard 
-                member={member} 
-                onClick={() => router.push('/equipe')} 
+        <Stagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {TEAM_MEMBERS.slice(0, 4).map((member) => (
+            <StaggerItem key={member.id} className="h-full">
+              <TeamCard
+                member={member}
+                onClick={() => router.push('/equipe')}
               />
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </Section>
 
       {/* TESTIMONIALS */}
-      <Section background="light">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Histoires de succès</h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          {TESTIMONIALS.map((t, idx) => (
-            <div key={t.id} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 relative group border border-transparent hover:border-neo/20">
-              <div className="absolute -top-4 -left-2 text-6xl text-neo/20 font-serif leading-none">"</div>
-              <div className="flex text-yellow-400 mb-6">
-                {[...Array(t.rating)].map((_, i) => <Star key={i} size={18} fill="currentColor" className="mr-1" />)}
+      <Section background="light" noAnimation>
+        <Reveal>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Histoires de succès</h2>
+        </Reveal>
+        <Stagger className="grid md:grid-cols-3 gap-8">
+          {TESTIMONIALS.map((t) => (
+            <StaggerItem key={t.id} className="h-full">
+              <div className="h-full bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 relative group border border-transparent hover:border-neo/20">
+                <div className="absolute -top-4 -left-2 text-6xl text-neo/20 font-serif leading-none">"</div>
+                <div className="flex text-yellow-400 mb-6">
+                  {[...Array(t.rating)].map((_, i) => <Star key={i} size={18} fill="currentColor" className="mr-1" />)}
+                </div>
+                <p className="text-gray-700 italic mb-8 leading-relaxed relative z-10">{t.text}</p>
+                <div className="flex items-center justify-between border-t border-gray-100 pt-6">
+                  <span className="font-bold text-gray-900 group-hover:text-neo transition-colors">{t.name}</span>
+                  <span className="text-xs font-bold text-neo bg-neo/10 px-3 py-1 rounded-full">{t.result}</span>
+                </div>
               </div>
-              <p className="text-gray-700 italic mb-8 leading-relaxed relative z-10">{t.text}</p>
-              <div className="flex items-center justify-between border-t border-gray-100 pt-6">
-                <span className="font-bold text-gray-900 group-hover:text-neo transition-colors">{t.name}</span>
-                <span className="text-xs font-bold text-neo bg-neo/10 px-3 py-1 rounded-full">{t.result}</span>
-              </div>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </Section>
       
       {/* FACEBOOK COMMUNITY SECTION - PREMIUM & CLEAN */}

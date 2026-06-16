@@ -46,14 +46,14 @@ const Shop: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
               <span className="text-neo font-extrabold uppercase tracking-[0.3em] text-xs mb-4 block">
-                Boutique Officielle NEO
+                Testés en Clinique
               </span>
               <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-[1.05] mb-3">
-                Qualité<br />
-                <span className="text-neo">Clinique</span>
+                Boutique<br />
+                <span className="text-neo">NEO</span>
               </h1>
               <p className="text-gray-500 max-w-md text-sm leading-relaxed mt-2">
-                Chaque supplément est rigoureusement sélectionné pour sa pureté,<br className="hidden md:block" /> sa biodisponibilité et son efficacité clinique démontrée.
+                Des suppléments recommandés par nos naturopathes, disponibles en ligne partout au Québec. Sélectionnés pour leur pureté, leur biodisponibilité et leurs résultats mesurables.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 mb-1">

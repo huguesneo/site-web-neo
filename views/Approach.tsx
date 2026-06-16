@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Section from '../components/Section';
 import Button from '../components/Button';
+import { Stagger, StaggerItem } from '../components/Reveal';
 import { IMAGES } from '../constants';
 import {
   Brain,
@@ -237,33 +238,33 @@ const Approach: React.FC = () => {
         
         
         
-        <div className="grid md:grid-cols-3 gap-8 mt-12">
+        <Stagger className="grid md:grid-cols-3 gap-8 mt-12">
           {[
-            { 
-              icon: Utensils, 
-              title: "1. Optimisation Digestive", 
-              desc: "Un système digestif optimal, c'est la base de tout. On évalue ton acidité et ton temps de transit pour que ton corps assimile correctement ce que tu lui donnes et réduise l'inflammation de l'intérieur." 
+            {
+              icon: Utensils,
+              title: "1. Optimisation Digestive",
+              desc: "Un système digestif optimal, c'est la base de tout. On évalue ton acidité et ton temps de transit pour que ton corps assimile correctement ce que tu lui donnes et réduise l'inflammation de l'intérieur."
             },
-            { 
-              icon: Brain, 
-              title: "2. Gestion du Cortisol", 
-              desc: "Le stress chronique maintient ton corps en mode survie et bloque le déstockage des graisses. On travaille les trois sources de stress : physique, chimique et psychologique, pour libérer ton métabolisme." 
+            {
+              icon: Brain,
+              title: "2. Gestion du Cortisol",
+              desc: "Le stress chronique maintient ton corps en mode survie et bloque le déstockage des graisses. On travaille les trois sources de stress : physique, chimique et psychologique, pour libérer ton métabolisme."
             },
-            { 
-              icon: Activity, 
-              title: "3. Équilibre Hormonal", 
-              desc: "Tes hormones régulent ta faim, ton énergie et ta composition corporelle. Un déséquilibre hormonal crée une résistance que l'effort seul ne peut pas surmonter. On les optimise naturellement pour que ton corps réponde enfin." 
+            {
+              icon: Activity,
+              title: "3. Équilibre Hormonal",
+              desc: "Tes hormones régulent ta faim, ton énergie et ta composition corporelle. Un déséquilibre hormonal crée une résistance que l'effort seul ne peut pas surmonter. On les optimise naturellement pour que ton corps réponde enfin."
             }
           ].map((item, idx) => (
-            <div key={idx} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 text-center border-t-4 border-transparent hover:border-neo">
+            <StaggerItem key={idx} className="h-full bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 text-center border-t-4 border-transparent hover:border-neo">
               <div className="w-16 h-16 bg-neo/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-neo">
                 <item.icon size={32} />
               </div>
               <h3 className="text-xl font-bold mb-3 text-gray-900">{item.title}</h3>
               <p className="text-gray-500">{item.desc}</p>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </Section>
 
       {/* 4. LE PROGRAMME DE 15 SEMAINES */}
@@ -286,7 +287,7 @@ const Approach: React.FC = () => {
                   <FlaskConical size={20} className="text-neo" /> L'Évaluation initiale
                 </h4>
                 <p className="text-gray-600">
-                  Rencontre de 60 à 75 minutes pour établir ton profil métabolique complet. On ne devine rien, on teste : test de stress sur 180 points, test d'acidité et test de transit pour partir sur des bases concrètes.
+                  Rencontre de 60 à 75 minutes pour comprendre exactement pourquoi ton corps résiste. On ne suppose rien, on teste : test de stress sur 180 points, test d'acidité et test de transit. À la fin, tu sais ce qui se passe vraiment, et on sait exactement par où commencer.
                 </p>
               </div>
             </div>
@@ -301,7 +302,7 @@ const Approach: React.FC = () => {
                   <Zap size={20} className="text-neo" /> Le Reset Métabolique
                 </h4>
                 <p className="text-gray-600">
-                  Une structure alimentaire de 14 jours conçue pour abaisser l'inflammation et le stress oxydatif. C'est ici que l'énergie revient et que le corps commence à désétocker.
+                  14 jours pour calmer l'inflammation, stabiliser la glycémie et relancer un corps qui stockait par réflexe. La plupart de nos clientes sentent la différence dès la fin de la première semaine, moins de ballonnements, plus d'énergie au réveil, moins d'envies de sucre.
                 </p>
               </div>
             </div>
@@ -316,7 +317,7 @@ const Approach: React.FC = () => {
                   <CalendarDays size={20} className="text-neo" /> Suivi & Ajustements
                 </h4>
                 <p className="text-gray-600">
-                  Rencontres aux deux semaines avec ton naturopathe. Tests métaboliques aux semaines 6 et 13 pour mesurer ta progression. Chat quotidien et accès à ta formation en ligne sur le métabolisme.
+                  Un accompagnement naturopathique continu : rencontres aux deux semaines, bilans métaboliques aux semaines 6 et 13, chat quotidien et accès à une formation en ligne sur la perte de poids et l'optimisation métabolique. Le suivi qui fait la différence entre un résultat temporaire et un résultat qui reste.
                 </p>
               </div>
             </div>
@@ -346,25 +347,25 @@ const Approach: React.FC = () => {
                 Ton naturopathe établit la stratégie, LÉO s'occupe de l'exécution. Notre IA exclusive, utilisée plus de 1 000 fois par jour, analyse ton profil et te guide en temps réel pour faire les bons choix, sans charge mentale.
               </p>
 
-              <div className="space-y-5">
+              <Stagger className="space-y-5">
                 {[
-                  { 
-                    icon: Utensils, 
-                    title: "Générateur de Recettes & Épicerie", 
-                    desc: "Des recettes adaptées à tes intolérances, ta liste d'épicerie générée automatiquement et les rabais en circulaire trouvés pour toi." 
+                  {
+                    icon: Utensils,
+                    title: "Générateur de Recettes & Épicerie",
+                    desc: "Des recettes adaptées à tes intolérances, ta liste d'épicerie générée automatiquement et les rabais en circulaire trouvés pour toi."
                   },
-                  { 
-                    icon: Smartphone, 
-                    title: "Assistant Restaurant", 
-                    desc: "Tu sors ce soir ? LÉO analyse le menu du restaurant et te recommande le meilleur choix pour ton métabolisme." 
+                  {
+                    icon: Smartphone,
+                    title: "Assistant Restaurant",
+                    desc: "Tu sors ce soir ? LÉO analyse le menu du restaurant et te recommande le meilleur choix pour ton métabolisme."
                   },
-                  { 
-                    icon: ScanBarcode, 
-                    title: "Scan Alimentaire Personnalisé", 
-                    desc: "Scanne un produit : LÉO ne te donne pas une note générique. Il te dit si c'est bon pour TON métabolisme, selon ton plan spécifique." 
+                  {
+                    icon: ScanBarcode,
+                    title: "Scan Alimentaire Personnalisé",
+                    desc: "Scanne un produit : LÉO ne te donne pas une note générique. Il te dit si c'est bon pour TON métabolisme, selon ton plan spécifique."
                   }
                 ].map((feature, idx) => (
-                  <div key={idx} className="flex gap-5 p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm">
+                  <StaggerItem key={idx} className="flex gap-5 p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm">
                     <div className="shrink-0 w-14 h-14 rounded-full bg-gradient-to-br from-neo to-neo/60 flex items-center justify-center text-white shadow-lg shadow-neo/20">
                       <feature.icon size={26} />
                     </div>
@@ -372,9 +373,9 @@ const Approach: React.FC = () => {
                       <h4 className="font-bold text-white text-lg mb-1">{feature.title}</h4>
                       <p className="text-sm text-gray-400 leading-relaxed">{feature.desc}</p>
                     </div>
-                  </div>
+                  </StaggerItem>
                 ))}
-              </div>
+              </Stagger>
             </div>
 
             {/* Visualisation : Mockup Téléphone avec Chat ancré dans la méthode */}
@@ -440,39 +441,43 @@ const Approach: React.FC = () => {
       <Section>
         <div className="max-w-4xl mx-auto">
            {/* Badges de réassurance */}
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-              <div className="flex items-center gap-5 bg-blue-50/50 p-5 rounded-2xl border border-blue-100 transition-transform hover:-translate-y-1">
-                <ShieldCheck className="text-blue-600 shrink-0" size={36} />
-                <div>
-                  <h4 className="font-bold text-gray-900 text-lg">Services couverts</h4>
-                  <p className="text-gray-600">Remise de 15 reçus d'assurance en naturopathie.</p>
+           <Stagger className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+              <StaggerItem className="h-full">
+                <div className="h-full flex items-center gap-5 bg-blue-50/50 p-5 rounded-2xl border border-blue-100 transition-transform hover:-translate-y-1">
+                  <ShieldCheck className="text-blue-600 shrink-0" size={36} />
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-lg">Services couverts</h4>
+                    <p className="text-gray-600">Remise de 15 reçus d'assurance en naturopathie.</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-5 bg-green-50/50 p-5 rounded-2xl border border-green-100 transition-transform hover:-translate-y-1">
-                <MapPin className="text-green-600 shrink-0" size={36} />
-                <div>
-                  <h4 className="font-bold text-gray-900 text-lg">Clinique ou Visio</h4>
-                  <p className="text-gray-600">Rencontre-nous à notre clinique de Brossard ou en visioconférence, selon ce qui te convient.</p>
+              </StaggerItem>
+              <StaggerItem className="h-full">
+                <div className="h-full flex items-center gap-5 bg-green-50/50 p-5 rounded-2xl border border-green-100 transition-transform hover:-translate-y-1">
+                  <MapPin className="text-green-600 shrink-0" size={36} />
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-lg">Clinique ou Visio</h4>
+                    <p className="text-gray-600">Rencontre-nous à notre clinique de Brossard ou en visioconférence, selon ce qui te convient.</p>
+                  </div>
                 </div>
-              </div>
-           </div>
+              </StaggerItem>
+           </Stagger>
 
            <div className="text-center mb-10">
              <h2 className="text-3xl font-bold text-gray-900">Questions Fréquentes</h2>
            </div>
            
-           <div className="space-y-4">
+           <Stagger className="space-y-4" gap={0.1}>
              {[
                { q: "Est-ce seulement pour perdre du poids ?", a: "Non. Notre priorité c'est ton métabolisme. Fatigue, inconforts digestifs, stress chronique, déséquilibres hormonaux : le programme est conçu pour tout ça. La perte de gras est souvent la conséquence naturelle d'un corps qui fonctionne enfin bien." },
                { q: "Est-ce une énième diète restrictive ?", a: "C'est l'exact opposé. La privation ralentit le métabolisme et met le corps sous pression. On travaille avec des structures alimentaires qui nourrissent ton corps au lieu de le priver." },
                { q: "Est-ce que LÉO remplace mon naturopathe ?", a: "Absolument pas. Ton naturopathe conçoit ta stratégie de A à Z et effectue tous les suivis. LÉO est ton outil quotidien pour appliquer ton plan sans te casser la tête." }
              ].map((faq, idx) => (
-               <div key={idx} className="border border-gray-200 bg-white rounded-2xl p-6 hover:border-neo/50 transition-colors shadow-sm">
+               <StaggerItem key={idx} y={16} className="border border-gray-200 bg-white rounded-2xl p-6 hover:border-neo/50 transition-colors shadow-sm">
                  <h4 className="font-bold text-lg mb-3 text-gray-900">{faq.q}</h4>
                  <p className="text-gray-600 leading-relaxed">{faq.a}</p>
-               </div>
+               </StaggerItem>
              ))}
-           </div>
+           </Stagger>
            
            <div className="mt-14 text-center">
              <Button to="/consultation" className="text-lg px-8 py-4 shadow-xl hover:shadow-neo/30 hover:-translate-y-0.5 transition-all">

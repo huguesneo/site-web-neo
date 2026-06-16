@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Section from '../components/Section';
 import TeamCard from '../components/TeamCard';
 import Button from '../components/Button';
+import { Stagger, StaggerItem } from '../components/Reveal';
 import { TEAM_MEMBERS } from '../constants';
 import { TeamMember } from '../types';
 import { X, Check } from 'lucide-react';
@@ -21,16 +22,17 @@ const Team: React.FC = () => {
         </div>
       </div>
 
-      <Section>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+      <Section noAnimation>
+        <Stagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" gap={0.08}>
           {TEAM_MEMBERS.map(member => (
-            <TeamCard 
-              key={member.id} 
-              member={member} 
-              onClick={setSelectedMember} 
-            />
+            <StaggerItem key={member.id} className="h-full">
+              <TeamCard
+                member={member}
+                onClick={setSelectedMember}
+              />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </Section>
 
       {/* TEAM MODAL */}
