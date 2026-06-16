@@ -2,11 +2,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, X, Send, Loader2, ArrowRight, Mail, ChevronLeft, ShoppingCart, CheckCircle } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, ArrowRight, Mail, ChevronLeft, ShoppingCart, CheckCircle, Lock, LogIn } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useCart } from '../contexts/CartContext';
 import { useGHLProducts } from '../hooks/useGHLProducts';
 import { GHLProduct } from '../data/ghlProducts';
+import { supabase } from '../services/supabaseClient';
 
 // Webhook Make.com qui reçoit les demandes de contact (partagé avec la page Contact)
 const CONTACT_WEBHOOK = 'https://hook.us1.make.com/9zzcxgr29wn6l6feb2p6qxjgj6teklxi';
@@ -165,6 +166,57 @@ function stripMachineMarkers(text: string): string {
     .trim();
 }
 
+// ─── Flux « client NEO » (plan de suppléments depuis Supabase) ─────────────────
+
+// Réponses exactes du premier choix de l'accueil conseil (doivent matcher ADVISOR_GREETING)
+const CLIENT_YES = 'Oui, je suis déjà client';
+
+// Question d'objectif réutilisée quand on retombe sur le conseil « invité »
+const GUEST_FALLBACK_CHOICES = '[CHOIX:Plus d\'énergie|Perte de poids|Meilleure digestion|Autre (j\'écris)]';
+
+interface SuppBlock { timing: string; text: string }
+
+// Convertit le HTML brouillon des naturopathes en texte propre, ligne par ligne.
+function htmlToText(html: string): string {
+  return (html || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+// Extrait les blocs de suppléments non vides depuis data.suppsBlocks
+function extractSuppBlocks(suppsBlocks: unknown): SuppBlock[] {
+  if (!Array.isArray(suppsBlocks)) return [];
+  return suppsBlocks
+    .map((b) => ({ timing: String(b?.title || '').trim(), text: htmlToText(String(b?.text || '')) }))
+    .filter((b) => b.text.length > 0);
+}
+
+// Repli : matching d'un nom de supplément au catalogue par chevauchement de mots
+// (utilisé seulement si Gemini ne renvoie pas d'id valide).
+function fuzzyMatchProduct(name: string, catalog: GHLProduct[]): GHLProduct | null {
+  const norm = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ');
+  const words = norm(name).split(/\s+/).filter((w) => w.length > 2);
+  if (!words.length) return null;
+  let best: GHLProduct | null = null;
+  let bestScore = 0;
+  for (const p of catalog) {
+    const pn = norm(p.name);
+    const score = words.reduce((acc, w) => acc + (pn.includes(w) ? 1 : 0), 0);
+    if (score > bestScore) { bestScore = score; best = p; }
+  }
+  return bestScore >= 1 ? best : null;
+}
+
 export default function Chatbot({ embedded = false }: ChatbotProps) {
   const pathname = usePathname();
   const { addItem } = useCart();
@@ -180,6 +232,10 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
   const [humanForm, setHumanForm] = useState<'closed' | 'open' | 'sending' | 'sent'>('closed');
   const [humanFields, setHumanFields] = useState(EMPTY_HUMAN_FORM);
   const [humanConsent, setHumanConsent] = useState(false);
+  // Connexion « client NEO » directement dans le chat (pour récupérer son plan de suppléments)
+  const [clientLogin, setClientLogin] = useState<'idle' | 'form' | 'authing' | 'fetching'>('idle');
+  const [loginFields, setLoginFields] = useState({ email: '', password: '' });
+  const [loginError, setLoginError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -189,6 +245,11 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
     for (const p of products) map.set(p.id, p);
     return map;
   }, [products]);
+
+  // Référence toujours à jour du catalogue : permet d'attendre son chargement
+  // dans les fonctions asynchrones (sinon « course » → catalogue vide au matching).
+  const productsRef = useRef<GHLProduct[]>(products);
+  productsRef.current = products;
 
   // Ouvre Léo en mode conseil produits depuis la boutique
   useEffect(() => {
@@ -242,9 +303,238 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
     return `${ADVISOR_SYSTEM_PROMPT}\n\nCATALOGUE (utilise uniquement ces identifiants exacts) :\n${catalog}`;
   }
 
+  const pushAssistant = (content: string) =>
+    setMessages((prev) => [...prev, { role: 'assistant', content }]);
+
+  // Appel Gemini renvoyant du JSON strict (pour l'extraction/matching des suppléments)
+  async function geminiJson(prompt: string): Promise<unknown> {
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') throw new Error('Clé API manquante');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const res = await model.generateContent(prompt);
+    const raw = res.response.text().trim().replace(/^```json\s*/i, '').replace(/```$/i, '');
+    return JSON.parse(raw);
+  }
+
+  // Associe les suppléments du plan (texte brouillon) aux produits du catalogue.
+  async function matchSuppsToCatalog(blocks: SuppBlock[], cat: GHLProduct[]): Promise<
+    { name: string; brand: string; quantity: string; timing: string; productId: string | null }[]
+  > {
+    const catalog = cat.map((p) => `${p.id} :: ${p.name}`).join('\n');
+    const planText = blocks.map((b) => `[${b.timing || 'Moment non précisé'}]\n${b.text}`).join('\n\n');
+    const prompt = `Tu associes les suppléments d'un plan naturopathique au catalogue d'une boutique en ligne.
+
+PLAN (texte brut rédigé par le naturopathe : peut contenir des fautes, des abréviations et la marque entre parenthèses, ex. (DFH) = Designs for Health, (EVO) = Evo Lab) :
+${planText}
+
+CATALOGUE (format "id :: nom") :
+${catalog || '(catalogue indisponible)'}
+
+Pour CHAQUE supplément distinct réellement prescrit dans le plan (IGNORE les notes qui ne sont pas des suppléments, ex. « finir le pot », « on continue X une fois fini »), renvoie un objet avec :
+- "name" : le nom du supplément tel qu'écrit dans le plan (sans la marque ni la quantité)
+- "brand" : la marque indiquée dans le plan si présente (ex. "Evo Lab" pour (EVO)/EVO, "Designs for Health" pour (DFH)/DFH), sinon ""
+- "quantity" : la posologie indiquée (ex. « 1 capsule »), sinon ""
+- "timing" : le moment (titre du bloc, ex. « Au déjeuner »), sinon ""
+- "productId" : l'id EXACT du produit du catalogue qui correspond le mieux. RÈGLE IMPORTANTE : si une marque est indiquée, choisis EN PRIORITÉ le produit de CETTE marque (ex. "oméga 3 (EVO)" → le produit "Evo Lab - Omega 3", PAS un oméga d'une autre marque). Tolère fautes et abréviations. Si AUCUN produit ne correspond raisonnablement, mets null. N'invente jamais un id absent du catalogue.
+
+Réponds UNIQUEMENT par un tableau JSON.`;
+    const arr = await geminiJson(prompt);
+    return Array.isArray(arr) ? (arr as { name: string; brand: string; quantity: string; timing: string; productId: string | null }[]) : [];
+  }
+
+  // Va chercher le plan du client connecté dans Supabase, puis présente ses suppléments.
+  async function fetchClientPlan(email: string) {
+    setClientLogin('fetching');
+    setLoading(true);
+    try {
+      // 1) Dossier client par courriel
+      const { data: client } = await supabase
+        .from('clients')
+        .select('id, first_name, leo_enabled')
+        .ilike('email', email)
+        .maybeSingle();
+
+      if (!client) {
+        pushAssistant(
+          `Hmm, je ne trouve pas de dossier avec ce courriel 🤔 Vérifie que c'est bien celui de ton compte NEO. En attendant, je peux te conseiller comme un nouveau client — c'est quoi ton objectif principal ? ${GUEST_FALLBACK_CHOICES}`
+        );
+        return;
+      }
+      if (client.leo_enabled === false) {
+        pushAssistant(
+          `L'accès à ton plan personnalisé via Léo n'est pas encore activé sur ton compte. Mais je peux quand même te recommander d'excellents suppléments ! Quel est ton objectif principal ? ${GUEST_FALLBACK_CHOICES}`
+        );
+        return;
+      }
+
+      const prenom = (client.first_name || '').trim();
+
+      // 2) Plans du client, du plus récent au plus ancien
+      const { data: plans } = await supabase
+        .from('plans')
+        .select('id, title, latest_version, updated_at, created_at')
+        .eq('client_id', client.id)
+        .order('updated_at', { ascending: false });
+
+      // 3) Premier plan (le plus récent) qui contient réellement des suppléments
+      let chosenTitle = '';
+      let blocks: SuppBlock[] = [];
+      for (const plan of plans || []) {
+        const { data: ver } = await supabase
+          .from('plan_versions')
+          .select('data')
+          .eq('plan_id', plan.id)
+          .eq('version', plan.latest_version)
+          .maybeSingle();
+        const extracted = extractSuppBlocks((ver?.data as { suppsBlocks?: unknown })?.suppsBlocks);
+        if (extracted.length) {
+          chosenTitle = plan.title || '';
+          blocks = extracted;
+          break;
+        }
+      }
+
+      if (!blocks.length) {
+        pushAssistant(
+          `Je ne trouve pas de suppléments dans ton plan actuel${prenom ? `, ${prenom}` : ''}. Veux-tu que je te conseille selon ton objectif ? ${GUEST_FALLBACK_CHOICES}`
+        );
+        return;
+      }
+
+      // 4) S'assurer que le catalogue est chargé AVANT de matcher (sinon course →
+      //    catalogue vide → tout marqué « absent » alors que les produits existent).
+      let catalog = productsRef.current;
+      for (let i = 0; i < 25 && catalog.length === 0; i++) {
+        await new Promise((r) => setTimeout(r, 200));
+        catalog = productsRef.current;
+      }
+      if (catalog.length === 0) {
+        pushAssistant(
+          `Je finis de charger notre catalogue… réessaie dans quelques secondes, ${prenom || 'on y est presque'} 🙏`
+        );
+        return;
+      }
+      const catById = new Map(catalog.map((p) => [p.id, p]));
+
+      // 5) Extraction + matching au catalogue via Gemini
+      const items = await matchSuppsToCatalog(blocks, catalog);
+
+      // 6) Construction du message : récap (nom/quantité/moment), cartes produits, indispos
+      const matched: { item: typeof items[number]; product: GHLProduct }[] = [];
+      const unmatched: typeof items = [];
+      for (const it of items) {
+        // Gemini renvoie parfois l'id en nombre → forcer la chaîne (les clés sont des chaînes)
+        const pid = it.productId == null ? null : String(it.productId);
+        // Repli par nom (marque incluse pour privilégier le bon produit, ex. oméga 3 Evo Lab)
+        const product =
+          (pid && catById.get(pid)) ||
+          fuzzyMatchProduct(`${it.name} ${it.brand || ''}`.trim(), catalog) ||
+          undefined;
+        if (product) matched.push({ item: it, product });
+        else unmatched.push(it);
+      }
+
+      if (!matched.length && !unmatched.length) {
+        pushAssistant(
+          `J'ai trouvé ton plan « ${chosenTitle} » mais je n'arrive pas à en extraire les suppléments. Veux-tu que je te conseille selon ton objectif ? ${GUEST_FALLBACK_CHOICES}`
+        );
+        return;
+      }
+
+      const recap = [...matched.map((m) => m.item), ...unmatched]
+        .map((it) => {
+          const details = [it.quantity, it.timing].filter(Boolean).join(' · ');
+          return `• ${it.name}${details ? ` — ${details}` : ''}`;
+        })
+        .join('\n');
+
+      // Produits uniques pour les cartes / « tout ajouter »
+      const seen = new Set<string>();
+      const productMarkers = matched
+        .filter((m) => !seen.has(m.product.id) && seen.add(m.product.id))
+        .map((m) => `[PRODUIT:${m.product.id}]`)
+        .join('\n');
+
+      let msg = `Parfait${prenom ? ` ${prenom}` : ''} ! 🙌 Voici les suppléments de ton plan « ${chosenTitle} » :\n\n${recap}`;
+      if (productMarkers) {
+        msg += `\n\nVoici ceux qu'on a en boutique 👇\n${productMarkers}`;
+      }
+      if (unmatched.length) {
+        const names = unmatched.map((u) => u.name).join(', ');
+        msg += `\n\n⚠️ On n'a pas ${unmatched.length > 1 ? 'ces suppléments' : 'ce supplément'} au Québec : ${names}. Tu peux par contre ${unmatched.length > 1 ? 'les' : 'le'} trouver au Marché Tau ou chez Avril.`;
+      }
+      if (productMarkers) {
+        msg += `\n\nVeux-tu que je mette le tout dans ton panier ?`;
+      }
+      pushAssistant(msg);
+    } catch (err) {
+      console.error('[Chatbot] fetchClientPlan error:', err);
+      pushAssistant(
+        `Désolé, je n'arrive pas à récupérer ton plan pour le moment. Je peux quand même te conseiller selon ton objectif ! ${GUEST_FALLBACK_CHOICES}`
+      );
+    } finally {
+      setClientLogin('idle');
+      setLoading(false);
+    }
+  }
+
+  // Lancé quand la personne dit « Oui, je suis déjà client »
+  async function startClientFlow(userText: string) {
+    setInput('');
+    setMessages((prev) => [...prev, { role: 'user', content: userText }]);
+    const { data } = await supabase.auth.getSession();
+    const email = data.session?.user?.email;
+    if (email) {
+      pushAssistant('Super ! 🙌 Laisse-moi récupérer ton plan de suppléments…');
+      await fetchClientPlan(email);
+    } else {
+      pushAssistant(
+        'Parfait ! Connecte-toi avec le courriel et le mot de passe de ton application NEO Performance — je récupère ensuite ton plan personnalisé. 👇'
+      );
+      setLoginError(null);
+      setClientLogin('form');
+    }
+  }
+
+  // Soumission du mini-formulaire de connexion dans le chat
+  async function submitClientLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (clientLogin === 'authing') return;
+    setLoginError(null);
+    if (!loginFields.email.trim() || !loginFields.password) {
+      setLoginError('Entre ton courriel et ton mot de passe.');
+      return;
+    }
+    setClientLogin('authing');
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginFields.email.trim(),
+      password: loginFields.password,
+    });
+    if (error) {
+      setLoginError('Courriel ou mot de passe incorrect.');
+      setClientLogin('form');
+      return;
+    }
+    const email = loginFields.email.trim();
+    setClientLogin('idle');
+    setLoginFields({ email: '', password: '' });
+    pushAssistant('Connexion réussie ✅ Je récupère ton plan de suppléments…');
+    await fetchClientPlan(email);
+  }
+
   async function sendMessage(text: string) {
     const userText = text.trim();
     if (!userText || loading) return;
+
+    // En mode conseil, « Oui je suis client » déclenche le flux Supabase, pas Gemini
+    if (mode === 'advisor' && userText === CLIENT_YES) {
+      await startClientFlow(userText);
+      return;
+    }
 
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userText }]);
@@ -576,6 +866,47 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
                 )}
               </div>
             ))}
+
+            {/* Mini-formulaire de connexion « client NEO » (dans le chat, sans quitter la page) */}
+            {(clientLogin === 'form' || clientLogin === 'authing') && (
+              <form onSubmit={submitClientLogin} className="ml-9 flex flex-col gap-2 bg-white border border-gray-100 rounded-2xl p-3 shadow-sm">
+                <div className="relative">
+                  <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={loginFields.email}
+                    onChange={(e) => setLoginFields((f) => ({ ...f, email: e.target.value }))}
+                    placeholder="Ton courriel NEO"
+                    className="w-full bg-gray-100 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 placeholder:text-gray-400"
+                  />
+                </div>
+                <div className="relative">
+                  <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={loginFields.password}
+                    onChange={(e) => setLoginFields((f) => ({ ...f, password: e.target.value }))}
+                    placeholder="Mot de passe"
+                    className="w-full bg-gray-100 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neo/20 placeholder:text-gray-400"
+                  />
+                </div>
+                {loginError && <p className="text-xs text-red-500">{loginError}</p>}
+                <button
+                  type="submit"
+                  disabled={clientLogin === 'authing'}
+                  className="w-full justify-center bg-neo text-white font-bold text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-neo/90 transition-colors disabled:opacity-50"
+                >
+                  {clientLogin === 'authing'
+                    ? <><Loader2 size={15} className="animate-spin" /> Connexion…</>
+                    : <><LogIn size={15} /> Se connecter</>}
+                </button>
+                <p className="text-[10px] text-gray-400 text-center">
+                  Mêmes identifiants que l'application NEO Performance.
+                </p>
+              </form>
+            )}
 
             {loading && (
               <div className="flex justify-start">
