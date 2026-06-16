@@ -133,6 +133,8 @@ export async function POST(req: NextRequest) {
   try {
     const token = await getAccessToken();
 
+    const fullName = `${customer?.firstName ?? ''} ${customer?.lastName ?? ''}`.trim();
+
     const payload: Record<string, unknown> = {
       idempotencyKey: randomUUID(),
       amount: { amount: amountCents, currency: 'CAD' },
@@ -144,12 +146,13 @@ export async function POST(req: NextRequest) {
       automaticCapture: true,
       dynamicDescriptor: 'NEO Performance',
       ...(orderId ? { orderId: String(orderId) } : {}),
-      ...(customer?.firstName || customer?.lastName
+      // Champ « ID client » de Moneris : on y met le prénom + nom du client pour
+      // qu'il apparaisse dans le portail (comme les paiements faits en clinique).
+      ...(fullName ? { customerId: fullName } : {}),
+      ...(fullName
         ? {
             paymentMethodDetails: {
-              cardholderInformation: {
-                cardholderName: `${customer?.firstName ?? ''} ${customer?.lastName ?? ''}`.trim(),
-              },
+              cardholderInformation: { cardholderName: fullName },
             },
           }
         : {}),
