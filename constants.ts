@@ -134,8 +134,9 @@ export const TESTIMONIALS: Testimonial[] = [
 
 export const BOOKING_IFRAME_SRC = "https://api.leadconnectorhq.com/widget/booking/DIN6EPtG7eNU3Gf6ZRoC";
 
-// ─── BOUTIQUE : 5 catégories canoniques ─────────────────────────────────────────
-// Les produits WooCommerce ont des tags variés ; on les range dans ces 5 buckets.
+// ─── BOUTIQUE : catégories canoniques ───────────────────────────────────────────
+// Les produits WooCommerce ont des tags variés ; on les range dans ces buckets.
+// "Accompagnement NEO" est la dernière — visible uniquement pour les clients connectés.
 // L'ordre ci-dessous = l'ordre d'affichage des pastilles dans la boutique.
 export const SHOP_CATEGORIES = [
   "Santé Globale & Vitalité",
@@ -143,6 +144,7 @@ export const SHOP_CATEGORIES = [
   "Énergie, Stress & Sommeil",
   "Performance, Muscles & Métabolisme",
   "Santé Ciblée (Hormones & Immunité)",
+  "Accompagnement NEO",
 ] as const;
 
 export type ShopCategory = (typeof SHOP_CATEGORIES)[number];
@@ -150,11 +152,35 @@ export type ShopCategory = (typeof SHOP_CATEGORIES)[number];
 // Catégorie par défaut (fourre-tout) pour tout produit non couvert par une règle.
 export const SHOP_DEFAULT_CATEGORY: ShopCategory = "Santé Globale & Vitalité";
 
+// Catégorie réservée aux clients connectés — JAMAIS de rabais -13 % sur ces produits.
+// (« Bloc de suivis NEO », etc. — produits WooCommerce rangés via la catégorie WC « NEOflow ».)
+export const NEO_ACCOMPANIMENT_CATEGORY: ShopCategory = "Accompagnement NEO";
+
+// Catégorie WooCommerce qui alimente « Accompagnement NEO ». Aussi exclue du coupon
+// client -13 % côté serveur (voir app/api/checkout/create-order/route.ts) → id #18 « NEOflow ».
+export const NEO_ACCOMPANIMENT_WC_CATEGORY = "NEOflow";
+export const NEO_ACCOMPANIMENT_WC_CATEGORY_ID = 18;
+
 // ─── BOUTIQUE : prix client ─────────────────────────────────────────────────────
 // Les clients connectés (session Supabase active) bénéficient automatiquement
 // d'un rabais sur le prix régulier. Un seul endroit à modifier pour changer le %.
 export const CLIENT_DISCOUNT_RATE = 0.13;            // 13 %
 export const CLIENT_DISCOUNT_LABEL = "−13 %";
+
+// Le rabais client ne s'applique QU'AUX produits de la marque « Designs for Health ».
+// Aucune taxonomie de marque dans WooCommerce → on identifie par le préfixe du nom.
+// Utilisé côté client (affichage + panier) ET côté serveur (coupon limité à ces produits).
+export const CLIENT_DISCOUNT_BRAND_PREFIX = "designs for health";
+
+/** Vrai si le produit (par son nom) est admissible au rabais client -13 %. */
+export function isClientDiscountEligible(name: string): boolean {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+    .startsWith(CLIENT_DISCOUNT_BRAND_PREFIX);
+}
 
 /** Prix client = prix régulier moins le rabais client. */
 export function prixClient(regular: number): number {
@@ -169,4 +195,5 @@ export const SHOP_CATEGORY_RULES: Array<{ category: ShopCategory; wcTags: string
   { category: "Énergie, Stress & Sommeil", wcTags: ["Cortisol"] },
   { category: "Santé Ciblée (Hormones & Immunité)", wcTags: ["endocrinien / métabolisme", "thyroide"] },
   { category: "Performance, Muscles & Métabolisme", wcTags: ["glycémie", "Protéine"] },
+  { category: "Accompagnement NEO", wcTags: ["NEOflow"] },
 ];

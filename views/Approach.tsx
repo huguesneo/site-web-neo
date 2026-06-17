@@ -233,7 +233,7 @@ const Approach: React.FC = () => {
       <Section background="light">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <h2 className="text-3xl font-bold mb-4 text-gray-900">L'Écosystème Métabolique NEO</h2>
-          <p className="text-gray-600 text-lg">Notre méthode repose sur trois piliers interdépendants. Si un est déréglé, tout le reste compensse.</p>
+          <p className="text-gray-600 text-lg">Notre méthode repose sur trois piliers interdépendants : si l'un est déréglé, le reste du système compense.</p>
         </div>
         
         

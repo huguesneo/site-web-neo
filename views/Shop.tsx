@@ -6,7 +6,7 @@ import { GHLProduct } from '../data/ghlProducts';
 import { useGHLProducts } from '../hooks/useGHLProducts';
 import { useCart } from '../contexts/CartContext';
 import { useClientStatus } from '../hooks/useClientStatus';
-import { SHOP_CATEGORIES, prixClient } from '../constants';
+import { SHOP_CATEGORIES, NEO_ACCOMPANIMENT_CATEGORY, prixClient, isClientDiscountEligible } from '../constants';
 import { OPEN_LEO_ADVISOR_EVENT } from '../components/Chatbot';
 import {
   Search, ArrowRight, Truck, ShieldCheck, ShoppingCart,
@@ -20,8 +20,16 @@ const fmt = (n: number) => n.toFixed(2);
 
 // Prix sur la carte produit — compact. Montre le prix client comme appât pour
 // les visiteurs, ou le prix client appliqué (régulier barré) pour les clients.
-const CardPriceTag: React.FC<{ regular: number; isClient: boolean }> = ({ regular, isClient }) => {
+// noDiscount = true pour les produits d'accompagnement (prix fixe, aucun rabais).
+const CardPriceTag: React.FC<{ regular: number; isClient: boolean; noDiscount?: boolean }> = ({ regular, isClient, noDiscount }) => {
   const client = prixClient(regular);
+  if (noDiscount) {
+    return (
+      <div className="flex flex-col leading-none gap-1">
+        <span className="text-lg font-extrabold text-gray-900 tracking-tight">{fmt(regular)} $</span>
+      </div>
+    );
+  }
   if (isClient) {
     return (
       <div className="flex flex-col leading-none gap-1">
@@ -42,9 +50,17 @@ const CardPriceTag: React.FC<{ regular: number; isClient: boolean }> = ({ regula
 };
 
 // Bloc prix dans le modal produit — plus généreux, met en avant l'économie.
-const ModalPriceBlock: React.FC<{ regular: number; isClient: boolean }> = ({ regular, isClient }) => {
+// noDiscount = true pour les produits d'accompagnement (prix fixe, aucun rabais).
+const ModalPriceBlock: React.FC<{ regular: number; isClient: boolean; noDiscount?: boolean }> = ({ regular, isClient, noDiscount }) => {
   const client = prixClient(regular);
   const saving = regular - client;
+  if (noDiscount) {
+    return (
+      <div className="mb-5">
+        <p className="text-3xl font-extrabold text-gray-900 tracking-tight">{fmt(regular)} $</p>
+      </div>
+    );
+  }
   if (isClient) {
     return (
       <div className="mb-5">
@@ -66,8 +82,8 @@ const ModalPriceBlock: React.FC<{ regular: number; isClient: boolean }> = ({ reg
           <Sparkles size={15} className="text-neo" />
         </div>
         <div className="leading-tight">
-          <p className="text-[13px] font-extrabold text-neo">Prix client&nbsp;: {fmt(client)} $</p>
-          <p className="text-[11px] text-gray-500">Économisez {fmt(saving)} $ — réservé aux clients connectés</p>
+          <p className="text-[13px] font-extrabold text-neo">En tant que client NEO, vous auriez économisé {fmt(saving)} $</p>
+          <p className="text-[11px] text-gray-500">Déjà client ? Connectez-vous à votre espace client.</p>
         </div>
       </div>
     </div>
@@ -136,14 +152,19 @@ const Shop: React.FC = () => {
     window.dispatchEvent(new Event(OPEN_LEO_ADVISOR_EVENT));
   };
 
-  // 5 catégories canoniques, dans l'ordre défini, en ne gardant que celles qui ont des produits
+  // Catégories canoniques, dans l'ordre défini, en ne gardant que celles qui ont des produits.
+  // "Accompagnement NEO" n'est visible que pour les clients connectés.
   const present = new Set(products.map((p) => p.category));
-  const categories = ["Tout", ...SHOP_CATEGORIES.filter((c) => present.has(c))];
+  const categories = ["Tout", ...SHOP_CATEGORIES.filter((c) => {
+    if (c === NEO_ACCOMPANIMENT_CATEGORY && !isClient) return false;
+    return present.has(c);
+  })];
 
   const normalize = (str: string) =>
     str.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
   const filteredProducts = products.filter(product => {
+    if (product.category === NEO_ACCOMPANIMENT_CATEGORY && !isClient) return false;
     const matchCategory = activeCategory === "Tout" || product.category === activeCategory;
     const matchSearch = normalize(product.name).includes(normalize(searchQuery));
     return matchCategory && matchSearch;
@@ -307,7 +328,7 @@ const Shop: React.FC = () => {
                         {product.name}
                       </h3>
                       <div className="mt-auto flex items-end justify-between gap-2 pt-3 border-t border-gray-50">
-                        <CardPriceTag regular={parseFloat(product.price)} isClient={isClient} />
+                        <CardPriceTag regular={parseFloat(product.price)} isClient={isClient} noDiscount={!isClientDiscountEligible(product.name)} />
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -375,7 +396,7 @@ const Shop: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-900 leading-tight mb-1">
                 {selectedProduct.name}
               </h2>
-              <ModalPriceBlock regular={parseFloat(selectedProduct.price)} isClient={isClient} />
+              <ModalPriceBlock regular={parseFloat(selectedProduct.price)} isClient={isClient} noDiscount={!isClientDiscountEligible(selectedProduct.name)} />
 
               <div className="h-px bg-gray-100 mb-5" />
 
@@ -391,7 +412,7 @@ const Shop: React.FC = () => {
                   className="w-full bg-neo hover:bg-neo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-neo/25 active:scale-[0.98]"
                 >
                   <ShoppingCart size={17} />
-                  Ajouter au panier — {fmt(isClient ? prixClient(parseFloat(selectedProduct.price)) : parseFloat(selectedProduct.price))} $
+                  Ajouter au panier — {fmt(isClient && isClientDiscountEligible(selectedProduct.name) ? prixClient(parseFloat(selectedProduct.price)) : parseFloat(selectedProduct.price))} $
                 </button>
                 <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
                   <ShieldCheck size={11} className="text-gray-400" />

@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import Section from '../components/Section';
 
 const Cart: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
+  const { items, subtotal, isClient, clientDiscount, potentialClientDiscount, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
   const [couponInput, setCouponInput] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [couponError, setCouponError] = useState('');
@@ -170,14 +170,15 @@ const Cart: React.FC = () => {
                 </div>
               </div>
 
-              {!isClient && subtotal > 0 && (
+              {!isClient && potentialClientDiscount > 0 && (
                 <Link
                   href="/espace-client"
                   className="mt-5 flex items-center gap-2.5 rounded-xl bg-neo-50/70 border border-neo/10 px-3 py-2.5 hover:bg-neo-50 transition-colors"
                 >
                   <Sparkles size={16} className="text-neo shrink-0" />
                   <span className="text-[13px] text-gray-700 leading-tight">
-                    <span className="font-bold text-neo">Économisez {(subtotal * 0.13).toFixed(2)} $</span> en vous connectant à votre espace client.
+                    <span className="font-bold text-neo">En tant que client NEO Performance, vous auriez économisé {potentialClientDiscount.toFixed(2)} $.</span>
+                    <span className="block text-[11px] text-gray-500 mt-0.5">Déjà client ? Connectez-vous à votre espace client.</span>
                   </span>
                 </Link>
               )}
