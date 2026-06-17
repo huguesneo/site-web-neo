@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
+import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import { supabase } from '../services/supabaseClient';
 import Section from '../components/Section';
 
@@ -72,7 +72,7 @@ const PROVINCES: { label: string; code: string }[] = [
 ];
 
 const Checkout: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, coupon, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
+  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, coupon, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
   const router = useRouter();
 
   const [couponInput, setCouponInput] = useState('');
@@ -112,7 +112,7 @@ const Checkout: React.FC = () => {
   // Estimation affichée avant soumission. Le montant RÉEL facturé est celui que
   // WooCommerce recalcule côté serveur (prix réels + taxes + rabais).
   const couponDiscount = coupon?.discountValue ?? 0;
-  const totalDiscount = clientDiscount + couponDiscount;
+  const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
   const taxes = (subtotal - totalDiscount) * 0.14975;
   const total = subtotal - totalDiscount + taxes;
 
@@ -274,7 +274,11 @@ const Checkout: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ product_id: parseInt(i.product.id), quantity: i.quantity })),
+          items: items.map((i) => ({
+            product_id: parseInt(i.product.id),
+            ...(i.variation ? { variation_id: i.variation.id } : {}),
+            quantity: i.quantity,
+          })),
           billing,
           shipping,
           customer_note: form.notes,
@@ -396,20 +400,24 @@ const Checkout: React.FC = () => {
                 <h2 className="text-lg font-bold text-gray-900 mb-5">Votre commande</h2>
 
                 <div className="flex flex-col gap-3 mb-5">
-                  {items.map(({ product, quantity }) => (
-                    <div key={product.id} className="flex items-center gap-3">
+                  {items.map((item) => {
+                    const { product, quantity, variation } = item;
+                    const img = itemImage(item);
+                    return (
+                    <div key={cartLineId(product.id, variation?.id)} className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-lg bg-gray-50 overflow-hidden shrink-0">
-                        {product.image && <img src={product.image} alt={product.name} className="w-full h-full object-contain p-1" />}
+                        {img && <img src={img} alt={product.name} className="w-full h-full object-contain p-1" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 line-clamp-1">{product.name}</p>
-                        <p className="text-xs text-gray-400">x{quantity}</p>
+                        <p className="text-xs text-gray-400">{variation ? `${variation.label} · ` : ''}x{quantity}</p>
                       </div>
                       <span className="text-sm font-bold text-gray-900 shrink-0">
-                        {(parseFloat(product.price) * quantity).toFixed(2)} $
+                        {(itemUnitPrice(item) * quantity).toFixed(2)} $
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Code promo */}
@@ -463,6 +471,12 @@ const Checkout: React.FC = () => {
                     <div className="flex justify-between text-neo">
                       <span className="font-medium">Rabais client (−13 %)</span>
                       <span className="font-medium">-{clientDiscount.toFixed(2)} $</span>
+                    </div>
+                  )}
+                  {isClient && giftCardDiscount > 0 && (
+                    <div className="flex justify-between text-neo">
+                      <span className="font-medium">Rabais carte-cadeau client</span>
+                      <span className="font-medium">-{giftCardDiscount.toFixed(2)} $</span>
                     </div>
                   )}
                   {coupon && (

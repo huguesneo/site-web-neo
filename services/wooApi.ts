@@ -11,6 +11,7 @@ const WC_SECRET = process.env.NEXT_PUBLIC_WC_SECRET as string | undefined;
 export interface WCProduct {
   id: number;
   name: string;
+  type: string;            // 'simple' | 'variable' | 'pw-gift-card' …
   price: string;           // déjà en dollars ex: "33.06"
   regular_price: string;
   sale_price: string;
@@ -19,8 +20,17 @@ export interface WCProduct {
   short_description: string;
   categories: Array<{ id: number; name: string; slug: string }>;
   images: Array<{ src: string; alt: string }>;
+  attributes: Array<{ id: number; name: string; variation: boolean; options: string[] }>;
   status: string;
   catalog_visibility: string;
+}
+
+export interface WCVariation {
+  id: number;
+  price: string;
+  attributes: Array<{ name: string; option: string }>;
+  image?: { src: string; alt: string };
+  stock_status: string;    // 'instock' | 'outofstock' | 'onbackorder'
 }
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -42,5 +52,12 @@ function wcUrl(path: string, params: Record<string, string> = {}): string {
 export async function fetchWCProducts(): Promise<WCProduct[]> {
   const res = await fetch(wcUrl('/products', { per_page: '100', status: 'publish' }));
   if (!res.ok) throw new Error(`WooCommerce produits: ${res.status}`);
+  return res.json();
+}
+
+/** Récupère les variations d'un produit variable (saveurs, montants, etc.). */
+export async function fetchWCVariations(productId: number): Promise<WCVariation[]> {
+  const res = await fetch(wcUrl(`/products/${productId}/variations`, { per_page: '100' }));
+  if (!res.ok) throw new Error(`WooCommerce variations ${productId}: ${res.status}`);
   return res.json();
 }

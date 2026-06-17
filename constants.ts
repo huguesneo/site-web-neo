@@ -187,6 +187,32 @@ export function prixClient(regular: number): number {
   return regular * (1 - CLIENT_DISCOUNT_RATE);
 }
 
+// ─── BOUTIQUE : rabais client carte-cadeau ───────────────────────────────────────
+// La carte-cadeau (#5531) donne, POUR LES CLIENTS UNIQUEMENT, un rabais FIXE selon le
+// montant choisi. Clé = VALEUR FACIALE de la carte (360/480/600 $), lue depuis le libellé
+// de la variante — robuste même si le prix payé change. Appliqué côté serveur via une ligne
+// de remise négative (voir create-order/route.ts).
+export const GIFT_CARD_PRODUCT_ID = 5531;
+export const GIFT_CARD_CLIENT_DISCOUNTS: Record<string, number> = {
+  '360': 60,   // carte 360 $ → client paie 300 $
+  '480': 80,   // carte 480 $ → client paie 400 $
+  '600': 100,  // carte 600 $ → client paie 500 $
+};
+
+/** Rabais client maximal possible sur la carte-cadeau (pour l'appât « jusqu'à X $ »). */
+export const GIFT_CARD_MAX_CLIENT_DISCOUNT = Math.max(...Object.values(GIFT_CARD_CLIENT_DISCOUNTS));
+
+/** Valeur faciale (en $) lue depuis un libellé de variante carte-cadeau, ex. "360 $" → 360. */
+export function giftCardFaceValue(label?: string): number {
+  return parseInt((label ?? '').replace(/[^0-9]/g, ''), 10) || 0;
+}
+
+/** Rabais client fixe (en $) pour une carte-cadeau selon sa valeur faciale ; 0 si non applicable. */
+export function giftCardClientDiscount(productId: string, faceValue: number): number {
+  if (productId !== String(GIFT_CARD_PRODUCT_ID)) return 0;
+  return GIFT_CARD_CLIENT_DISCOUNTS[String(Math.round(faceValue))] ?? 0;
+}
+
 // Règles de mappage : pour chaque produit, la PREMIÈRE règle dont un des
 // `wcTags` correspond à une catégorie WooCommerce du produit gagne.
 // (comparaison insensible à la casse / aux accents)

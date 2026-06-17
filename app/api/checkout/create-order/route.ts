@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { isClientDiscountEligible } from '../../../../constants';
+import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount, giftCardFaceValue } from '../../../../constants';
 
 /**
  * Route serveur — crée la commande WooCommerce de façon SÛRE.
@@ -32,7 +32,7 @@ const CLIENT_COUPON_PERCENT = '13';
 // commande pour rester à jour). Si le panier ne contient AUCUN produit admissible, on
 // n'ajoute pas le coupon (sinon WooCommerce le rejette → commande échouée).
 
-interface LineItemIn { product_id: number | string; quantity: number; }
+interface LineItemIn { product_id: number | string; variation_id?: number | string; quantity: number; }
 interface Body {
   items: LineItemIn[];
   billing: Record<string, string>;
@@ -124,6 +124,36 @@ async function ensureClientCoupon(dfhIds: Set<number>): Promise<boolean> {
   }
 }
 
+/**
+ * Rabais client carte-cadeau (clients seulement) : somme des rabais FIXES selon le montant
+ * de chaque variante achetée. Lit les VRAIS prix des variantes côté serveur (jamais ceux du
+ * client) pour décider du rabais. Retourne 0 si rien d'applicable.
+ */
+async function giftCardClientDiscountTotal(
+  giftLines: Array<{ variation_id?: number; quantity: number }>,
+): Promise<number> {
+  if (giftLines.length === 0) return 0;
+  try {
+    const res = await fetch(wc(`/products/${GIFT_CARD_PRODUCT_ID}/variations?per_page=100`));
+    if (!res.ok) return 0;
+    const variations: Array<{ id: number; attributes?: Array<{ option: string }> }> = await res.json();
+    // Valeur faciale lue depuis le libellé de la variante (ex. "360 $" → 360), comme côté client.
+    const faceById = new Map(
+      variations.map((v) => [v.id, giftCardFaceValue((v.attributes ?? []).map((a) => a.option).join(' '))]),
+    );
+    let total = 0;
+    for (const gl of giftLines) {
+      if (!gl.variation_id) continue;
+      const face = faceById.get(gl.variation_id);
+      if (face === undefined) continue;
+      total += giftCardClientDiscount(String(GIFT_CARD_PRODUCT_ID), face) * gl.quantity;
+    }
+    return total;
+  } catch {
+    return 0;
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!WC_BASE || !WC_KEY || !WC_SECRET) {
     return NextResponse.json({ error: 'Configuration WooCommerce manquante côté serveur.' }, { status: 500 });
@@ -136,9 +166,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 });
   }
 
-  // Articles : on ne garde QUE product_id + quantité (jamais de prix du client).
+  // Articles : on ne garde QUE product_id (+ variation_id) + quantité (jamais de prix du client).
   const line_items = (body.items ?? [])
-    .map((i) => ({ product_id: Number(i.product_id), quantity: Math.max(1, Number(i.quantity) || 1) }))
+    .map((i) => {
+      const variationId = Number(i.variation_id);
+      return {
+        product_id: Number(i.product_id),
+        quantity: Math.max(1, Number(i.quantity) || 1),
+        ...(Number.isInteger(variationId) && variationId > 0 ? { variation_id: variationId } : {}),
+      };
+    })
     .filter((i) => Number.isInteger(i.product_id) && i.product_id > 0);
 
   if (line_items.length === 0) {
@@ -168,6 +205,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Rabais client carte-cadeau (montant fixe par variante) → ligne de remise négative.
+  // Clients seulement, et seulement si une carte-cadeau est au panier.
+  const fee_lines: Array<{ name: string; total: string; tax_status: string }> = [];
+  if (isClient) {
+    const giftLines = line_items
+      .filter((i) => i.product_id === GIFT_CARD_PRODUCT_ID)
+      .map((i) => ({ variation_id: (i as { variation_id?: number }).variation_id, quantity: i.quantity }));
+    const gcDiscount = await giftCardClientDiscountTotal(giftLines);
+    if (gcDiscount > 0) {
+      fee_lines.push({ name: 'Rabais client carte-cadeau', total: (-gcDiscount).toFixed(2), tax_status: 'none' });
+    }
+  }
+
   const orderData: Record<string, unknown> = {
     status: 'pending',
     currency: 'CAD',
@@ -178,6 +228,7 @@ export async function POST(req: NextRequest) {
     line_items,
     customer_note: body.customer_note ?? '',
     ...(coupon_lines.length ? { coupon_lines } : {}),
+    ...(fee_lines.length ? { fee_lines } : {}),
   };
 
   try {

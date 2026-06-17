@@ -1,12 +1,31 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { GHLProduct } from '../data/ghlProducts';
+import { GHLProduct, ProductVariation } from '../data/ghlProducts';
 import { useClientStatus } from '../hooks/useClientStatus';
-import { CLIENT_DISCOUNT_RATE, isClientDiscountEligible } from '../constants';
+import { CLIENT_DISCOUNT_RATE, isClientDiscountEligible, giftCardClientDiscount, giftCardFaceValue } from '../constants';
+
+/** Variante choisie pour une ligne de panier (sous-ensemble de ProductVariation). */
+export type SelectedVariation = Pick<ProductVariation, 'id' | 'label' | 'price' | 'image'>;
 
 export interface CartItem {
   product: GHLProduct;
   quantity: number;
+  variation?: SelectedVariation;
+}
+
+/** Identité d'une ligne = produit + variante choisie (deux saveurs = deux lignes). */
+export function cartLineId(productId: string, variationId?: number): string {
+  return variationId ? `${productId}:${variationId}` : productId;
+}
+
+/** Prix unitaire effectif (variante si choisie, sinon prix du produit). */
+export function itemUnitPrice(item: CartItem): number {
+  return parseFloat(item.variation?.price ?? item.product.price);
+}
+
+/** Image effective (image de la variante si fournie, sinon image principale). */
+export function itemImage(item: CartItem): string {
+  return item.variation?.image || item.product.image;
 }
 
 export interface AppliedCoupon {
@@ -21,15 +40,16 @@ interface CartContextValue {
   count: number;
   subtotal: number;
   isClient: boolean;        // session Supabase active → prix client
-  clientDiscount: number;   // rabais client appliqué en dollars (0 si non connecté)
-  potentialClientDiscount: number; // rabais possible sur les produits admissibles (appât non-connecté)
+  clientDiscount: number;   // rabais client -13 % appliqué en dollars (0 si non connecté)
+  giftCardDiscount: number; // rabais client carte-cadeau appliqué en dollars (0 si non connecté)
+  potentialClientDiscount: number; // rabais total possible (appât non-connecté)
   hydrated: boolean;
   coupon: AppliedCoupon | null;
   applyCoupon: (code: string) => Promise<void>;
   removeCoupon: () => void;
-  addItem: (product: GHLProduct) => void;
-  removeItem: (productId: string) => void;
-  updateQty: (productId: string, qty: number) => void;
+  addItem: (product: GHLProduct, variation?: SelectedVariation) => void;
+  removeItem: (lineId: string) => void;
+  updateQty: (lineId: string, qty: number) => void;
   clearCart: () => void;
 }
 
@@ -65,17 +85,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const { isClient } = useClientStatus();
 
-  const subtotal = items.reduce((sum, i) => sum + parseFloat(i.product.price) * i.quantity, 0);
+  const subtotal = items.reduce((sum, i) => sum + itemUnitPrice(i) * i.quantity, 0);
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
   // Le rabais client -13 % s'applique UNIQUEMENT aux produits Designs for Health (aligné sur
   // le coupon serveur). `discountableSubtotal` = part du panier admissible au rabais.
   const discountableSubtotal = items.reduce(
-    (sum, i) => isClientDiscountEligible(i.product.name) ? sum + parseFloat(i.product.price) * i.quantity : sum,
+    (sum, i) => isClientDiscountEligible(i.product.name) ? sum + itemUnitPrice(i) * i.quantity : sum,
     0,
   );
   const clientDiscount = isClient ? discountableSubtotal * CLIENT_DISCOUNT_RATE : 0;
-  // Économies potentielles si le visiteur (non connecté) devenait client.
-  const potentialClientDiscount = discountableSubtotal * CLIENT_DISCOUNT_RATE;
+  // Rabais client fixe sur les cartes-cadeaux (montant par variante), clients seulement.
+  const giftCardDiscountPotential = items.reduce(
+    (sum, i) => sum + giftCardClientDiscount(i.product.id, giftCardFaceValue(i.variation?.label)) * i.quantity,
+    0,
+  );
+  const giftCardDiscount = isClient ? giftCardDiscountPotential : 0;
+  // Économies potentielles totales si le visiteur (non connecté) devenait client.
+  const potentialClientDiscount = discountableSubtotal * CLIENT_DISCOUNT_RATE + giftCardDiscountPotential;
 
   async function applyCoupon(code: string) {
     const wcKey = process.env.NEXT_PUBLIC_WC_KEY;
@@ -123,26 +149,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCoupon(null);
   }
 
-  function addItem(product: GHLProduct) {
+  function addItem(product: GHLProduct, variation?: SelectedVariation) {
+    const lineId = cartLineId(product.id, variation?.id);
     setItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
+      const existing = prev.find((i) => cartLineId(i.product.id, i.variation?.id) === lineId);
       if (existing) {
         return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          cartLineId(i.product.id, i.variation?.id) === lineId ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, quantity: 1, variation }];
     });
   }
 
-  function removeItem(productId: string) {
-    setItems((prev) => prev.filter((i) => i.product.id !== productId));
+  function removeItem(lineId: string) {
+    setItems((prev) => prev.filter((i) => cartLineId(i.product.id, i.variation?.id) !== lineId));
   }
 
-  function updateQty(productId: string, qty: number) {
-    if (qty <= 0) { removeItem(productId); return; }
+  function updateQty(lineId: string, qty: number) {
+    if (qty <= 0) { removeItem(lineId); return; }
     setItems((prev) =>
-      prev.map((i) => (i.product.id === productId ? { ...i, quantity: qty } : i))
+      prev.map((i) => (cartLineId(i.product.id, i.variation?.id) === lineId ? { ...i, quantity: qty } : i))
     );
   }
 
@@ -152,7 +179,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <CartContext.Provider value={{ items, count, subtotal, isClient, clientDiscount, potentialClientDiscount, hydrated, coupon, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
+    <CartContext.Provider value={{ items, count, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, hydrated, coupon, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
       {children}
     </CartContext.Provider>
   );

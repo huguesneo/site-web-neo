@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Leaf, Tag, X, Loader2, CheckCircle, Sparkles } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
+import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import Button from '../components/Button';
 import Section from '../components/Section';
 
 const Cart: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, potentialClientDiscount, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
+  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
   const [couponInput, setCouponInput] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [couponError, setCouponError] = useState('');
@@ -40,7 +40,7 @@ const Cart: React.FC = () => {
   }
 
   const couponDiscount = coupon?.discountValue ?? 0;
-  const totalDiscount = clientDiscount + couponDiscount;
+  const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
   const taxes = (subtotal - totalDiscount) * 0.14975;
   const total = subtotal - totalDiscount + taxes;
 
@@ -58,11 +58,15 @@ const Cart: React.FC = () => {
 
           {/* Items */}
           <div className="lg:col-span-2 flex flex-col gap-4">
-            {items.map(({ product, quantity }) => (
-              <div key={product.id} className="flex gap-4 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            {items.map((item) => {
+              const { product, quantity, variation } = item;
+              const lineId = cartLineId(product.id, variation?.id);
+              const img = itemImage(item);
+              return (
+              <div key={lineId} className="flex gap-4 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
                 <div className="w-24 h-24 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
-                  {product.image ? (
-                    <img src={product.image} alt={product.name} className="w-full h-full object-contain p-2" />
+                  {img ? (
+                    <img src={img} alt={product.name} className="w-full h-full object-contain p-2" />
                   ) : (
                     <ShoppingBag size={32} className="text-gray-300" />
                   )}
@@ -71,25 +75,29 @@ const Cart: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <span className="text-[10px] font-black text-neo uppercase tracking-widest">{product.category}</span>
                   <h3 className="font-bold text-gray-900 leading-tight mt-0.5 line-clamp-2">{product.name}</h3>
-                  <p className="text-neo font-bold mt-1">{(parseFloat(product.price) * quantity).toFixed(2)} $</p>
+                  {variation && (
+                    <p className="text-xs text-gray-500 mt-0.5">{product.variationLabel ? `${product.variationLabel} : ` : ''}{variation.label}</p>
+                  )}
+                  <p className="text-neo font-bold mt-1">{(itemUnitPrice(item) * quantity).toFixed(2)} $</p>
                 </div>
 
                 <div className="flex flex-col items-end justify-between gap-2 shrink-0">
-                  <button onClick={() => removeItem(product.id)} className="text-gray-300 hover:text-red-400 transition-colors">
+                  <button onClick={() => removeItem(lineId)} className="text-gray-300 hover:text-red-400 transition-colors">
                     <Trash2 size={18} />
                   </button>
                   <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-2 py-1">
-                    <button onClick={() => updateQty(product.id, quantity - 1)} className="text-gray-500 hover:text-neo transition-colors">
+                    <button onClick={() => updateQty(lineId, quantity - 1)} className="text-gray-500 hover:text-neo transition-colors">
                       <Minus size={14} />
                     </button>
                     <span className="w-6 text-center text-sm font-bold">{quantity}</span>
-                    <button onClick={() => updateQty(product.id, quantity + 1)} className="text-gray-500 hover:text-neo transition-colors">
+                    <button onClick={() => updateQty(lineId, quantity + 1)} className="text-gray-500 hover:text-neo transition-colors">
                       <Plus size={14} />
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Résumé */}
@@ -148,6 +156,12 @@ const Cart: React.FC = () => {
                   <div className="flex justify-between text-neo">
                     <span className="font-medium">Rabais client (−13 %)</span>
                     <span className="font-medium">-{clientDiscount.toFixed(2)} $</span>
+                  </div>
+                )}
+                {isClient && giftCardDiscount > 0 && (
+                  <div className="flex justify-between text-neo">
+                    <span className="font-medium">Rabais carte-cadeau client</span>
+                    <span className="font-medium">-{giftCardDiscount.toFixed(2)} $</span>
                   </div>
                 )}
                 {coupon && (
