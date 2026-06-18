@@ -6,7 +6,7 @@ import { urlForImage } from '@/sanity/lib/image';
 import { formatDateFR } from '@/sanity/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'Blogue Santé Métabolique & Naturopathie | NEO Performance',
+  title: 'Blogue Santé Métabolique & Naturopathie',
   description: 'Articles scientifiques sur l\'optimisation métabolique, la santé hormonale, la digestion et le cortisol. Conseils pratiques de nos naturopathes experts.',
   alternates: {
     canonical: 'https://www.neoperformance.ca/blog',

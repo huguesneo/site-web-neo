@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Checkout from '@/views/Checkout';
 
 export const metadata: Metadata = {
-  title: 'Paiement Sécurisé | NEO Performance',
+  title: 'Paiement Sécurisé',
   description: 'Finalisez votre commande de suppléments NEO Performance en toute sécurité. Informations de livraison et paiement crypté SSL.',
   alternates: {
     canonical: 'https://www.neoperformance.ca/paiement',

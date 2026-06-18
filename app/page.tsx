@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 import Home from '@/views/Home';
 
 export const metadata: Metadata = {
-  title: 'NEO Performance | Optimisation Métabolique & Composition Corporelle',
-  description: 'Clinique d\'optimisation métabolique à Brossard, Rive-Sud. Programme 15 semaines pour femmes actives 35-50 ans : cortisol, hormones, digestion. Résultats durables.',
+  title: 'Naturopathe en ligne & à Brossard | Optimisation Métabolique | NEO Performance',
+  description: 'Naturopathe en ligne et à Brossard. Consultations virtuelles partout au Québec : perte de poids, cortisol, hormones, digestion. Optimisation métabolique durable.',
   alternates: {
     canonical: 'https://www.neoperformance.ca/',
   },
   openGraph: {
-    title: 'NEO Performance | Optimisation Métabolique & Composition Corporelle',
-    description: 'Clinique d\'optimisation métabolique à Brossard, Rive-Sud. Programme 15 semaines pour femmes actives 35-50 ans : cortisol, hormones, digestion. Résultats durables.',
+    title: 'Naturopathe en ligne & à Brossard | Optimisation Métabolique | NEO Performance',
+    description: 'Naturopathe en ligne et à Brossard. Consultations virtuelles partout au Québec : perte de poids, cortisol, hormones, digestion. Optimisation métabolique durable.',
     url: 'https://www.neoperformance.ca/',
     siteName: 'NEO Performance',
     locale: 'fr_CA',

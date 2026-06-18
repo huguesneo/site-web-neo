@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Account from '@/views/Account';
 
 export const metadata: Metadata = {
-  title: 'Espace client | NEO Performance',
+  title: 'Espace client',
   description:
     'Connectez-vous à votre espace client NEO Performance pour accéder à vos commandes et à votre suivi. Mêmes identifiants que l’application Neo Performance.',
   alternates: {

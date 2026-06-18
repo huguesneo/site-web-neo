@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import QuizPage from '@/views/QuizPage';
 
 export const metadata: Metadata = {
-  title: 'Quiz Métabolique Gratuit | NEO Performance',
+  title: 'Quiz Métabolique Gratuit',
   description: 'Faites le test métabolique gratuit de 2 minutes. Identifiez vos blocages hormonaux, digestifs et liés au cortisol. Obtenez votre profil personnalisé instantanément.',
   alternates: {
     canonical: 'https://www.neoperformance.ca/quiz',

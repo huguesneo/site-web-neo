@@ -59,11 +59,18 @@ const jsonLd = {
     },
   ],
   areaServed: ['Brossard', 'Longueuil', 'Rive-Sud de Montréal', 'Québec'],
-  availableService: {
-    '@type': 'LifestyleModification',
-    name: 'Programme optimisation composition corporelle 15 semaines',
-    description: 'Programme personnalisé axé sur la gestion du cortisol, l\'optimisation de la digestion et l\'équilibre hormonal',
-  },
+  availableService: [
+    {
+      '@type': 'LifestyleModification',
+      name: 'Programme optimisation composition corporelle 15 semaines',
+      description: 'Programme personnalisé axé sur la gestion du cortisol, l\'optimisation de la digestion et l\'équilibre hormonal',
+    },
+    {
+      '@type': 'MedicalProcedure',
+      name: 'Consultation naturopathique en ligne',
+      description: 'Téléconsultation naturopathique disponible partout au Québec : perte de poids, métabolisme, hormones et digestion. Aussi offerte en clinique à Brossard.',
+    },
+  ],
   priceRange: '$$',
   sameAs: [
     'https://www.facebook.com/neoperformance1',
