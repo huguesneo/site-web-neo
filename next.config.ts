@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   },
   compress: true,
   poweredByHeader: false,
+  // On laisse le middleware gérer lui-même le slash final pour éviter une
+  // chaîne de redirections (308 de normalisation + 301 de migration) sur les
+  // anciennes URLs WordPress, qui avaient toutes un slash final.
+  skipTrailingSlashRedirect: true,
   async headers() {
     return [
       {
