@@ -1,5 +1,16 @@
 import type { Metadata } from 'next';
+import { Montserrat } from 'next/font/google';
 import '@/index.css';
+
+// Police self-hostée par Next (plus de requête bloquante vers Google Fonts, plus
+// de CLS de police). `display: swap` + variable CSS branchée dans index.css.
+// Quicksand a été retirée : elle était chargée mais jamais utilisée.
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-montserrat',
+  display: 'swap',
+});
 import { CartProvider } from '@/contexts/CartContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -65,16 +76,10 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="fr" className={montserrat.variable}>
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap"
-          rel="stylesheet"
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -90,7 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   d.id='neo-intro-precover';
   d.style.cssText='position:fixed;inset:0;z-index:9998;background:#0F0F0F';
   (document.body||document.documentElement).appendChild(d);
-  setTimeout(function(){var e=document.getElementById('neo-intro-precover');if(e)e.remove();},6000);
+  setTimeout(function(){var e=document.getElementById('neo-intro-precover');if(e)e.remove();},2000);
 }catch(e){}})();`,
           }}
         />

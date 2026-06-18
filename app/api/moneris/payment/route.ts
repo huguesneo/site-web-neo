@@ -22,9 +22,9 @@ const IS_PROD = process.env.MONERIS_ENV === 'prod';
 const API_HOST = IS_PROD ? 'https://api.moneris.io' : 'https://api.sb.moneris.io';
 const API_VERSION = '2024-09-17';
 
-const WC_BASE = process.env.NEXT_PUBLIC_WC_URL;
-const WC_KEY = process.env.NEXT_PUBLIC_WC_KEY;
-const WC_SECRET = process.env.NEXT_PUBLIC_WC_SECRET;
+const WC_BASE = process.env.WC_URL;
+const WC_KEY = process.env.WC_KEY;
+const WC_SECRET = process.env.WC_SECRET;
 
 interface PaymentBody {
   // ⚠️ Aucun montant n'est accepté du navigateur : il est relu depuis WooCommerce.

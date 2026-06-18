@@ -104,42 +104,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const potentialClientDiscount = discountableSubtotal * CLIENT_DISCOUNT_RATE + giftCardDiscountPotential;
 
   async function applyCoupon(code: string) {
-    const wcKey = process.env.NEXT_PUBLIC_WC_KEY;
-    const wcSecret = process.env.NEXT_PUBLIC_WC_SECRET;
-    const wcUrl = process.env.NEXT_PUBLIC_WC_URL;
+    // Validation côté serveur : les clés WooCommerce ne sont jamais exposées au
+    // navigateur. La route renvoie le type/montant ; on calcule le rabais ici
+    // (il dépend du sous-total du panier).
+    const res = await fetch('/api/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
 
-    const res = await fetch(
-      `${wcUrl}/wp-json/wc/v3/coupons?code=${encodeURIComponent(code.trim())}&consumer_key=${wcKey}&consumer_secret=${wcSecret}`
-    );
-    if (!res.ok) throw new Error('Erreur réseau');
-
-    const data = await res.json();
-    if (!data.length) throw new Error('Code promo invalide ou expiré.');
-
-    const c = data[0];
-
-    // Vérifier la date d'expiration
-    if (c.date_expires && new Date(c.date_expires) < new Date()) {
-      throw new Error('Ce code promo est expiré.');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.error || 'Code promo invalide ou expiré.');
     }
 
-    // Vérifier le nombre d'utilisations max
-    if (c.usage_limit && c.usage_count >= c.usage_limit) {
-      throw new Error('Ce code promo a atteint sa limite d\'utilisation.');
-    }
-
-    const amount = parseFloat(c.amount);
-    let discountValue = 0;
-
-    if (c.discount_type === 'percent') {
-      discountValue = subtotal * (amount / 100);
-    } else {
-      discountValue = Math.min(amount, subtotal);
-    }
+    const amount = parseFloat(String(data.amount));
+    const discountValue = data.discount_type === 'percent'
+      ? subtotal * (amount / 100)
+      : Math.min(amount, subtotal);
 
     setCoupon({
-      code: c.code,
-      discountType: c.discount_type,
+      code: data.code,
+      discountType: data.discount_type,
       amount,
       discountValue,
     });

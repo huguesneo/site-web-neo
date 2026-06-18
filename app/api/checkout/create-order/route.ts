@@ -17,9 +17,9 @@ import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount,
 
 export const runtime = 'nodejs';
 
-const WC_BASE = process.env.NEXT_PUBLIC_WC_URL;
-const WC_KEY = process.env.NEXT_PUBLIC_WC_KEY;
-const WC_SECRET = process.env.NEXT_PUBLIC_WC_SECRET;
+const WC_BASE = process.env.WC_URL;
+const WC_KEY = process.env.WC_KEY;
+const WC_SECRET = process.env.WC_SECRET;
 
 // Coupon WooCommerce qui porte le rabais client (-13 %). Le code est
 // volontairement non devinable et n'est JAMAIS envoyé au navigateur :

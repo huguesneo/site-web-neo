@@ -21,9 +21,13 @@ const Home: React.FC = () => {
       <section className="relative min-h-screen flex items-center overflow-hidden pt-20 pb-20">
         {/* Background Image with Slow Zoom Effect */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <img 
-            src={IMAGES.hero} 
-            alt="Consultation NEO Performance" 
+          {/* Image LCP de l'accueil : priorité haute, chargement immédiat (pas de
+              lazy), décodage asynchrone → meilleur Largest Contentful Paint. */}
+          <img
+            src={IMAGES.hero}
+            alt="Consultation NEO Performance"
+            fetchPriority="high"
+            decoding="async"
             className="w-full h-full object-cover animate-scale-slow origin-center"
           />
           {/* Advanced Gradient Overlay */}

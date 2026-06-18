@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
 import Shop from '@/views/Shop';
+import { getShopProducts } from '@/services/products';
+
+// La boutique est rendue côté serveur avec les produits pré-chargés (cache 10 min) :
+// Google indexe les produits/prix, et le visiteur voit la grille sans spinner.
+export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: 'Boutique Suppléments Cliniques | NEO Performance',
@@ -17,6 +22,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
-  return <Shop />;
+export default async function Page() {
+  const initialProducts = await getShopProducts();
+  return <Shop initialProducts={initialProducts} />;
 }

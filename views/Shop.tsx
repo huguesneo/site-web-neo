@@ -104,8 +104,8 @@ const ModalPriceBlock: React.FC<{ regular: number; isClient: boolean; noDiscount
   );
 };
 
-const Shop: React.FC = () => {
-  const { products, loading, error } = useGHLProducts();
+const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts }) => {
+  const { products, loading, error } = useGHLProducts(initialProducts);
   const { addItem } = useCart();
   const { isClient } = useClientStatus();
   const [activeCategory, setActiveCategory] = useState("Tout");
@@ -342,6 +342,7 @@ const Shop: React.FC = () => {
                         alt={product.name}
                         className="w-4/5 h-4/5 object-contain group-hover:scale-[1.06] transition-transform duration-500"
                         loading="lazy"
+                        decoding="async"
                       />
                       {/* Category pill */}
                       <div className="absolute top-3 left-3">

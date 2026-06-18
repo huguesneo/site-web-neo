@@ -17,7 +17,10 @@
       "Bash(sort -k2)",
       "Bash(npm run *)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(echo \"PID: $!\")"
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s http://localhost:58418/api/products)",
+      "Bash(grep -v '^WC_DEBUG=1$' .env.local)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
