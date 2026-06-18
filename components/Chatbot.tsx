@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MessageCircle, X, Send, Loader2, ArrowRight, Mail, ChevronLeft, ShoppingCart, CheckCircle, Lock, LogIn } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useCart } from '../contexts/CartContext';
 import { useGHLProducts } from '../hooks/useGHLProducts';
 import { GHLProduct } from '../data/ghlProducts';
@@ -318,16 +317,14 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
 
   // Appel Gemini renvoyant du JSON strict (pour l'extraction/matching des suppléments)
   async function geminiJson(prompt: string): Promise<unknown> {
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') throw new Error('Clé API manquante');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: { responseMimeType: 'application/json' },
+    const res = await fetch('/api/gemini-json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
     });
-    const res = await model.generateContent(prompt);
-    const raw = res.response.text().trim().replace(/^```json\s*/i, '').replace(/```$/i, '');
-    return JSON.parse(raw);
+    if (!res.ok) throw new Error(`gemini-json: ${res.status}`);
+    const data = await res.json();
+    return data.result;
   }
 
   // Associe les suppléments du plan (texte brouillon) aux produits du catalogue.
@@ -551,31 +548,18 @@ Réponds UNIQUEMENT par un tableau JSON.`;
     setLoading(true);
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
-        throw new Error('Clé API manquante');
-      }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        systemInstruction: mode === 'advisor' ? buildAdvisorSystemPrompt() : SYSTEM_PROMPT,
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          systemPrompt: mode === 'advisor' ? buildAdvisorSystemPrompt() : SYSTEM_PROMPT,
+          userMessage: userText,
+        }),
       });
-
-      // Historique des 10 derniers messages — Gemini exige que ça commence par 'user'
-      const rawHistory = messages.slice(-10).map((m) => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }],
-      }));
-      const firstUser = rawHistory.findIndex((m) => m.role === 'user');
-      const history = firstUser >= 0 ? rawHistory.slice(firstUser) : [];
-
-      const chat = model.startChat({ history });
-
-      const result = await chat.sendMessage(userText);
-      const responseText = result.response.text();
-
-      setMessages((prev) => [...prev, { role: 'assistant', content: responseText }]);
+      if (!res.ok) throw new Error(`chat: ${res.status}`);
+      const data = await res.json();
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.text }]);
     } catch (err) {
       console.error('[Chatbot] Gemini error:', err);
       setMessages((prev) => [...prev, {

@@ -1,12 +1,5 @@
-const GHL_BASE = 'https://services.leadconnectorhq.com';
-const locationId = process.env.NEXT_PUBLIC_GHL_LOCATION_ID as string;
-const apiKey = process.env.NEXT_PUBLIC_GHL_API_KEY as string;
-
-const headers = {
-  Authorization: `Bearer ${apiKey}`,
-  Version: '2021-07-28',
-  'Content-Type': 'application/json',
-};
+// Toutes les requêtes GHL passent par /api/ghl/blog (route serveur).
+// La clé API GHL_API_KEY reste côté serveur et n'est jamais exposée au navigateur.
 
 export interface GHLBlog {
   id: string;
@@ -17,9 +10,9 @@ export interface GHLBlog {
 export interface GHLBlogPost {
   id: string;
   title: string;
-  url: string;          // slug
-  description?: string; // excerpt
-  rawHTML?: string;     // full HTML content
+  url: string;
+  description?: string;
+  rawHTML?: string;
   featuredImage?: string;
   imageAltText?: string;
   categories?: Array<{ id: string; label: string }>;
@@ -31,52 +24,35 @@ export interface GHLBlogPost {
   status?: string;
 }
 
-// ─── Get list of blogs for this location ──────────────────────────────────────
 export async function fetchGHLBlogs(): Promise<GHLBlog[]> {
-  const url = `${GHL_BASE}/blogs/?locationId=${locationId}&limit=10&offset=0`;
-  const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error(`GHL blogs list: ${res.status}`);
+  const res = await fetch('/api/ghl/blog?action=blogs');
+  if (!res.ok) throw new Error(`GHL blogs: ${res.status}`);
   const data = await res.json();
-  // Response shape: { blogs: [...], total: N }
-  return data.blogs ?? data ?? [];
+  return data.blogs ?? [];
 }
 
-// ─── Get posts for a specific blog ────────────────────────────────────────────
 export async function fetchGHLBlogPosts(blogId: string, limit = 20, offset = 0): Promise<{ posts: GHLBlogPost[]; total: number }> {
-  const url = `${GHL_BASE}/blogs/${blogId}/posts?limit=${limit}&offset=${offset}`;
-  const res = await fetch(url, { headers });
+  const res = await fetch(`/api/ghl/blog?action=posts&blogId=${encodeURIComponent(blogId)}&limit=${limit}&offset=${offset}`);
   if (!res.ok) throw new Error(`GHL blog posts: ${res.status}`);
-  const data = await res.json();
-  return {
-    posts: data.posts ?? data.data ?? data ?? [],
-    total: data.total ?? data.count ?? 0,
-  };
+  return res.json();
 }
 
-// ─── Get single post by slug ───────────────────────────────────────────────────
 export async function fetchGHLBlogPostBySlug(blogId: string, slug: string): Promise<GHLBlogPost | null> {
-  // GHL doesn't have a slug lookup endpoint — fetch all and filter
   const { posts } = await fetchGHLBlogPosts(blogId, 100, 0);
   return posts.find((p) => p.url === slug || p.id === slug) ?? null;
 }
 
-// ─── Get single post by ID ─────────────────────────────────────────────────────
 export async function fetchGHLBlogPostById(blogId: string, postId: string): Promise<GHLBlogPost | null> {
-  const url = `${GHL_BASE}/blogs/${blogId}/posts/${postId}`;
-  const res = await fetch(url, { headers });
+  const res = await fetch(`/api/ghl/blog?action=post&blogId=${encodeURIComponent(blogId)}&postId=${encodeURIComponent(postId)}`);
   if (!res.ok) return null;
   const data = await res.json();
-  return data.post ?? data ?? null;
+  return data.post ?? null;
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Strip HTML tags from a string */
 export function stripHtml(html: string): string {
   return html.replace(/<[^>]*>?/gm, '');
 }
 
-/** Format a date string to French Canadian format */
 export function formatDateFR(dateStr: string): string {
   try {
     return new Date(dateStr).toLocaleDateString('fr-CA', {
@@ -87,7 +63,6 @@ export function formatDateFR(dateStr: string): string {
   }
 }
 
-/** Estimate read time from HTML content */
 export function estimateReadTime(html: string): string {
   const words = stripHtml(html).split(/\s+/).length;
   const minutes = Math.max(1, Math.ceil(words / 200));

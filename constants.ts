@@ -8,8 +8,7 @@ export const WP_CONFIG = {
   apiUrl: "https://neoperformance.ca/wp-json"
 };
 
-// Logo corrigé selon votre lien
-export const LOGO_URL = "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6941c9327109a899ec69b43c.png"; 
+export const LOGO_URL = "/logo-neo.png";
 
 // CONFIGURATION GOHIGHLEVEL (GHL)
 export const GHL_CONFIG = {
@@ -18,11 +17,11 @@ export const GHL_CONFIG = {
 };
 
 export const IMAGES = {
-  hero: "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6985ce940708e4bb93112c71.jpg",
-  consultation: "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6985ce941dfc023f86bfaf37.jpg",
-  method: "https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/69e60d4138381eafa8cca5c2.jpg",
-  clinic: "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6985ce940708e4e99e112c75.jpg",
-  Lyliane: "https://storage.googleapis.com/msgsndr/YG2spvWJqnD75L3V95UJ/media/6985ce942dd985420a75a44f.jpg"
+  hero: "/hero.jpg",
+  consultation: "/consultation.jpg",
+  method: "/methode.jpg",
+  clinic: "/clinique.jpg",
+  Lyliane: "/lyliane.jpg",
 };
 
 export const NAV_LINKS: NavLink[] = [

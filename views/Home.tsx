@@ -441,8 +441,8 @@ const Home: React.FC = () => {
                 </a>
              </div>
              <div className="relative min-h-[400px]">
-                <img 
-                   src="https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/69e637329f80f3338698f1b0.png" 
+                <img
+                   src="/communaute.png"
                    alt="Communauté de femmes"
                    className="absolute inset-0 w-full h-full object-cover"
                    loading="lazy"

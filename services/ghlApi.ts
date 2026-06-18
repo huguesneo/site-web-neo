@@ -41,12 +41,12 @@ export interface GHLApiCollection {
 // ─── Helper fetch authentifié ─────────────────────────────────────────────────
 
 function ghlFetch(path: string): Promise<Response> {
-  const apiKey = process.env.NEXT_PUBLIC_GHL_API_KEY;
-  const locationId = process.env.NEXT_PUBLIC_GHL_LOCATION_ID;
+  const apiKey = process.env.GHL_API_KEY;
+  const locationId = process.env.GHL_LOCATION_ID;
 
   if (!apiKey || !locationId) {
     return Promise.reject(
-      new Error('Variables d\'environnement NEXT_PUBLIC_GHL_API_KEY ou NEXT_PUBLIC_GHL_LOCATION_ID manquantes.')
+      new Error('Variables d\'environnement GHL_API_KEY ou GHL_LOCATION_ID manquantes.')
     );
   }
 
@@ -63,7 +63,7 @@ function ghlFetch(path: string): Promise<Response> {
 
 /** Récupère tous les produits du catalogue GHL */
 export async function fetchGHLProducts(): Promise<GHLApiProduct[]> {
-  const locationId = process.env.NEXT_PUBLIC_GHL_LOCATION_ID;
+  const locationId = process.env.GHL_LOCATION_ID;
   // Essai avec expand=prices pour inclure les prix directement
   const res = await ghlFetch(`/products/?locationId=${locationId}&expand=prices`);
   if (!res.ok) throw new Error(`Produits — erreur API GHL: ${res.status} ${res.statusText}`);
@@ -78,7 +78,7 @@ export async function fetchGHLProducts(): Promise<GHLApiProduct[]> {
  * Test pour voir si les prix s'y trouvent directement.
  */
 export async function fetchGHLProductPrices(productId: string): Promise<GHLApiPrice[]> {
-  const locationId = process.env.NEXT_PUBLIC_GHL_LOCATION_ID;
+  const locationId = process.env.GHL_LOCATION_ID;
   const res = await ghlFetch(`/products/${productId}?locationId=${locationId}`);
   if (!res.ok) throw new Error(`Produit détail — erreur API GHL: ${res.status} ${res.statusText}`);
   const data = await res.json();
@@ -89,7 +89,7 @@ export async function fetchGHLProductPrices(productId: string): Promise<GHLApiPr
 
 /** Récupère toutes les collections (= catégories) du catalogue GHL */
 export async function fetchGHLCollections(): Promise<GHLApiCollection[]> {
-  const locationId = process.env.NEXT_PUBLIC_GHL_LOCATION_ID;
+  const locationId = process.env.GHL_LOCATION_ID;
   const res = await ghlFetch(`/products/collections?locationId=${locationId}`);
   if (!res.ok) throw new Error(`Collections — erreur API GHL: ${res.status} ${res.statusText}`);
   const data = await res.json();

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ShoppingCart } from 'lucide-react';
 import { LOGO_URL, NAV_LINKS } from '../constants';
@@ -50,9 +51,9 @@ const Header: React.FC = () => {
       }`}
     >
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
-        {/* Logo */}
+        {/* Logo — priority déclenche fetchpriority="high" + preload (LCP element) */}
         <Link href="/" className="relative z-50">
-          <img src={LOGO_URL} alt="NEO Performance" className="h-10 md:h-12 w-auto object-contain" />
+          <Image src={LOGO_URL} alt="NEO Performance" width={48} height={48} priority className="h-10 md:h-12 w-auto object-contain" />
         </Link>
 
         {/* Desktop Nav */}
@@ -72,7 +73,7 @@ const Header: React.FC = () => {
 
         {/* Desktop CTA */}
         <div className="hidden lg:flex items-center gap-3">
-          <Link href="/panier" className={`relative p-2 hover:text-neo transition-colors ${lightText ? 'text-white' : 'text-gray-700'}`}>
+          <Link href="/panier" aria-label="Voir mon panier" className={`relative p-2 hover:text-neo transition-colors ${lightText ? 'text-white' : 'text-gray-700'}`}>
             <ShoppingCart size={22} />
             {count > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-neo text-white text-[10px] font-bold w-4.5 h-4.5 rounded-full flex items-center justify-center min-w-[18px] min-h-[18px] px-1">
@@ -86,7 +87,7 @@ const Header: React.FC = () => {
         </div>
 
         {/* Mobile Cart */}
-        <Link href="/panier" className={`lg:hidden relative z-50 p-2 hover:text-neo transition-colors mr-1 ${lightText ? 'text-white' : 'text-gray-800'}`}>
+        <Link href="/panier" aria-label="Voir mon panier" className={`lg:hidden relative z-50 p-2 hover:text-neo transition-colors mr-1 ${lightText ? 'text-white' : 'text-gray-800'}`}>
           <ShoppingCart size={22} />
           {count > 0 && (
             <span className="absolute top-0 right-0 bg-neo text-white text-[10px] font-bold rounded-full min-w-[18px] min-h-[18px] px-1 flex items-center justify-center">

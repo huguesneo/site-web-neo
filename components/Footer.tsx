@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { LOGO_URL, NAV_LINKS } from '../constants';
 import { MapPin, Phone, Mail, Instagram, Facebook } from 'lucide-react';
 
@@ -12,15 +13,15 @@ const Footer: React.FC = () => {
 
           {/* Brand */}
           <div className="space-y-6">
-            <img src={LOGO_URL} alt="NEO Performance" className="h-10 w-auto brightness-0 invert" />
+            <Image src={LOGO_URL} alt="NEO Performance" width={40} height={40} className="h-10 w-auto brightness-0 invert" />
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
               Clinique d'optimisation métabolique. Nous redéfinissons la santé métabolique par une approche scientifique et humaine.
             </p>
             <div className="flex gap-4">
-              <a href="https://www.instagram.com/neoperformance/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-neo transition-colors">
+              <a href="https://www.instagram.com/neoperformance/" target="_blank" rel="noopener noreferrer" aria-label="Suivez-nous sur Instagram" className="text-gray-400 hover:text-neo transition-colors">
                 <Instagram size={20} />
               </a>
-              <a href="https://www.facebook.com/neoperformance1" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-neo transition-colors">
+              <a href="https://www.facebook.com/neoperformance1" target="_blank" rel="noopener noreferrer" aria-label="Suivez-nous sur Facebook" className="text-gray-400 hover:text-neo transition-colors">
                 <Facebook size={20} />
               </a>
             </div>
@@ -28,7 +29,7 @@ const Footer: React.FC = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-lg font-bold mb-6">Navigation</h4>
+            <h3 className="text-lg font-bold mb-6">Navigation</h3>
             <ul className="space-y-4">
               {NAV_LINKS.map(link => (
                 <li key={link.path}>
@@ -47,7 +48,7 @@ const Footer: React.FC = () => {
 
           {/* Contact */}
           <div>
-            <h4 className="text-lg font-bold mb-6">Nous Joindre</h4>
+            <h3 className="text-lg font-bold mb-6">Nous Joindre</h3>
             <ul className="space-y-4 text-gray-400 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin size={18} className="mt-1 text-neo shrink-0" />
@@ -66,7 +67,7 @@ const Footer: React.FC = () => {
 
           {/* Legal / Hours */}
           <div>
-            <h4 className="text-lg font-bold mb-6">Heures d'ouverture</h4>
+            <h3 className="text-lg font-bold mb-6">Heures d'ouverture</h3>
             <ul className="space-y-2 text-gray-400 text-sm">
               <li className="flex justify-between"><span>Lundi - Vendred</span> <span>8h00 - 17h00</span></li>
               <li className="flex justify-between"><span>Samedi</span> <span>Fermé</span></li>

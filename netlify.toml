@@ -8,9 +8,7 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
-  # Ces variables NEXT_PUBLIC_ sont intégrées au site côté navigateur de façon
-  # volontaire (elles ne sont pas secrètes). On les exclut du scan de secrets
-  # de Netlify pour que le build passe. Les vrais secrets (Moneris + désormais
-  # WC_KEY / WC_SECRET, qui ne sont PLUS NEXT_PUBLIC) NE sont PAS dans cette
-  # liste : ils restent surveillés et ne doivent jamais apparaître côté navigateur.
-  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_GEMINI_API_KEY,NEXT_PUBLIC_GHL_API_KEY,NEXT_PUBLIC_GHL_LOCATION_ID,NEXT_PUBLIC_MONERIS_ENV,NEXT_PUBLIC_MONERIS_HT_PROFILE_ID"
+  # Seules les variables NEXT_PUBLIC_ légitimes (non secrètes) sont exemptées.
+  # GEMINI_API_KEY, GHL_API_KEY, GHL_LOCATION_ID sont désormais des secrets purs
+  # (sans NEXT_PUBLIC_) → plus dans le bundle navigateur, plus dans cette liste.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_MONERIS_ENV,NEXT_PUBLIC_MONERIS_HT_PROFILE_ID"
