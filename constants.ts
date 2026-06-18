@@ -12,8 +12,7 @@ export const LOGO_URL = "/logo-neo.png";
 
 // CONFIGURATION GOHIGHLEVEL (GHL)
 export const GHL_CONFIG = {
-  locationId: "YG2spvWJqnD75L3V95UJ",
-  checkoutBaseUrl: "https://link.msgsndr.com/widget/checkout/"
+  checkoutBaseUrl: "https://link.msgsndr.com/widget/checkout/",
 };
 
 export const IMAGES = {

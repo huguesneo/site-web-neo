@@ -68,8 +68,6 @@ export async function fetchGHLProducts(): Promise<GHLApiProduct[]> {
   const res = await ghlFetch(`/products/?locationId=${locationId}&expand=prices`);
   if (!res.ok) throw new Error(`Produits — erreur API GHL: ${res.status} ${res.statusText}`);
   const data = await res.json();
-  // 🔍 DEBUG — à retirer après validation
-  console.log('DEBUG produit[0] brut:', JSON.stringify((data.products ?? [])[0], null, 2));
   return data.products ?? [];
 }
 
@@ -82,8 +80,6 @@ export async function fetchGHLProductPrices(productId: string): Promise<GHLApiPr
   const res = await ghlFetch(`/products/${productId}?locationId=${locationId}`);
   if (!res.ok) throw new Error(`Produit détail — erreur API GHL: ${res.status} ${res.statusText}`);
   const data = await res.json();
-  // 🔍 DEBUG — à retirer après validation
-  console.log(`DEBUG product detail[${productId}]:`, JSON.stringify(data, null, 2));
   return data.product?.prices ?? [];
 }
 
