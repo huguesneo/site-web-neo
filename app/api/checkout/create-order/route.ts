@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount, giftCardFaceValue } from '../../../../constants';
+import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount, giftCardFaceValue, shippingFeeFor, SHIPPING_LABEL } from '../../../../constants';
 
 /**
  * Route serveur — crée la commande WooCommerce de façon SÛRE.
@@ -242,10 +242,32 @@ export async function POST(req: NextRequest) {
       try { const e = await res.json(); msg = e.message || msg; } catch { /* ignore */ }
       return NextResponse.json({ error: msg }, { status: 502 });
     }
-    const order = await res.json();
+    let order = await res.json();
+
+    // Frais de livraison : 15 $ pour les commandes de 100 $ et moins (valeur marchande
+    // nette = total autoritatif − taxes, donc après rabais et hors livraison). Gratuite
+    // au-delà. On se base sur le total recalculé par WooCommerce — jamais sur une valeur
+    // venue du navigateur — puis on ajoute une ligne taxable et on laisse WooCommerce
+    // recalculer total + taxes. En cas d'échec, on garde la commande sans frais plutôt
+    // que de tout faire échouer.
+    try {
+      const netGoods = parseFloat(order.total || '0') - parseFloat(order.total_tax || '0');
+      const shipping = shippingFeeFor(netGoods);
+      if (shipping > 0) {
+        const upd = await fetch(wc(`/orders/${order.id}`), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fee_lines: [{ name: SHIPPING_LABEL, total: shipping.toFixed(2), tax_status: 'taxable' }],
+          }),
+        });
+        if (upd.ok) order = await upd.json();
+      }
+    } catch { /* on conserve la commande sans frais de livraison */ }
+
     return NextResponse.json({
       orderId: order.id,
-      total: parseFloat(order.total),                 // total autoritatif (prix réels + taxes + rabais)
+      total: parseFloat(order.total),                 // total autoritatif (prix réels + taxes + rabais + livraison)
       discountTotal: parseFloat(order.discount_total || '0'),
       isClient,
     });

@@ -234,6 +234,9 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 bg-gray-50 px-4 py-2.5 rounded-full border border-gray-100">
                 <Truck size={15} className="text-neo" /> Expédition 24/48h
               </div>
+              <div className="flex items-center gap-2 text-xs font-bold text-neo bg-neo-50/70 px-4 py-2.5 rounded-full border border-neo/15">
+                <Truck size={15} className="text-neo" /> Livraison gratuite dès 100 $
+              </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 bg-gray-50 px-4 py-2.5 rounded-full border border-gray-100">
                 <ShieldCheck size={15} className="text-neo" /> Checkout Sécurisé
               </div>

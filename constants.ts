@@ -211,6 +211,21 @@ export function giftCardClientDiscount(productId: string, faceValue: number): nu
   return GIFT_CARD_CLIENT_DISCOUNTS[String(Math.round(faceValue))] ?? 0;
 }
 
+// ─── BOUTIQUE : frais de livraison ───────────────────────────────────────────────
+// Règle reprise de l'ancienne boutique : livraison gratuite à partir de 100 $ d'achat,
+// sinon des frais fixes de 15 $. Le seuil se mesure sur la VALEUR MARCHANDE NETTE
+// (sous-total après rabais, hors taxes et hors livraison). Côté serveur, ce montant est
+// lu depuis le total autoritatif recalculé par WooCommerce — jamais d'une valeur venue
+// du navigateur. Un seul endroit à modifier pour changer le tarif ou le seuil.
+export const SHIPPING_FEE = 15;              // $ (avant taxes)
+export const FREE_SHIPPING_THRESHOLD = 100;  // $ — livraison gratuite au-delà de ce montant
+export const SHIPPING_LABEL = 'Livraison';
+
+/** Frais de livraison (en $) pour une valeur marchande nette donnée ; 0 si livraison gratuite. */
+export function shippingFeeFor(netGoods: number): number {
+  return netGoods > 0 && netGoods <= FREE_SHIPPING_THRESHOLD ? SHIPPING_FEE : 0;
+}
+
 // Règles de mappage : pour chaque produit, la PREMIÈRE règle dont un des
 // `wcTags` correspond à une catégorie WooCommerce du produit gagne.
 // (comparaison insensible à la casse / aux accents)

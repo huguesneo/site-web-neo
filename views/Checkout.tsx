@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag } from 'lucide-react';
 import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import { supabase } from '../services/supabaseClient';
+import { shippingFeeFor } from '../constants';
 import Section from '../components/Section';
 
 // ─── Moneris Hosted Tokenization (iframe sécurisée) ─────────────────────────────
@@ -113,8 +114,10 @@ const Checkout: React.FC = () => {
   // WooCommerce recalcule côté serveur (prix réels + taxes + rabais).
   const couponDiscount = coupon?.discountValue ?? 0;
   const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
-  const taxes = (subtotal - totalDiscount) * 0.14975;
-  const total = subtotal - totalDiscount + taxes;
+  const netGoods = subtotal - totalDiscount;
+  const shipping = shippingFeeFor(netGoods);
+  const taxes = (netGoods + shipping) * 0.14975;
+  const total = netGoods + shipping + taxes;
 
   useEffect(() => {
     if (hydrated && items.length === 0 && status === 'idle') {
@@ -485,6 +488,14 @@ const Checkout: React.FC = () => {
                       <span className="font-medium">-{couponDiscount.toFixed(2)} $</span>
                     </div>
                   )}
+                  <div className="flex justify-between">
+                    <span>Livraison</span>
+                    {shipping > 0 ? (
+                      <span className="font-medium text-gray-900">{shipping.toFixed(2)} $</span>
+                    ) : (
+                      <span className="font-bold text-neo">Gratuite</span>
+                    )}
+                  </div>
                   <div className="flex justify-between">
                     <span>TPS + TVQ</span>
                     <span className="font-medium text-gray-900">{taxes.toFixed(2)} $</span>

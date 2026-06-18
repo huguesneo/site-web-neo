@@ -1,10 +1,11 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Leaf, Tag, X, Loader2, CheckCircle, Sparkles } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Leaf, Tag, X, Loader2, CheckCircle, Sparkles, Truck } from 'lucide-react';
 import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import Button from '../components/Button';
 import Section from '../components/Section';
+import { shippingFeeFor, FREE_SHIPPING_THRESHOLD } from '../constants';
 
 const Cart: React.FC = () => {
   const { items, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
@@ -41,8 +42,11 @@ const Cart: React.FC = () => {
 
   const couponDiscount = coupon?.discountValue ?? 0;
   const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
-  const taxes = (subtotal - totalDiscount) * 0.14975;
-  const total = subtotal - totalDiscount + taxes;
+  const netGoods = subtotal - totalDiscount;
+  const shipping = shippingFeeFor(netGoods);
+  const freeShippingGap = FREE_SHIPPING_THRESHOLD - netGoods; // > 0 si livraison gratuite proche
+  const taxes = (netGoods + shipping) * 0.14975;
+  const total = netGoods + shipping + taxes;
 
   return (
     <>
@@ -176,8 +180,20 @@ const Cart: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>Livraison</span>
-                  <span className="text-gray-400">Calculée au paiement</span>
+                  {shipping > 0 ? (
+                    <span className="font-medium text-gray-900">{shipping.toFixed(2)} $</span>
+                  ) : (
+                    <span className="font-bold text-neo">Gratuite</span>
+                  )}
                 </div>
+                {shipping > 0 && freeShippingGap > 0 && (
+                  <div className="flex items-center gap-2 rounded-xl bg-neo-50/70 border border-neo/10 px-3 py-2 -mt-0.5">
+                    <Truck size={15} className="text-neo shrink-0" />
+                    <span className="text-[12px] text-gray-600 leading-tight">
+                      Plus que <span className="font-bold text-neo">{freeShippingGap.toFixed(2)} $</span> pour la <span className="font-semibold">livraison gratuite</span>.
+                    </span>
+                  </div>
+                )}
                 <div className="border-t border-gray-100 pt-3 flex justify-between text-base font-bold text-gray-900">
                   <span>Total estimé</span>
                   <span>{total.toFixed(2)} $</span>
