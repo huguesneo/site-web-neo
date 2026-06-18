@@ -177,26 +177,16 @@ export async function POST(req: NextRequest) {
     const approved = res.ok && (data as { paymentStatus?: string })?.paymentStatus === 'SUCCEEDED';
 
     if (!approved) {
-      // — DIAGNOSTIC TEMPORAIRE — journalise la vraie réponse Moneris.
+      // Journalise la réponse complète Moneris côté serveur (diagnostic), sans
+      // jamais l'exposer au navigateur.
       console.error('[MONERIS] Paiement non approuvé — HTTP', res.status, '— corps:', rawText);
-      const d = data as {
-        transactionDetails?: { message?: string };
-        message?: string;
-        errors?: unknown;
-      };
+      const d = data as { transactionDetails?: { message?: string }; message?: string };
       const msg =
         d?.transactionDetails?.message ||
         d?.message ||
-        (d?.errors ? JSON.stringify(d.errors) : '') ||
         'Le paiement a été refusé.';
       return NextResponse.json(
-        {
-          approved: false,
-          error: msg,
-          status: (data as { paymentStatus?: string })?.paymentStatus ?? null,
-          // — DEBUG TEMPORAIRE (à retirer après diagnostic) —
-          debug: { monerisHttp: res.status, monerisBody: rawText?.slice(0, 1500) },
-        },
+        { approved: false, error: msg, status: (data as { paymentStatus?: string })?.paymentStatus ?? null },
         { status: 402 }
       );
     }
