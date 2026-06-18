@@ -12,10 +12,7 @@ const montserrat = Montserrat({
   display: 'swap',
 });
 import { CartProvider } from '@/contexts/CartContext';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import CookieConsent from '@/components/CookieConsent';
-import Chatbot from '@/components/Chatbot';
+import SiteChrome from '@/components/SiteChrome';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.neoperformance.ca'),
@@ -88,13 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="flex flex-col min-h-screen bg-white font-sans text-gray-900 antialiased selection:bg-neo/30 selection:text-neo-900">
         <CartProvider>
-          <Header />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
-          <CookieConsent />
-          <Chatbot />
+          <SiteChrome>{children}</SiteChrome>
         </CartProvider>
       </body>
     </html>
