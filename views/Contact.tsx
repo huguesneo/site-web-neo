@@ -41,7 +41,7 @@ const Contact: React.FC = () => {
                         <a href="tel:4504864006" className="text-lg font-bold text-gray-900 hover:text-neo transition-colors">
                           450-486-4006
                         </a>
-                        <p className="text-xs text-gray-500 mt-0.5">Lundi au Vendredi, 8h - 20h</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Lundi au Vendredi</p>
                       </div>
                     </StaggerItem>
 

@@ -68,7 +68,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
     name: "Tamara Ovayan",
     role: "Naturopathe",
     specialty: "Hormones & Stress Chronique",
-    image: "https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/69e7599bc56ad279086de1cd.jpg",
+    image: "https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/6a33e2bd0a683b64fedc5c78.png",
     bio: "Je me suis tournée vers la naturopathie pour mieux comprendre les causes profondes derrière les symptômes chroniques, souvent banalisés. Mon approche est axée sur l’équilibre hormonal, la digestion et la gestion du stress, en tenant compte de la réalité unique de chaque client en leur préparant un plan personnalisé avec plusieurs variétés. Mes clients me le disent souvent : “J’ai des résultats, et j’ai même pas l’impression de suivre un plan”.",
     strengths: ["Optimisation du mindset", "Hormone féminine", "Flexibilité alimentaire"],
   },

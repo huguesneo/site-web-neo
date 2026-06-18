@@ -165,7 +165,10 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
 
   const openLeoAdvisor = () => {
     dismissLeoPopup();
-    window.dispatchEvent(new Event(OPEN_LEO_ADVISOR_EVENT));
+    // On transmet le catalogue SSR (déjà chargé côté serveur) à Léo via l'événement.
+    // Ainsi le conseiller a TOUJOURS le catalogue, sans dépendre de son propre
+    // fetch /api/products (qui peut échouer/être lent selon l'hôte déployé).
+    window.dispatchEvent(new CustomEvent(OPEN_LEO_ADVISOR_EVENT, { detail: { products } }));
   };
 
   // Catégories canoniques, dans l'ordre défini, en ne gardant que celles qui ont des produits.

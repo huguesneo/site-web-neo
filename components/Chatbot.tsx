@@ -234,26 +234,36 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
   const [humanConsent, setHumanConsent] = useState(false);
   // Connexion « client NEO » directement dans le chat (pour récupérer son plan de suppléments)
   const [clientLogin, setClientLogin] = useState<'idle' | 'form' | 'authing' | 'fetching'>('idle');
+  // Catalogue transmis par la boutique (SSR) à l'ouverture du conseil. Prioritaire
+  // sur le fetch /api/products : il est garanti présent dès l'ouverture de Léo.
+  const [advisorProducts, setAdvisorProducts] = useState<GHLProduct[]>([]);
   const [loginFields, setLoginFields] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Catalogue effectif : priorité aux produits SSR fournis par la boutique
+  // (toujours présents), repli sur le fetch /api/products (autres contextes).
+  const catalog = advisorProducts.length ? advisorProducts : products;
+
   // Map id -> produit pour résoudre les marqueurs [PRODUIT:id]
   const productById = React.useMemo(() => {
     const map = new Map<string, GHLProduct>();
-    for (const p of products) map.set(p.id, p);
+    for (const p of catalog) map.set(p.id, p);
     return map;
-  }, [products]);
+  }, [catalog]);
 
   // Référence toujours à jour du catalogue : permet d'attendre son chargement
   // dans les fonctions asynchrones (sinon « course » → catalogue vide au matching).
-  const productsRef = useRef<GHLProduct[]>(products);
-  productsRef.current = products;
+  const productsRef = useRef<GHLProduct[]>(catalog);
+  productsRef.current = catalog;
 
   // Ouvre Léo en mode conseil produits depuis la boutique
   useEffect(() => {
-    function handleOpenAdvisor() {
+    function handleOpenAdvisor(e: Event) {
+      // La boutique transmet son catalogue SSR → Léo l'utilise directement.
+      const detail = (e as CustomEvent<{ products?: GHLProduct[] }>).detail;
+      if (detail?.products?.length) setAdvisorProducts(detail.products);
       setMode('advisor');
       setStarted(true);
       setHumanForm('closed');
@@ -295,12 +305,12 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
   }, [open]);
 
   function buildAdvisorSystemPrompt(): string {
-    const catalog = products.length
-      ? products
+    const catalogText = catalog.length
+      ? catalog
           .map((p) => `- ${p.id} | ${p.name} | ${p.category} | ${p.price}$ — ${(p.description || '').slice(0, 160)}`)
           .join('\n')
       : '(catalogue momentanément indisponible)';
-    return `${ADVISOR_SYSTEM_PROMPT}\n\nCATALOGUE (utilise uniquement ces identifiants exacts) :\n${catalog}`;
+    return `${ADVISOR_SYSTEM_PROMPT}\n\nCATALOGUE (utilise uniquement ces identifiants exacts) :\n${catalogText}`;
   }
 
   const pushAssistant = (content: string) =>
