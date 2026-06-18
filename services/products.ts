@@ -13,7 +13,6 @@
  *     à chaque visite.
  */
 import 'server-only';
-import { JSDOM } from 'jsdom';
 import { GHLProduct, ProductVariation } from '../data/ghlProducts';
 import { SHOP_CATEGORY_RULES, SHOP_DEFAULT_CATEGORY, ShopCategory } from '../constants';
 
@@ -99,39 +98,42 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 /**
- * Assainit le HTML de description WooCommerce, côté serveur, avec jsdom.
- * Ne garde qu'un sous-ensemble de balises sûres, retire tous les attributs
- * (sauf href/title sur <a>), supprime script/style. Identique au rendu attendu
- * dans le modal boutique.
+ * Assainit le HTML de description WooCommerce, côté serveur, SANS dépendance
+ * lourde (jsdom plantait dans le runtime serverless de Netlify → 500). Ne garde
+ * qu'un sous-ensemble de balises sûres, retire tous les attributs (sauf
+ * href/title sur <a>), supprime script/style et commentaires. Le contenu vient
+ * de notre propre WooCommerce (de confiance), pas d'entrées utilisateur.
  */
 function sanitizeDescriptionHtml(html: string): string {
   if (!html) return '';
-  let dom: JSDOM;
-  try {
-    dom = new JSDOM(`<body>${html}</body>`);
-  } catch {
-    return `<p>${stripHtml(html)}</p>`;
-  }
-  const doc = dom.window.document;
-  const walk = (node: Node) => {
-    for (const child of [...node.childNodes]) {
-      if (child.nodeType !== 1) continue;
-      const el = child as HTMLElement;
-      walk(el);
-      if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') { el.remove(); continue; }
-      if (!ALLOWED_TAGS.has(el.tagName)) { el.replaceWith(...[...el.childNodes]); continue; }
-      for (const attr of [...el.attributes]) {
-        if (el.tagName === 'A' && (attr.name === 'href' || attr.name === 'title')) continue;
-        el.removeAttribute(attr.name);
+  // 1) Retire entièrement les blocs script/style (balise + contenu) et les commentaires.
+  let out = html
+    .replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+
+  // 2) Traite chaque balise : garde les balises autorisées (attributs retirés,
+  //    sauf href/title sur <a>), « déballe » les autres en conservant leur texte.
+  const unquote = (v: string) => v.replace(/^['"]|['"]$/g, '');
+  out = out.replace(
+    /<(\/?)\s*([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g,
+    (_m: string, slash: string, tag: string, attrs: string) => {
+      const TAG = tag.toUpperCase();
+      if (!ALLOWED_TAGS.has(TAG)) return '';            // déballe : texte conservé
+      if (slash) return `</${tag.toLowerCase()}>`;
+      if (TAG === 'A') {
+        const href = attrs.match(/\bhref\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i);
+        const title = attrs.match(/\btitle\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i);
+        let a = '<a';
+        if (href) a += ` href="${unquote(href[1])}"`;
+        if (title) a += ` title="${unquote(title[1])}"`;
+        return a + ' target="_blank" rel="noopener noreferrer">';
       }
-      if (el.tagName === 'A') {
-        el.setAttribute('target', '_blank');
-        el.setAttribute('rel', 'noopener noreferrer');
-      }
+      return `<${tag.toLowerCase()}>`;                  // autres balises : attributs retirés
     }
-  };
-  walk(doc.body);
-  return doc.body.innerHTML.replace(/^(\s*<hr>\s*)+/i, '').replace(/(\s*<hr>\s*)+$/i, '').trim();
+  );
+
+  // 3) Retire les <hr> en tête/queue (comme l'ancien rendu).
+  return out.replace(/^(\s*<hr>\s*)+/i, '').replace(/(\s*<hr>\s*)+$/i, '').trim();
 }
 
 const normalize = (s: string) =>

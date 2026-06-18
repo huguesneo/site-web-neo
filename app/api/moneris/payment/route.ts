@@ -170,28 +170,49 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
-    const approved = res.ok && data?.paymentStatus === 'SUCCEEDED';
+    const rawText = await res.text();
+    let data: Record<string, unknown> = {};
+    try { data = rawText ? JSON.parse(rawText) : {}; } catch { /* réponse non-JSON */ }
+    const approved = res.ok && (data as { paymentStatus?: string })?.paymentStatus === 'SUCCEEDED';
 
     if (!approved) {
+      // — DIAGNOSTIC TEMPORAIRE — journalise la vraie réponse Moneris.
+      console.error('[MONERIS] Paiement non approuvé — HTTP', res.status, '— corps:', rawText);
+      const d = data as {
+        transactionDetails?: { message?: string };
+        message?: string;
+        errors?: unknown;
+      };
       const msg =
-        data?.transactionDetails?.message ||
-        data?.message ||
+        d?.transactionDetails?.message ||
+        d?.message ||
+        (d?.errors ? JSON.stringify(d.errors) : '') ||
         'Le paiement a été refusé.';
       return NextResponse.json(
-        { approved: false, error: msg, status: data?.paymentStatus ?? null },
+        {
+          approved: false,
+          error: msg,
+          status: (data as { paymentStatus?: string })?.paymentStatus ?? null,
+          // — DEBUG TEMPORAIRE (à retirer après diagnostic) —
+          debug: { monerisHttp: res.status, monerisBody: rawText?.slice(0, 1500) },
+        },
         { status: 402 }
       );
     }
 
     // Paiement approuvé → on marque la commande payée côté serveur.
-    await markOrderPaid(orderId, data.paymentId ?? '');
+    const ok = data as {
+      paymentId?: string;
+      transactionDetails?: { authorizationCode?: string };
+      amount?: { amount?: number };
+    };
+    await markOrderPaid(orderId, ok.paymentId ?? '');
 
     return NextResponse.json({
       approved: true,
-      paymentId: data.paymentId,
-      authorizationCode: data?.transactionDetails?.authorizationCode ?? null,
-      amount: data?.amount?.amount ?? amountCents,
+      paymentId: ok.paymentId,
+      authorizationCode: ok?.transactionDetails?.authorizationCode ?? null,
+      amount: ok?.amount?.amount ?? amountCents,
     });
   } catch (err) {
     return NextResponse.json(
