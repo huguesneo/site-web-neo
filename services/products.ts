@@ -136,6 +136,19 @@ function sanitizeDescriptionHtml(html: string): string {
   return out.replace(/^(\s*<hr>\s*)+/i, '').replace(/(\s*<hr>\s*)+$/i, '').trim();
 }
 
+// Les médias WooCommerce (images produits) sont servis par WordPress (WP Engine),
+// accessible via wp.neoperformance.ca. Mais l'API renvoie des URLs codées en dur sur
+// www.neoperformance.ca : depuis la migration DNS, ce host pointe vers ce site Next
+// (Netlify) et ne sert donc plus les fichiers /wp-content/ → images cassées. On
+// réécrit l'hôte des médias vers wp.neoperformance.ca, qui sert toujours WordPress.
+const WP_MEDIA_HOST = 'wp.neoperformance.ca';
+function rewriteMediaHost(src: string): string {
+  return src.replace(
+    /^(https?:\/\/)(?:www\.)?neoperformance\.ca\//i,
+    `$1${WP_MEDIA_HOST}/`
+  );
+}
+
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 
@@ -156,14 +169,14 @@ function mapVariation(v: WCVariation): ProductVariation {
     id: v.id,
     label: (v.attributes ?? []).map((a) => a.option).filter(Boolean).join(' · '),
     price: parseFloat(v.price || '0').toFixed(2),
-    image: v.image?.src,
+    image: v.image?.src ? rewriteMediaHost(v.image.src) : undefined,
     inStock: v.stock_status !== 'outofstock',
   };
 }
 
 function mapWCProduct(p: WCProduct, variations?: WCVariation[]): GHLProduct {
   const price = p.price || p.regular_price || '0.00';
-  const images = (p.images ?? []).map((i) => i.src).filter(Boolean);
+  const images = (p.images ?? []).map((i) => rewriteMediaHost(i.src)).filter(Boolean);
   const category = resolveCategory(p);
   const rawDescription = p.description || p.short_description || '';
   const description = stripHtml(rawDescription);
