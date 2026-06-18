@@ -146,9 +146,10 @@ export async function POST(req: NextRequest) {
       automaticCapture: true,
       dynamicDescriptor: 'NEO Performance',
       ...(orderId ? { orderId: String(orderId) } : {}),
-      // Champ « ID client » de Moneris : on y met le prénom + nom du client pour
-      // qu'il apparaisse dans le portail (comme les paiements faits en clinique).
-      ...(fullName ? { customerId: fullName } : {}),
+      // NB : le champ Moneris `customerId` n'est PAS un nom libre — il exige un
+      // format strict (30 car., motif ^[A-Za-z]{2}\d{2}[A-Za-z0-9]{26}$). Y mettre
+      // le nom du client faisait échouer TOUT le paiement (400 INVALID_FORMAT).
+      // Le nom est déjà transmis via cardholderName ci-dessous, qui s'affiche au portail.
       ...(fullName
         ? {
             paymentMethodDetails: {
