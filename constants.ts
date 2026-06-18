@@ -8,7 +8,7 @@ export const WP_CONFIG = {
   apiUrl: "https://neoperformance.ca/wp-json"
 };
 
-export const LOGO_URL = "/logo-neo.png";
+export const LOGO_URL = "/logo-neo.webp";
 
 // CONFIGURATION GOHIGHLEVEL (GHL)
 export const GHL_CONFIG = {
@@ -16,11 +16,11 @@ export const GHL_CONFIG = {
 };
 
 export const IMAGES = {
-  hero: "/hero.jpg",
-  consultation: "/consultation.jpg",
-  method: "/methode.jpg",
-  clinic: "/clinique.jpg",
-  Lyliane: "/lyliane.jpg",
+  hero: "/hero.webp",
+  consultation: "/consultation.webp",
+  method: "/methode.webp",
+  clinic: "/clinique.webp",
+  Lyliane: "/lyliane.webp",
 };
 
 export const NAV_LINKS: NavLink[] = [
