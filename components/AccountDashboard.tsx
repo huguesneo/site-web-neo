@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { LogOut, Package, ClipboardList, ArrowRight } from 'lucide-react';
+import { LogOut, Package, ArrowRight, FolderOpen } from 'lucide-react';
 import Button from './Button';
 import { supabase } from '../services/supabaseClient';
 
@@ -43,11 +43,19 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
   // Repli immédiat dérivé du courriel, le temps de lire le vrai prénom.
   const [firstName, setFirstName] = useState<string>(() => getFirstName(user));
 
-  // Va chercher le prénom dans la table `clients` (colonne first_name),
-  // associé par courriel — même donnée que l'application de suivi.
+  // Client de la clinique = personne possédant une fiche dans `clients`. Les
+  // sections « Mon suivi » et « Mes documents » (contenu clinique) ne s'affichent
+  // que pour eux. `undefined` = pas encore déterminé (on n'affiche rien avant).
+  const [isClinicClient, setIsClinicClient] = useState<boolean | undefined>(undefined);
+
+  // Va chercher le prénom + l'existence d'une fiche dans la table `clients`,
+  // associée par courriel — même donnée que l'application de suivi.
   useEffect(() => {
     let mounted = true;
-    if (!user.email) return;
+    if (!user.email) {
+      setIsClinicClient(false);
+      return;
+    }
 
     supabase
       .from('clients')
@@ -55,7 +63,9 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
       .eq('email', user.email)
       .maybeSingle()
       .then(({ data }) => {
-        if (mounted && data?.first_name && typeof data.first_name === 'string') {
+        if (!mounted) return;
+        setIsClinicClient(!!data);
+        if (data?.first_name && typeof data.first_name === 'string') {
           const f = data.first_name.trim();
           if (f) setFirstName(f.charAt(0).toUpperCase() + f.slice(1));
         }
@@ -100,19 +110,25 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
               </span>
             </Link>
 
-            {/* Mon suivi (à venir) */}
-            <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100 p-6">
-              <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-neo/10 text-neo mb-4">
-                <ClipboardList size={22} />
-              </div>
-              <h2 className="text-lg font-bold text-gray-900">Mon suivi</h2>
-              <p className="mt-1.5 text-sm text-gray-500">
-                Votre dossier et votre suivi NEO Performance, au même endroit.
-              </p>
-              <p className="mt-3 inline-block text-xs font-medium text-neo bg-neo-50 rounded-full px-3 py-1">
-                Bientôt disponible
-              </p>
-            </div>
+            {/* Mes documents — clients de la clinique seulement */}
+            {isClinicClient && (
+              <Link
+                href="/espace-client/documents"
+                className="group bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100 p-6 transition hover:shadow-2xl hover:border-neo/30 hover:-translate-y-0.5"
+              >
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-neo/10 text-neo mb-4">
+                  <FolderOpen size={22} />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">Mes documents</h2>
+                <p className="mt-1.5 text-sm text-gray-500">
+                  Stratégies alimentaires, programmes d'entraînement et reçus.
+                </p>
+                <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-neo">
+                  Voir mes documents
+                  <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+            )}
           </div>
 
           {/* Actions */}
