@@ -125,6 +125,43 @@ const Checkout: React.FC = () => {
     }
   }, [hydrated, items.length, status, router]);
 
+  // Pré-remplit les coordonnées avec celles du compte connecté (sans écraser une
+  // saisie en cours) : courriel (depuis Supabase Auth) puis prénom, nom et
+  // téléphone (depuis la fiche `clients`, associée par courriel — même donnée
+  // que l'application de suivi). Garantit aussi que la commande sera reliée à
+  // l'espace client, où le client retrouve l'historique de ses commandes.
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      const accountEmail = data.session?.user?.email;
+      if (!mounted || !accountEmail) return;
+
+      // 1) Courriel du compte tout de suite.
+      setForm((prev) => (prev.email.trim() ? prev : { ...prev, email: accountEmail }));
+
+      // 2) Prénom / nom / téléphone depuis la fiche client (si elle existe ;
+      //    une personne sans dossier clinique n'aura pas de ligne ici).
+      const { data: client } = await supabase
+        .from('clients')
+        .select('first_name, last_name, phone')
+        .eq('email', accountEmail)
+        .maybeSingle();
+      if (!mounted || !client) return;
+
+      setForm((prev) => ({
+        ...prev,
+        firstName: prev.firstName.trim() ? prev.firstName : (client.first_name ?? '').trim(),
+        lastName: prev.lastName.trim() ? prev.lastName : (client.last_name ?? '').trim(),
+        phone: prev.phone.trim() ? prev.phone : (client.phone ?? '').trim(),
+      }));
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // ─── Écoute la réponse de l'iframe Hosted Tokenization ──────────────────────
   // (placé ici, avant tout return anticipé, pour respecter l'ordre des hooks)
   useEffect(() => {

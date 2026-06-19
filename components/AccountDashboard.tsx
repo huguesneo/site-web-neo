@@ -1,7 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { LogOut, Package, ClipboardList } from 'lucide-react';
+import Link from 'next/link';
+import { LogOut, Package, ClipboardList, ArrowRight } from 'lucide-react';
 import Button from './Button';
 import { supabase } from '../services/supabaseClient';
 
@@ -81,8 +82,11 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
         <div className="container mx-auto max-w-2xl">
           {/* Cartes de sections */}
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Mes commandes (à venir) */}
-            <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100 p-6">
+            {/* Mes commandes */}
+            <Link
+              href="/espace-client/commandes"
+              className="group bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100 p-6 transition hover:shadow-2xl hover:border-neo/30 hover:-translate-y-0.5"
+            >
               <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-neo/10 text-neo mb-4">
                 <Package size={22} />
               </div>
@@ -90,10 +94,11 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
               <p className="mt-1.5 text-sm text-gray-500">
                 Retrouvez ici l'historique de vos achats à la boutique.
               </p>
-              <p className="mt-3 inline-block text-xs font-medium text-neo bg-neo-50 rounded-full px-3 py-1">
-                Bientôt disponible
-              </p>
-            </div>
+              <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-neo">
+                Voir mes commandes
+                <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </Link>
 
             {/* Mon suivi (à venir) */}
             <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100 p-6">
