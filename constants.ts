@@ -226,6 +226,16 @@ export function shippingFeeFor(netGoods: number): number {
   return netGoods > 0 && netGoods <= FREE_SHIPPING_THRESHOLD ? SHIPPING_FEE : 0;
 }
 
+/**
+ * Produit NUMÉRIQUE (carte-cadeau ou suivi « Accompagnement NEO ») : aucun frais de
+ * livraison et — surtout — EXCLU du calcul du seuil de livraison gratuite. Les frais de
+ * 15 $ se mesurent uniquement sur la valeur des produits PHYSIQUES. Exemple : un produit
+ * physique à 32 $ + une carte-cadeau de 100 $ → base de livraison = 32 $ (≤ 100) → frais 15 $.
+ */
+export function isDigitalProduct(product: { id: string; category: string }): boolean {
+  return product.id === String(GIFT_CARD_PRODUCT_ID) || product.category === NEO_ACCOMPANIMENT_CATEGORY;
+}
+
 // Règles de mappage : pour chaque produit, la PREMIÈRE règle dont un des
 // `wcTags` correspond à une catégorie WooCommerce du produit gagne.
 // (comparaison insensible à la casse / aux accents)

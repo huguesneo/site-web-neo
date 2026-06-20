@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag } from 'lucide-react';
 import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import { supabase } from '../services/supabaseClient';
-import { shippingFeeFor } from '../constants';
 import Section from '../components/Section';
 
 // ─── Moneris Hosted Tokenization (iframe sécurisée) ─────────────────────────────
@@ -73,7 +72,7 @@ const PROVINCES: { label: string; code: string }[] = [
 ];
 
 const Checkout: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, coupon, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
+  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, shipping, coupon, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
   const router = useRouter();
 
   const [couponInput, setCouponInput] = useState('');
@@ -115,7 +114,7 @@ const Checkout: React.FC = () => {
   const couponDiscount = coupon?.discountValue ?? 0;
   const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
   const netGoods = subtotal - totalDiscount;
-  const shipping = shippingFeeFor(netGoods);
+  // `shipping` (contexte) : basé sur les produits PHYSIQUES seulement (numériques exclus).
   const taxes = (netGoods + shipping) * 0.14975;
   const total = netGoods + shipping + taxes;
 

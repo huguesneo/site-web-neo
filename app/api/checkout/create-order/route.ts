@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount, giftCardFaceValue, shippingFeeFor, SHIPPING_LABEL } from '../../../../constants';
+import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount, giftCardFaceValue, shippingFeeFor, SHIPPING_LABEL, NEO_ACCOMPANIMENT_WC_CATEGORY_ID } from '../../../../constants';
 
 /**
  * Route serveur — crée la commande WooCommerce de façon SÛRE.
@@ -154,6 +154,24 @@ async function giftCardClientDiscountTotal(
   }
 }
 
+/**
+ * IDs des produits NUMÉRIQUES à exclure du calcul des frais de livraison : la carte-cadeau
+ * (#5531) + tous les produits de la catégorie « Accompagnement NEO » (suivis / NEOflow).
+ * Ces produits ne génèrent pas de frais et ne comptent pas dans le seuil de livraison
+ * gratuite. Renvoie au moins la carte-cadeau, même si l'appel catégorie échoue.
+ */
+async function fetchDigitalProductIds(): Promise<Set<number>> {
+  const ids = new Set<number>([GIFT_CARD_PRODUCT_ID]);
+  try {
+    const res = await fetch(wc(`/products?per_page=100&status=publish&category=${NEO_ACCOMPANIMENT_WC_CATEGORY_ID}`));
+    if (res.ok) {
+      const batch: Array<{ id: number }> = await res.json();
+      if (Array.isArray(batch)) for (const p of batch) ids.add(p.id);
+    }
+  } catch { /* on conserve au moins la carte-cadeau */ }
+  return ids;
+}
+
 export async function POST(req: NextRequest) {
   if (!WC_BASE || !WC_KEY || !WC_SECRET) {
     return NextResponse.json({ error: 'Configuration WooCommerce manquante côté serveur.' }, { status: 500 });
@@ -251,8 +269,16 @@ export async function POST(req: NextRequest) {
     // recalculer total + taxes. En cas d'échec, on garde la commande sans frais plutôt
     // que de tout faire échouer.
     try {
-      const netGoods = parseFloat(order.total || '0') - parseFloat(order.total_tax || '0');
-      const shipping = shippingFeeFor(netGoods);
+      // Base des frais = valeur marchande nette des PRODUITS PHYSIQUES seulement (après
+      // rabais, hors taxes). Les produits numériques (carte-cadeau, suivis) sont exclus :
+      // ils ne génèrent pas de frais et ne comptent pas dans le seuil de livraison gratuite.
+      // Ex. produit 32 $ + carte-cadeau 100 $ → base = 32 $ (≤ 100) → frais 15 $.
+      const digitalIds = await fetchDigitalProductIds();
+      const lines: Array<{ product_id?: number; total?: string }> = Array.isArray(order.line_items) ? order.line_items : [];
+      const physicalNet = lines
+        .filter((li) => !digitalIds.has(Number(li.product_id)))
+        .reduce((sum, li) => sum + parseFloat(li.total || '0'), 0);
+      const shipping = shippingFeeFor(physicalNet);
       if (shipping > 0) {
         const upd = await fetch(wc(`/orders/${order.id}`), {
           method: 'PUT',

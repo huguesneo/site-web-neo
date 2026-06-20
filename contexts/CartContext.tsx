@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { GHLProduct, ProductVariation } from '../data/ghlProducts';
 import { useClientStatus } from '../hooks/useClientStatus';
-import { CLIENT_DISCOUNT_RATE, isClientDiscountEligible, giftCardClientDiscount, giftCardFaceValue } from '../constants';
+import { CLIENT_DISCOUNT_RATE, isClientDiscountEligible, giftCardClientDiscount, giftCardFaceValue, isDigitalProduct, shippingFeeFor } from '../constants';
 
 /** Variante choisie pour une ligne de panier (sous-ensemble de ProductVariation). */
 export type SelectedVariation = Pick<ProductVariation, 'id' | 'label' | 'price' | 'image'>;
@@ -43,6 +43,8 @@ interface CartContextValue {
   clientDiscount: number;   // rabais client -13 % appliqué en dollars (0 si non connecté)
   giftCardDiscount: number; // rabais client carte-cadeau appliqué en dollars (0 si non connecté)
   potentialClientDiscount: number; // rabais total possible (appât non-connecté)
+  shippableNet: number;     // valeur nette des produits PHYSIQUES (base du seuil de livraison)
+  shipping: number;         // frais de livraison estimés (0 si gratuite ou panier 100 % numérique)
   hydrated: boolean;
   coupon: AppliedCoupon | null;
   applyCoupon: (code: string) => Promise<void>;
@@ -102,6 +104,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const giftCardDiscount = isClient ? giftCardDiscountPotential : 0;
   // Économies potentielles totales si le visiteur (non connecté) devenait client.
   const potentialClientDiscount = discountableSubtotal * CLIENT_DISCOUNT_RATE + giftCardDiscountPotential;
+
+  // ── Frais de livraison ──────────────────────────────────────────────────────
+  // Les produits NUMÉRIQUES (carte-cadeau, suivis) ne génèrent pas de frais et NE
+  // comptent PAS dans le seuil de livraison gratuite. La base se calcule donc sur la
+  // valeur nette des produits PHYSIQUES seulement.
+  const physicalSubtotal = items.reduce(
+    (sum, i) => isDigitalProduct(i.product) ? sum : sum + itemUnitPrice(i) * i.quantity, 0,
+  );
+  // Rabais imputables au physique : le rabais client -13 % ne porte que sur des produits
+  // physiques (Designs for Health) ; le rabais carte-cadeau est numérique (exclu) ; le
+  // coupon est réparti au prorata de la part physique du panier.
+  const couponDiscountValue = coupon?.discountValue ?? 0;
+  const physicalCouponShare = subtotal > 0 ? couponDiscountValue * (physicalSubtotal / subtotal) : 0;
+  const shippableNet = Math.max(0, physicalSubtotal - clientDiscount - physicalCouponShare);
+  const shipping = shippingFeeFor(shippableNet);
 
   async function applyCoupon(code: string) {
     // Validation côté serveur : les clés WooCommerce ne sont jamais exposées au
@@ -165,7 +182,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <CartContext.Provider value={{ items, count, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, hydrated, coupon, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
+    <CartContext.Provider value={{ items, count, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, shippableNet, shipping, hydrated, coupon, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
       {children}
     </CartContext.Provider>
   );

@@ -5,10 +5,10 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Leaf, Tag, X, Loader2, Ch
 import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import Button from '../components/Button';
 import Section from '../components/Section';
-import { shippingFeeFor, FREE_SHIPPING_THRESHOLD } from '../constants';
+import { FREE_SHIPPING_THRESHOLD } from '../constants';
 
 const Cart: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
+  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, shippableNet, shipping, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
   const [couponInput, setCouponInput] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [couponError, setCouponError] = useState('');
@@ -43,8 +43,9 @@ const Cart: React.FC = () => {
   const couponDiscount = coupon?.discountValue ?? 0;
   const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
   const netGoods = subtotal - totalDiscount;
-  const shipping = shippingFeeFor(netGoods);
-  const freeShippingGap = FREE_SHIPPING_THRESHOLD - netGoods; // > 0 si livraison gratuite proche
+  // `shipping` vient du contexte : calculé sur la valeur des produits PHYSIQUES seulement
+  // (les produits numériques — carte-cadeau, suivis — sont exclus du seuil de livraison).
+  const freeShippingGap = FREE_SHIPPING_THRESHOLD - shippableNet; // > 0 si livraison gratuite proche
   const taxes = (netGoods + shipping) * 0.14975;
   const total = netGoods + shipping + taxes;
 
