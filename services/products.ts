@@ -152,6 +152,27 @@ function rewriteMediaHost(src: string): string {
 const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 
+// Slug « propre » pour les URLs (repli si le permalink WooCommerce est inexploitable).
+function slugify(s: string): string {
+  return normalize(s)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Le slug canonique d'un produit = dernier segment du permalink WooCommerce
+// (ex. https://.../produit/proteine-atp/ → "proteine-atp"). On conserve ainsi
+// l'URL que WooCommerce a déjà générée ; repli sur le nom si besoin.
+function slugFromPermalink(permalink: string, fallbackName: string): string {
+  try {
+    const segments = new URL(permalink).pathname.split('/').filter(Boolean);
+    const last = segments[segments.length - 1];
+    if (last) return decodeURIComponent(last);
+  } catch {
+    /* permalink absent/malformé → repli */
+  }
+  return slugify(fallbackName);
+}
+
 function resolveCategory(p: WCProduct): ShopCategory {
   const tags = new Set((p.categories ?? []).map((c) => normalize(c.name)));
   for (const rule of SHOP_CATEGORY_RULES) {
@@ -188,6 +209,7 @@ function mapWCProduct(p: WCProduct, variations?: WCVariation[]): GHLProduct {
 
   return {
     id: String(p.id),
+    slug: slugFromPermalink(p.permalink, p.name),
     name: p.name,
     category,
     price: parseFloat(price).toFixed(2),
@@ -215,6 +237,16 @@ export async function getShopProducts(): Promise<GHLProduct[]> {
     console.error('Erreur chargement boutique WooCommerce (serveur):', err);
     return [];
   }
+}
+
+/**
+ * Un produit par son slug d'URL, pour la page dédiée /boutique/[slug].
+ * S'appuie sur le même cache que la grille (getShopProducts). Renvoie null si
+ * introuvable → la page rend un 404.
+ */
+export async function getProductBySlug(slug: string): Promise<GHLProduct | null> {
+  const products = await getShopProducts();
+  return products.find((p) => p.slug === slug) ?? null;
 }
 
 async function loadShopProducts(): Promise<GHLProduct[]> {

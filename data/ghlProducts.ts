@@ -10,6 +10,7 @@ export interface ProductVariation {
 
 export interface GHLProduct {
   id: string;
+  slug: string;        // identifiant URL unique (ex. "proteine-atp") → page /boutique/[slug]
   name: string;
   category: string;
   price: string;       // prix d'affichage (= min des variantes pour un produit variable)

@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next';
 import { client } from '@/sanity/lib/client';
 import { postSlugsQuery } from '@/sanity/lib/queries';
+import { getShopProducts } from '@/services/products';
+import { NEO_ACCOMPANIMENT_CATEGORY } from '@/constants';
 
 export const revalidate = 3600;
 
@@ -18,6 +20,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
   } catch {
     // Sanity non configuré ou indisponible : on sert quand même le reste du sitemap
+  }
+
+  let productPages: MetadataRoute.Sitemap = [];
+  try {
+    const products = await getShopProducts();
+    productPages = products
+      // « Accompagnement NEO » réservé aux clients → hors sitemap.
+      .filter((p) => p.category !== NEO_ACCOMPANIMENT_CATEGORY)
+      .map((p) => ({
+      url: `${baseUrl}/boutique/${p.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    }));
+  } catch {
+    // WooCommerce indisponible : on sert quand même le reste du sitemap
   }
 
   return [
@@ -69,6 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    ...productPages,
     ...blogPosts,
   ];
 }

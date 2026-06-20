@@ -1,12 +1,13 @@
 'use client';
 import React, { useState } from 'react';
+import Link from 'next/link';
 import Section from '../components/Section';
 import Button from '../components/Button';
-import { GHLProduct, ProductVariation } from '../data/ghlProducts';
+import { GHLProduct } from '../data/ghlProducts';
 import { useGHLProducts } from '../hooks/useGHLProducts';
 import { useCart } from '../contexts/CartContext';
 import { useClientStatus } from '../hooks/useClientStatus';
-import { SHOP_CATEGORIES, NEO_ACCOMPANIMENT_CATEGORY, prixClient, isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, GIFT_CARD_MAX_CLIENT_DISCOUNT, giftCardClientDiscount, giftCardFaceValue } from '../constants';
+import { SHOP_CATEGORIES, NEO_ACCOMPANIMENT_CATEGORY, prixClient, isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, GIFT_CARD_MAX_CLIENT_DISCOUNT } from '../constants';
 import { OPEN_LEO_ADVISOR_EVENT } from '../components/Chatbot';
 import {
   Search, ArrowRight, Truck, ShieldCheck, ShoppingCart,
@@ -63,56 +64,12 @@ const CardPriceTag: React.FC<{ regular: number; isClient: boolean; noDiscount?: 
   );
 };
 
-// Bloc prix dans le modal produit — plus généreux, met en avant l'économie.
-// noDiscount = true pour les produits d'accompagnement (prix fixe, aucun rabais).
-const ModalPriceBlock: React.FC<{ regular: number; isClient: boolean; noDiscount?: boolean }> = ({ regular, isClient, noDiscount }) => {
-  const client = prixClient(regular);
-  const saving = regular - client;
-  if (noDiscount) {
-    return (
-      <div className="mb-5">
-        <p className="text-3xl font-extrabold text-gray-900 tracking-tight">{fmt(regular)} $</p>
-      </div>
-    );
-  }
-  if (isClient) {
-    return (
-      <div className="mb-5">
-        <div className="flex items-baseline gap-3">
-          <p className="text-3xl font-extrabold text-neo tracking-tight">{fmt(client)} $</p>
-          <p className="text-lg font-medium text-gray-400 line-through">{fmt(regular)} $</p>
-        </div>
-        <span className="mt-2.5 inline-flex items-center gap-1.5 bg-neo-50 text-neo text-[11px] font-bold px-2.5 py-1 rounded-full">
-          <CheckCircle size={12} /> Prix client appliqué · −13 %
-        </span>
-      </div>
-    );
-  }
-  return (
-    <div className="mb-5">
-      <p className="text-3xl font-extrabold text-gray-900 tracking-tight">{fmt(regular)} $</p>
-      <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-neo-50/70 border border-neo/10 px-3 py-2.5">
-        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm">
-          <Sparkles size={15} className="text-neo" />
-        </div>
-        <div className="leading-tight">
-          <p className="text-[13px] font-extrabold text-neo">En tant que client NEO, vous auriez économisé {fmt(saving)} $</p>
-          <p className="text-[11px] text-gray-500">Déjà client ? Connectez-vous à votre espace client.</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts }) => {
   const { products, loading, error } = useGHLProducts(initialProducts);
   const { addItem } = useCart();
   const { isClient } = useClientStatus();
   const [activeCategory, setActiveCategory] = useState("Tout");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<GHLProduct | null>(null);
-  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
-  const [activeImage, setActiveImage] = useState<string>('');
   const [addedId, setAddedId] = useState<string | null>(null);
   const [cartToast, setCartToast] = useState<{ name: string; visible: boolean }>({ name: '', visible: false });
   const [catMenuOpen, setCatMenuOpen] = useState(false);
@@ -189,27 +146,14 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
     return matchCategory && matchSearch;
   });
 
-  // Réinitialise la sélection (variante + image) à chaque ouverture de fiche produit.
-  React.useEffect(() => {
-    setSelectedVariation(null);
-    setActiveImage(selectedProduct?.image ?? '');
-  }, [selectedProduct]);
-
   const hasVariations = (p: GHLProduct) => !!p.variations?.length;
 
-  const handleAddToCart = (product: GHLProduct, variation?: ProductVariation | null) => {
-    addItem(product, variation ?? undefined);
+  const handleAddToCart = (product: GHLProduct) => {
+    addItem(product);
     setAddedId(product.id);
     setCartToast({ name: product.name, visible: true });
     setTimeout(() => setAddedId(null), 1500);
     setTimeout(() => setCartToast(prev => ({ ...prev, visible: false })), 2800);
-  };
-
-  // Clic « Ajouter » sur une carte : si le produit a des variantes, on ouvre la fiche
-  // pour forcer le choix ; sinon on ajoute directement.
-  const handleCardAdd = (product: GHLProduct) => {
-    if (hasVariations(product)) { setSelectedProduct(product); return; }
-    handleAddToCart(product);
   };
 
   return (
@@ -335,9 +279,9 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filteredProducts.map((product, index) => (
-                  <div
+                  <Link
                     key={product.id}
-                    onClick={() => setSelectedProduct(product)}
+                    href={`/boutique/${product.slug}`}
                     style={{ animationDelay: `${Math.min(index * 40, 400)}ms`, opacity: 0 }}
                     className="group bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-2xl hover:shadow-gray-200/80 hover:border-neo/20 hover:-translate-y-1.5 transition-all duration-300 flex flex-col cursor-pointer animate-fade-in-up"
                   >
@@ -369,8 +313,11 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
                         <CardPriceTag regular={parseFloat(product.price)} isClient={isClient} noDiscount={!isClientDiscountEligible(product.name)} variablePrefix={hasVariations(product)} giftCardUpTo={product.id === String(GIFT_CARD_PRODUCT_ID) ? GIFT_CARD_MAX_CLIENT_DISCOUNT : undefined} />
                         <button
                           onClick={(e) => {
-                            e.stopPropagation();
-                            handleCardAdd(product);
+                            // Produit à variantes : on laisse le lien naviguer vers la
+                            // fiche pour choisir. Produit simple : ajout direct au panier.
+                            if (hasVariations(product)) return;
+                            e.preventDefault();
+                            handleAddToCart(product);
                           }}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 shadow-sm ${
                             addedId === product.id
@@ -387,7 +334,7 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
 
@@ -402,171 +349,6 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
           )}
         </div>
       </div>
-
-      {/* ───── MODAL PRODUIT PREMIUM ───── */}
-      {selectedProduct && (() => {
-        const p = selectedProduct;
-        const variations = p.variations ?? [];
-        const eligible = isClientDiscountEligible(p.name);
-        const isGiftCard = p.id === String(GIFT_CARD_PRODUCT_ID);
-        const needsChoice = variations.length > 0 && !selectedVariation;
-        const displayPrice = selectedVariation ? parseFloat(selectedVariation.price) : parseFloat(p.price);
-        // Rabais carte-cadeau (fixe) pour la variante choisie.
-        const gcUnit = isGiftCard && selectedVariation ? giftCardClientDiscount(p.id, giftCardFaceValue(selectedVariation.label)) : 0;
-        // Prix payé final : -13 % pour Designs for Health, ou rabais fixe carte-cadeau, si connecté.
-        const finalPrice = !isClient
-          ? displayPrice
-          : eligible ? prixClient(displayPrice) : displayPrice - gcUnit;
-        const thumbs = Array.from(new Set([p.image, ...p.images, ...variations.map(v => v.image)].filter(Boolean))) as string[];
-        const mainImg = activeImage || p.image;
-        return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setSelectedProduct(null)}
-          />
-          <div className="relative z-10 bg-white rounded-3xl w-full max-w-2xl overflow-y-auto shadow-2xl animate-fade-in flex flex-col md:flex-row max-h-[90vh] md:overflow-hidden">
-
-            {/* Image + galerie */}
-            <div className="bg-gradient-to-br from-gray-50 to-neo-50/30 flex flex-col items-center justify-center p-6 md:p-8 md:w-[45%] flex-shrink-0 gap-4">
-              <img
-                src={mainImg}
-                className="w-32 h-32 md:w-48 md:h-48 object-contain drop-shadow-md"
-                alt={p.name}
-              />
-              {thumbs.length > 1 && (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {thumbs.map((src) => (
-                    <button
-                      key={src}
-                      onClick={() => setActiveImage(src)}
-                      className={`w-12 h-12 rounded-lg bg-white border-2 flex items-center justify-center overflow-hidden transition-colors ${
-                        mainImg === src ? 'border-neo' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <img src={src} alt="" className="w-full h-full object-contain p-1" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Details */}
-            <div className="p-8 flex flex-col flex-1 overflow-y-auto">
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-800 transition-colors"
-              >
-                <X size={16} />
-              </button>
-
-              <span className="text-[10px] font-black text-neo uppercase tracking-[0.28em] mb-2 block">
-                {p.category}
-              </span>
-              <h2 className="text-xl font-bold text-gray-900 leading-tight mb-1">
-                {p.name}
-              </h2>
-              {needsChoice && (
-                <p className="text-[11px] font-semibold text-gray-400 mb-1">À partir de</p>
-              )}
-              {isGiftCard ? (
-                isClient && selectedVariation && gcUnit > 0 ? (
-                  <div className="mb-5">
-                    <div className="flex items-baseline gap-3">
-                      <p className="text-3xl font-extrabold text-neo tracking-tight">{fmt(displayPrice - gcUnit)} $</p>
-                      <p className="text-lg font-medium text-gray-400 line-through">{fmt(displayPrice)} $</p>
-                    </div>
-                    <span className="mt-2.5 inline-flex items-center gap-1.5 bg-neo-50 text-neo text-[11px] font-bold px-2.5 py-1 rounded-full">
-                      <CheckCircle size={12} /> Prix client · −{Math.round(gcUnit)} $
-                    </span>
-                  </div>
-                ) : (
-                  <div className="mb-5">
-                    <p className="text-3xl font-extrabold text-gray-900 tracking-tight">{fmt(displayPrice)} $</p>
-                    <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-neo-50/70 border border-neo/10 px-3 py-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm">
-                        <Sparkles size={15} className="text-neo" />
-                      </div>
-                      <div className="leading-tight">
-                        <p className="text-[13px] font-extrabold text-neo">Client : économisez jusqu'à {Math.round(GIFT_CARD_MAX_CLIENT_DISCOUNT)} $</p>
-                        <p className="text-[11px] text-gray-500">
-                          {isClient ? 'Choisissez un montant pour voir votre prix client.' : 'Connectez-vous à votre espace client.'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              ) : (
-                <ModalPriceBlock regular={displayPrice} isClient={isClient} noDiscount={!eligible} />
-              )}
-
-              {/* Sélecteur de variantes */}
-              {variations.length > 0 && (
-                <div className="mb-5">
-                  <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2.5">
-                    {p.variationLabel || 'Choix'}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {variations.map((v) => {
-                      const active = selectedVariation?.id === v.id;
-                      return (
-                        <button
-                          key={v.id}
-                          disabled={!v.inStock}
-                          onClick={() => {
-                            setSelectedVariation(v);
-                            if (v.image) setActiveImage(v.image);
-                          }}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
-                            !v.inStock
-                              ? 'border-gray-100 text-gray-300 line-through cursor-not-allowed'
-                              : active
-                                ? 'border-neo bg-neo text-white shadow-md shadow-neo/20'
-                                : 'border-gray-200 text-gray-700 hover:border-neo/50'
-                          }`}
-                        >
-                          {v.label}{!v.inStock && ' — épuisé'}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="h-px bg-gray-100 mb-5" />
-
-              {p.descriptionHtml ? (
-                <div
-                  className="text-gray-600 text-sm leading-relaxed flex-1 mb-6 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-4 [&_h3]:mb-1.5 [&_h4]:font-bold [&_h4]:text-gray-900 [&_h4]:mt-3 [&_p]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_ol]:space-y-1 [&_strong]:font-semibold [&_strong]:text-gray-800 [&_b]:font-semibold [&_b]:text-gray-800 [&_a]:text-neo [&_a]:underline [&_hr]:my-4 [&_hr]:border-gray-100"
-                  dangerouslySetInnerHTML={{ __html: p.descriptionHtml }}
-                />
-              ) : (
-                <p className="text-gray-500 text-sm leading-relaxed flex-1 mb-6">
-                  Un supplément de haute qualité, rigoureusement sélectionné par nos experts cliniques pour ses propriétés biologiques exceptionnelles et sa biodisponibilité optimale.
-                </p>
-              )}
-
-              <div className="space-y-2.5 mt-auto">
-                <button
-                  disabled={needsChoice}
-                  onClick={() => { handleAddToCart(p, selectedVariation); setSelectedProduct(null); }}
-                  className="w-full bg-neo hover:bg-neo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-neo/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-                >
-                  <ShoppingCart size={17} />
-                  {needsChoice
-                    ? `Choisissez ${(p.variationLabel || 'une option').toLowerCase()}`
-                    : `Ajouter au panier — ${fmt(finalPrice)} $`}
-                </button>
-                <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
-                  <ShieldCheck size={11} className="text-gray-400" />
-                  Paiement 100% sécurisé via Moneris
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
 
       {/* ───── POP-UP ACCUEIL CONSEIL LÉO ───── */}
       {leoPopupOpen && (
