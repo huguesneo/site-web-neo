@@ -43,6 +43,7 @@ interface WCProduct {
   attributes: Array<{ id: number; name: string; variation: boolean; options: string[] }>;
   status: string;
   catalog_visibility: string;
+  stock_status: string; // 'instock' | 'outofstock' | 'onbackorder'
 }
 
 interface WCVariation {
@@ -207,6 +208,14 @@ function mapWCProduct(p: WCProduct, variations?: WCVariation[]): GHLProduct {
     .map(mapVariation)
     .filter((v) => v.label.length > 0);
 
+  // Disponibilité : pour un produit variable, on est dispo tant qu'AU MOINS une
+  // variante l'est (les variantes épuisées sont déjà barrées individuellement).
+  // Pour un produit simple, on suit le statut WooCommerce — seul 'outofstock'
+  // bloque (un 'onbackorder' / réappro reste achetable, comme pour les variantes).
+  const inStock = mappedVariations.length
+    ? mappedVariations.some((v) => v.inStock)
+    : p.stock_status !== 'outofstock';
+
   return {
     id: String(p.id),
     slug: slugFromPermalink(p.permalink, p.name),
@@ -218,6 +227,7 @@ function mapWCProduct(p: WCProduct, variations?: WCVariation[]): GHLProduct {
     checkoutUrl: p.permalink,
     description,
     descriptionHtml,
+    inStock,
     variationLabel: mappedVariations.length ? variationAttrName(p) : undefined,
     variations: mappedVariations.length ? mappedVariations : undefined,
   };

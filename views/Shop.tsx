@@ -290,7 +290,9 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-4/5 h-4/5 object-contain group-hover:scale-[1.06] transition-transform duration-500"
+                        className={`w-4/5 h-4/5 object-contain group-hover:scale-[1.06] transition-transform duration-500 ${
+                          product.inStock ? '' : 'opacity-40 grayscale'
+                        }`}
                         loading="lazy"
                         decoding="async"
                       />
@@ -300,6 +302,14 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
                           {product.category}
                         </span>
                       </div>
+                      {/* Badge rupture de stock */}
+                      {!product.inStock && (
+                        <div className="absolute top-3 right-3">
+                          <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.18em] bg-white/95 px-2.5 py-1 rounded-full border border-gray-200 shadow-sm">
+                            Rupture de stock
+                          </span>
+                        </div>
+                      )}
                       {/* Hover overlay cue */}
                       <div className="absolute inset-0 bg-neo/0 group-hover:bg-neo/4 transition-colors duration-300 pointer-events-none" />
                     </div>
@@ -312,7 +322,10 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
                       <div className="mt-auto flex items-end justify-between gap-2 pt-3 border-t border-gray-50">
                         <CardPriceTag regular={parseFloat(product.price)} isClient={isClient} noDiscount={!isClientDiscountEligible(product.name)} variablePrefix={hasVariations(product)} giftCardUpTo={product.id === String(GIFT_CARD_PRODUCT_ID) ? GIFT_CARD_MAX_CLIENT_DISCOUNT : undefined} />
                         <button
+                          disabled={!product.inStock}
                           onClick={(e) => {
+                            // Rupture : bouton inactif, on laisse le lien mener à la fiche.
+                            if (!product.inStock) return;
                             // Produit à variantes : on laisse le lien naviguer vers la
                             // fiche pour choisir. Produit simple : ajout direct au panier.
                             if (hasVariations(product)) return;
@@ -320,16 +333,20 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
                             handleAddToCart(product);
                           }}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 shadow-sm ${
-                            addedId === product.id
-                              ? 'bg-green-500 text-white scale-95'
-                              : 'bg-gray-900 text-white hover:bg-neo hover:shadow-neo/30 hover:shadow-md'
+                            !product.inStock
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                              : addedId === product.id
+                                ? 'bg-green-500 text-white scale-95'
+                                : 'bg-gray-900 text-white hover:bg-neo hover:shadow-neo/30 hover:shadow-md'
                           }`}
                         >
-                          {addedId === product.id
-                            ? <><CheckCircle size={13} /> Ajouté</>
-                            : hasVariations(product)
-                              ? <><SlidersHorizontal size={13} /> Choisir</>
-                              : <><ShoppingCart size={13} /> Ajouter</>
+                          {!product.inStock
+                            ? 'Rupture de stock'
+                            : addedId === product.id
+                              ? <><CheckCircle size={13} /> Ajouté</>
+                              : hasVariations(product)
+                                ? <><SlidersHorizontal size={13} /> Choisir</>
+                                : <><ShoppingCart size={13} /> Ajouter</>
                           }
                         </button>
                       </div>

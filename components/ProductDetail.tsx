@@ -31,6 +31,8 @@ const ProductDetail: React.FC<{ product: GHLProduct }> = ({ product: p }) => {
   const eligible = isClientDiscountEligible(p.name);
   const isGiftCard = p.id === String(GIFT_CARD_PRODUCT_ID);
   const needsChoice = variations.length > 0 && !selectedVariation;
+  // Produit SIMPLE en rupture (les variantes gèrent déjà leur propre statut, bouton par bouton).
+  const soldOut = variations.length === 0 && !p.inStock;
   const displayPrice = selectedVariation ? parseFloat(selectedVariation.price) : parseFloat(p.price);
 
   // Rabais carte-cadeau (fixe) pour la variante choisie.
@@ -45,7 +47,7 @@ const ProductDetail: React.FC<{ product: GHLProduct }> = ({ product: p }) => {
   const mainImg = activeImage || p.image;
 
   const handleAdd = () => {
-    if (needsChoice) return;
+    if (needsChoice || soldOut) return;
     addItem(p, selectedVariation ?? undefined);
     setAdded(true);
     setTimeout(() => setAdded(false), 2200);
@@ -196,7 +198,7 @@ const ProductDetail: React.FC<{ product: GHLProduct }> = ({ product: p }) => {
             {/* Ajout panier */}
             <div className="space-y-3 mb-8">
               <button
-                disabled={needsChoice}
+                disabled={needsChoice || soldOut}
                 onClick={handleAdd}
                 className={`w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${
                   added ? 'bg-green-500 text-white shadow-green-500/25' : 'bg-neo hover:bg-neo-600 text-white shadow-neo/25'
@@ -204,6 +206,8 @@ const ProductDetail: React.FC<{ product: GHLProduct }> = ({ product: p }) => {
               >
                 {added ? (
                   <><CheckCircle size={18} /> Ajouté au panier</>
+                ) : soldOut ? (
+                  'Rupture de stock'
                 ) : needsChoice ? (
                   `Choisissez ${(p.variationLabel || 'une option').toLowerCase()}`
                 ) : (

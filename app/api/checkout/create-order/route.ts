@@ -172,6 +172,53 @@ async function fetchDigitalProductIds(): Promise<Set<number>> {
   return ids;
 }
 
+/**
+ * Filet de sécurité : revérifie le stock RÉEL côté WooCommerce juste avant la commande.
+ * Le catalogue affiché est mis en cache (~10 min) ; un article a pu passer en rupture
+ * entre-temps. On lit le statut actuel et on renvoie les NOMS des articles épuisés.
+ * Seul 'outofstock' bloque (un 'onbackorder' / réappro reste commandable). Fail-open :
+ * en cas d'échec d'appel, on renvoie [] et on laisse WooCommerce trancher au moment de
+ * la création — on ne casse jamais une commande à cause d'un check qui échoue.
+ */
+async function findOutOfStockNames(
+  lineItems: Array<{ product_id: number; variation_id?: number }>,
+): Promise<string[]> {
+  try {
+    const productIds = [...new Set(lineItems.map((i) => i.product_id))];
+    const res = await fetch(wc(`/products?include=${productIds.join(',')}&per_page=100`));
+    if (!res.ok) return [];
+    const products: Array<{ id: number; name: string; stock_status: string }> = await res.json();
+    const byId = new Map(products.map((p) => [p.id, p]));
+
+    // Variantes : on charge les variantes des produits concernés pour lire leur statut propre.
+    const variationProductIds = [...new Set(lineItems.filter((i) => i.variation_id).map((i) => i.product_id))];
+    const variationsByProduct = new Map<number, Array<{ id: number; stock_status: string }>>();
+    await Promise.all(
+      variationProductIds.map(async (pid) => {
+        try {
+          const r = await fetch(wc(`/products/${pid}/variations?per_page=100`));
+          if (r.ok) variationsByProduct.set(pid, await r.json());
+        } catch { /* ignore : fail-open pour ce produit */ }
+      }),
+    );
+
+    const out = new Set<string>();
+    for (const li of lineItems) {
+      const p = byId.get(li.product_id);
+      const name = p?.name || `Produit #${li.product_id}`;
+      if (li.variation_id) {
+        const v = (variationsByProduct.get(li.product_id) ?? []).find((x) => x.id === li.variation_id);
+        if (v && v.stock_status === 'outofstock') out.add(name);
+      } else if (p && p.stock_status === 'outofstock') {
+        out.add(name);
+      }
+    }
+    return [...out];
+  } catch {
+    return [];
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!WC_BASE || !WC_KEY || !WC_SECRET) {
     return NextResponse.json({ error: 'Configuration WooCommerce manquante côté serveur.' }, { status: 500 });
@@ -198,6 +245,19 @@ export async function POST(req: NextRequest) {
 
   if (line_items.length === 0) {
     return NextResponse.json({ error: 'Panier vide ou articles invalides.' }, { status: 400 });
+  }
+
+  // Filet de sécurité : un article a-t-il basculé en rupture depuis l'affichage ?
+  const outOfStock = await findOutOfStockNames(line_items);
+  if (outOfStock.length > 0) {
+    const liste = outOfStock.join(', ');
+    return NextResponse.json(
+      {
+        error: `Désolé, ${outOfStock.length > 1 ? 'ces produits sont' : 'ce produit est'} en rupture de stock : ${liste}. Veuillez ${outOfStock.length > 1 ? 'les' : 'le'} retirer de votre panier pour continuer.`,
+        outOfStock,
+      },
+      { status: 409 },
+    );
   }
 
   const isClient = await verifyIsClient(body.accessToken);

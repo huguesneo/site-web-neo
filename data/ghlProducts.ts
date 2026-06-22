@@ -19,6 +19,7 @@ export interface GHLProduct {
   checkoutUrl: string; // Lien de paiement généré dans GoHighLevel
   description: string;        // texte brut (Chatbot/Léo, repli)
   descriptionHtml: string;   // HTML assaini pour un rendu formaté (modal boutique)
+  inStock: boolean;   // false = rupture de stock (achat bloqué). Pour un produit variable : true tant qu'au moins une variante est dispo.
   // Produits variables uniquement :
   variationLabel?: string;          // nom de l'attribut, ex. "Saveurs"
   variations?: ProductVariation[];  // choix disponibles (absent/vide = produit simple)

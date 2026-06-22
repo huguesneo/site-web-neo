@@ -153,6 +153,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   function addItem(product: GHLProduct, variation?: SelectedVariation) {
+    // Garde-fou : on n'ajoute jamais un produit explicitement en rupture (l'UI le bloque
+    // déjà, ceci couvre les chemins indirects — ex. recommandations de Léo). `=== false`
+    // pour ne pas bloquer les anciens articles du panier (localStorage) sans ce champ.
+    if (product.inStock === false && !variation) return;
     const lineId = cartLineId(product.id, variation?.id);
     setItems((prev) => {
       const existing = prev.find((i) => cartLineId(i.product.id, i.variation?.id) === lineId);
