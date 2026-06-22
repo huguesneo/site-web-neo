@@ -75,8 +75,8 @@ const Home: React.FC = () => {
             <div className="opacity-0 animate-fade-in-up [animation-delay:1000ms] flex items-center gap-4 text-sm font-medium text-gray-500 bg-white/60 backdrop-blur-sm p-4 rounded-2xl w-fit border border-white/50 shadow-sm">
               <div className="flex -space-x-3">
                 {[1,2,3,4].map(i => (
-                  <div key={i} className="w-10 h-10 rounded-full border-2 border-white shadow-md overflow-hidden transition-transform hover:scale-110 hover:z-10">
-                     <img src={`https://picsum.photos/seed/${i + 50}/100`} alt="Avatar" className="w-full h-full object-cover" loading="lazy" />
+                  <div key={i} className="w-10 h-10 rounded-full border-2 border-white shadow-md overflow-hidden bg-neo/10 transition-transform hover:scale-110 hover:z-10">
+                     <img src={`/avatar-${i}.jpg`} alt="Client NEO" className="w-full h-full object-cover" loading="lazy" />
                   </div>
                 ))}
               </div>

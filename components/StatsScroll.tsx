@@ -79,8 +79,8 @@ function GridCard({ stat, revealed, className = '' }: { stat: Stat; revealed: bo
     <motion.div
       className={className}
       initial={false}
-      animate={revealed ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 26, scale: 0.94 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      animate={revealed ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 22, scale: 0.96 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="relative h-full rounded-2xl bg-white px-5 py-6 shadow-[0_22px_55px_-28px_rgba(0,0,0,0.6)] ring-1 ring-black/5 flex flex-col items-center justify-center text-center">
         <span className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-1 rounded-b-full bg-neo/70" />
@@ -164,9 +164,9 @@ export default function StatsScroll() {
       return;
     }
     if (!inView || step >= 4) return;
-    // Délai > durée d'anim (0.5s) pour qu'une carte soit complètement arrivée
-    // avant que la suivante démarre (transition bien fluide, sans chevauchement).
-    const t = setTimeout(() => setStep((s) => s + 1), step === 0 ? 450 : 780);
+    // Cadence rapprochée : les cartes s'enchaînent en se chevauchant légèrement
+    // pour une cascade fluide et vivante (et non quatre apparitions espacées).
+    const t = setTimeout(() => setStep((s) => s + 1), step === 0 ? 200 : 260);
     return () => clearTimeout(t);
   }, [inView, step, reduce]);
 
