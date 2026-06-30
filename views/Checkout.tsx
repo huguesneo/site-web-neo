@@ -5,6 +5,7 @@ import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag } fr
 import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import { supabase } from '../services/supabaseClient';
 import Section from '../components/Section';
+import { isDigitalProduct } from '../constants';
 
 // ─── Moneris Hosted Tokenization (iframe sécurisée) ─────────────────────────────
 const HT_IS_PROD = process.env.NEXT_PUBLIC_MONERIS_ENV === 'prod';
@@ -114,8 +115,12 @@ const Checkout: React.FC = () => {
   const couponDiscount = coupon?.discountValue ?? 0;
   const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
   const netGoods = subtotal - totalDiscount;
-  // `shipping` (contexte) : basé sur les produits PHYSIQUES seulement (numériques exclus).
-  const taxes = (netGoods + shipping) * 0.14975;
+  // Seuls les produits physiques sont taxables (carte-cadeau et suivis exclus).
+  const digitalSubtotal = items
+    .filter((i) => isDigitalProduct(i.product))
+    .reduce((s, i) => s + itemUnitPrice(i) * i.quantity, 0);
+  const taxableBase = Math.max(0, netGoods - digitalSubtotal) + shipping;
+  const taxes = taxableBase * 0.14975;
   const total = netGoods + shipping + taxes;
 
   useEffect(() => {

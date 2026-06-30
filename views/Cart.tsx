@@ -5,7 +5,7 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Leaf, Tag, X, Loader2, Ch
 import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import Button from '../components/Button';
 import Section from '../components/Section';
-import { FREE_SHIPPING_THRESHOLD } from '../constants';
+import { FREE_SHIPPING_THRESHOLD, isDigitalProduct } from '../constants';
 
 const Cart: React.FC = () => {
   const { items, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, shippableNet, shipping, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
@@ -43,10 +43,14 @@ const Cart: React.FC = () => {
   const couponDiscount = coupon?.discountValue ?? 0;
   const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
   const netGoods = subtotal - totalDiscount;
-  // `shipping` vient du contexte : calculé sur la valeur des produits PHYSIQUES seulement
-  // (les produits numériques — carte-cadeau, suivis — sont exclus du seuil de livraison).
-  const freeShippingGap = FREE_SHIPPING_THRESHOLD - shippableNet; // > 0 si livraison gratuite proche
-  const taxes = (netGoods + shipping) * 0.14975;
+  const freeShippingGap = FREE_SHIPPING_THRESHOLD - shippableNet;
+  // Seuls les produits physiques sont taxables. On retire le sous-total des
+  // produits numériques (carte-cadeau, suivis) de la base taxable.
+  const digitalSubtotal = items
+    .filter((i) => isDigitalProduct(i.product))
+    .reduce((s, i) => s + itemUnitPrice(i) * i.quantity, 0);
+  const taxableBase = Math.max(0, netGoods - digitalSubtotal) + shipping;
+  const taxes = taxableBase * 0.14975;
   const total = netGoods + shipping + taxes;
 
   return (
