@@ -23,7 +23,10 @@ const ProductDetail: React.FC<{ product: GHLProduct }> = ({ product: p }) => {
   const { addItem } = useCart();
   const { isClient } = useClientStatus();
 
-  const variations = p.variations ?? [];
+  const variations = [...(p.variations ?? [])].sort((a, b) => {
+    const num = (label: string) => parseFloat(label.replace(/[^\d.]/g, '')) || 0;
+    return num(a.label) - num(b.label);
+  });
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
   const [activeImage, setActiveImage] = useState<string>(p.image);
   const [added, setAdded] = useState(false);

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { LogOut, Package, ArrowRight, FolderOpen } from 'lucide-react';
+import { LogOut, Package, ArrowRight, FolderOpen, Smartphone } from 'lucide-react';
 import Button from './Button';
 import { supabase } from '../services/supabaseClient';
 
@@ -47,6 +47,9 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
   // sections « Mon suivi » et « Mes documents » (contenu clinique) ne s'affichent
   // que pour eux. `undefined` = pas encore déterminé (on n'affiche rien avant).
   const [isClinicClient, setIsClinicClient] = useState<boolean | undefined>(undefined);
+  // Jeton public de la fiche client (table `clients`), utilisé pour construire
+  // le lien direct vers l'espace de suivi : app.neoperformance.ca/client/<public_token>.
+  const [clientToken, setClientToken] = useState<string | null>(null);
 
   // Va chercher le prénom + l'existence d'une fiche dans la table `clients`,
   // associée par courriel — même donnée que l'application de suivi.
@@ -59,7 +62,7 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
 
     supabase
       .from('clients')
-      .select('first_name')
+      .select('public_token, first_name')
       .eq('email', user.email)
       .maybeSingle()
       .then(({ data }) => {
@@ -69,6 +72,7 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
           const f = data.first_name.trim();
           if (f) setFirstName(f.charAt(0).toUpperCase() + f.slice(1));
         }
+        if (data?.public_token) setClientToken(String(data.public_token));
       });
 
     return () => {
@@ -130,6 +134,64 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
               </Link>
             )}
           </div>
+
+          {/* Application NEO Performance — clients de la clinique seulement */}
+          {isClinicClient && (
+            <div className="mt-4 bg-white rounded-2xl shadow-xl shadow-gray-200/60 border border-gray-100 p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-neo/10 text-neo shrink-0">
+                  <Smartphone size={22} />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">Mon application NEO Performance</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-5">
+                Accédez à votre profil, vos programmes et votre suivi personnalisé directement depuis
+                l'application.
+              </p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                {clientToken ? (
+                  <a
+                    href={`https://app.neoperformance.ca/client/${clientToken}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-neo text-white text-sm font-semibold hover:bg-neo-600 transition-colors w-full sm:w-auto"
+                  >
+                    <Smartphone size={17} />
+                    Accéder à l'application NEO Performance
+                  </a>
+                ) : (
+                  <a
+                    href="https://app.neoperformance.ca"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-neo text-white text-sm font-semibold hover:bg-neo-600 transition-colors w-full sm:w-auto"
+                  >
+                    <Smartphone size={17} />
+                    Accéder à l'application NEO Performance
+                  </a>
+                )}
+                <a
+                  href="https://apps.apple.com/ca/app/neo-performance/id6756714068"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-700 transition-colors shrink-0 w-full sm:w-auto justify-center sm:justify-start"
+                  aria-label="Télécharger sur l'App Store"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white shrink-0" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.13-2.19 1.28-2.17 3.82.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.76M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                  </svg>
+                  <div className="text-left leading-tight">
+                    <div className="text-[10px] text-gray-300">Télécharger dans</div>
+                    <div className="text-sm font-semibold">l&apos;App Store</div>
+                  </div>
+                </a>
+              </div>
+              <p className="mt-3 text-xs text-gray-400 flex items-center gap-1.5">
+                <span className="inline-block w-3.5 h-3.5 rounded-full border border-gray-300 text-gray-300 text-[9px] flex items-center justify-center leading-none">i</span>
+                L&apos;application Google Play arrive sous peu.
+              </p>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
