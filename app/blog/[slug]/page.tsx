@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const title = post.seoTitle || post.title;
 
   return {
-    title: `${title} | NEO Performance`,
+    title,
     description: post.excerpt,
     alternates: { canonical: `https://www.neoperformance.ca/blog/${post.slug}` },
     openGraph: {

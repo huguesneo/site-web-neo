@@ -64,6 +64,18 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/blog', req.url), 301);
   }
 
+  // 2.5) Anciennes URLs produits WooCommerce, imbriquées sous une catégorie :
+  //      /boutique/supplements/[categorie/]<slug>/. Le nouveau site sert le
+  //      même slug directement sous /boutique/<slug> : on saute droit au but
+  //      plutôt que de renvoyer vers l'index (le slug produit ne change pas).
+  if (pathname.startsWith('/boutique/supplements/')) {
+    const segments = pathname.split('/').filter(Boolean);
+    const slug = segments[segments.length - 1];
+    if (slug) {
+      return NextResponse.redirect(new URL(`/boutique/${slug}`, req.url), 301);
+    }
+  }
+
   // 3) Slash final sur une page valide (ex. /boutique/) : on 301 vers la
   //    version canonique sans slash. skipTrailingSlashRedirect étant activé,
   //    c'est ce middleware qui possède désormais cette normalisation, ce qui
