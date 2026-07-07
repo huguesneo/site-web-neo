@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount, giftCardFaceValue, shippingFeeFor, SHIPPING_LABEL, NEO_ACCOMPANIMENT_WC_CATEGORY_ID } from '../../../../constants';
+import { fetchCouponByCode, priceCartLines, evaluateCoupon, emailAllowed, perUserLimitReached, releaseUnpaidCouponHolds } from '../../../../lib/coupon-rules';
 
 /**
  * Route serveur — crée la commande WooCommerce de façon SÛRE.
@@ -262,25 +263,76 @@ export async function POST(req: NextRequest) {
 
   const isClient = await verifyIsClient(body.accessToken);
 
-  // Coupons. On refuse toute tentative d'utiliser le coupon client en manuel :
-  // il n'est ajouté QUE par le serveur, et seulement si la session est valide.
+  // ── Codes promo ─────────────────────────────────────────────────────────────
+  // TOUTES les règles WooCommerce du code saisi sont appliquées ICI (lib/coupon-rules) :
+  // l'API WooCommerce ne les vérifie que partiellement pour les commandes créées par le
+  // site. On refuse aussi toute tentative d'utiliser le coupon client -13 % en manuel.
   const coupon_lines: { code: string }[] = [];
   const userCoupon = (body.couponCode || '').trim();
-  if (userCoupon && userCoupon.toLowerCase() !== CLIENT_COUPON_CODE.toLowerCase()) {
-    coupon_lines.push({ code: userCoupon });
-  }
-  // Rabais client : seulement si la session est valide ET si le panier contient au moins
-  // un produit Designs for Health (sinon le coupon — restreint à ces produits — serait
-  // refusé par WooCommerce et ferait échouer la commande). Fail-closed : si on ne peut pas
-  // déterminer la liste des produits admissibles, on n'applique aucun rabais (jamais sur
-  // autre chose que Designs for Health).
+  const billingEmail = String(body.billing?.email ?? '');
+
+  // Rabais client -13 % : seulement si la session est valide ET si le panier contient au
+  // moins un produit Designs for Health (sinon le coupon — restreint à ces produits —
+  // serait refusé par WooCommerce et ferait échouer la commande). Fail-closed : si on ne
+  // peut pas déterminer la liste des produits admissibles, on n'applique aucun rabais.
+  let dfhIds: Set<number> | null = null;
+  let wantClientCoupon = false;
   if (isClient) {
-    const dfhIds = await fetchDfhProductIds();
-    if (dfhIds && dfhIds.size > 0 && line_items.some((i) => dfhIds.has(i.product_id))) {
-      if (await ensureClientCoupon(dfhIds)) {
-        coupon_lines.push({ code: CLIENT_COUPON_CODE });
+    dfhIds = await fetchDfhProductIds();
+    wantClientCoupon = !!(dfhIds && dfhIds.size > 0 && line_items.some((i) => dfhIds!.has(i.product_id)));
+  }
+
+  let applyUserCoupon = false;
+  let userFreeShipping = false;
+  if (userCoupon && userCoupon.toLowerCase() !== CLIENT_COUPON_CODE.toLowerCase()) {
+    // Libère d'abord les tentatives impayées du client (paiement échoué / page fermée)
+    // pour qu'elles ne comptent pas contre sa limite d'utilisation.
+    await releaseUnpaidCouponHolds(userCoupon, billingEmail);
+
+    const coupon = await fetchCouponByCode(userCoupon);
+    if (coupon === null) {
+      return NextResponse.json({ error: 'Ce code promo est invalide.' }, { status: 400 });
+    }
+    if (coupon === undefined) {
+      // Échec réseau : fail-open — on pousse le code et WooCommerce tranchera au moment
+      // de créer la commande, plutôt que de bloquer un client pour une panne passagère.
+      applyUserCoupon = true;
+    } else {
+      userFreeShipping = coupon.free_shipping === true;
+      const priced = await priceCartLines(line_items);
+      if (!priced) {
+        applyUserCoupon = true; // fail-open (données produit indisponibles)
+      } else {
+        const ev = evaluateCoupon(coupon, priced);
+        if (ev.error) {
+          return NextResponse.json({ error: ev.error }, { status: 400 });
+        }
+        if (!emailAllowed(coupon, billingEmail)) {
+          return NextResponse.json({ error: 'Ce code promo est réservé à une autre adresse courriel.' }, { status: 400 });
+        }
+        if (await perUserLimitReached(coupon, billingEmail)) {
+          return NextResponse.json(
+            { error: 'Ce code promo a déjà été utilisé avec cette adresse courriel (limite par personne atteinte).' },
+            { status: 400 },
+          );
+        }
+        applyUserCoupon = true;
+        // « Le meilleur des deux » : un code « usage individuel » (règle WooCommerce) ne
+        // se cumule pas avec le rabais client -13 % — on applique le plus avantageux
+        // pour le client. Même arbitrage que l'affichage du panier (CartContext).
+        if (ev.individualUse && wantClientCoupon && dfhIds) {
+          const clientDiscount = priced
+            .filter((l) => dfhIds!.has(l.product_id))
+            .reduce((s, l) => s + l.unitPrice * l.quantity, 0) * (parseFloat(CLIENT_COUPON_PERCENT) / 100);
+          if (clientDiscount > ev.discount) applyUserCoupon = false;
+          else wantClientCoupon = false;
+        }
       }
     }
+  }
+  if (applyUserCoupon) coupon_lines.push({ code: userCoupon });
+  if (wantClientCoupon && dfhIds && (await ensureClientCoupon(dfhIds))) {
+    coupon_lines.push({ code: CLIENT_COUPON_CODE });
   }
 
   // Rabais client carte-cadeau (montant fixe par variante) → ligne de remise négative.
@@ -338,7 +390,9 @@ export async function POST(req: NextRequest) {
       const physicalNet = lines
         .filter((li) => !digitalIds.has(Number(li.product_id)))
         .reduce((sum, li) => sum + parseFloat(li.total || '0'), 0);
-      const shipping = shippingFeeFor(physicalNet);
+      // Un code avec « livraison gratuite » (free_shipping) annule les frais — seulement
+      // s'il a réellement été appliqué (pas écarté par l'arbitrage « meilleur des deux »).
+      const shipping = applyUserCoupon && userFreeShipping ? 0 : shippingFeeFor(physicalNet);
       if (shipping > 0) {
         const upd = await fetch(wc(`/orders/${order.id}`), {
           method: 'PUT',

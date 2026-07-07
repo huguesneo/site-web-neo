@@ -8,7 +8,7 @@ import Section from '../components/Section';
 import { FREE_SHIPPING_THRESHOLD, isDigitalProduct } from '../constants';
 
 const Cart: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, shippableNet, shipping, coupon, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
+  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, shippableNet, shipping, coupon, couponNotice, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
   const [couponInput, setCouponInput] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [couponError, setCouponError] = useState('');
@@ -154,6 +154,9 @@ const Cart: React.FC = () => {
                     <p className="text-xs text-red-500 mt-1.5 ml-1">{couponError}</p>
                   )}
                 </div>
+              )}
+              {couponNotice && (
+                <p className="text-xs text-amber-600 mb-4 -mt-2">{couponNotice}</p>
               )}
 
               <div className="flex flex-col gap-3 text-sm text-gray-600">

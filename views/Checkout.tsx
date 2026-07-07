@@ -73,7 +73,7 @@ const PROVINCES: { label: string; code: string }[] = [
 ];
 
 const Checkout: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, shipping, coupon, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
+  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, shipping, coupon, couponNotice, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
   const router = useRouter();
 
   const [couponInput, setCouponInput] = useState('');
@@ -503,6 +503,9 @@ const Checkout: React.FC = () => {
                         <p className="text-xs text-red-600 mt-1.5">{couponError}</p>
                       )}
                     </>
+                  )}
+                  {couponNotice && (
+                    <p className="text-xs text-amber-600 mt-1.5">{couponNotice}</p>
                   )}
                 </div>
 

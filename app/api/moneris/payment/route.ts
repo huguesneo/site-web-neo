@@ -180,6 +180,19 @@ export async function POST(req: NextRequest) {
       // Journalise la réponse complète Moneris côté serveur (diagnostic), sans
       // jamais l'exposer au navigateur.
       console.error('[MONERIS] Paiement non approuvé — HTTP', res.status, '— corps:', rawText);
+      // Refus DÉFINITIF (réponse claire de Moneris, pas une panne) : on annule la
+      // commande. WooCommerce inscrit l'usage du code promo dès la création de la
+      // commande (avant paiement) — sans annulation, une carte refusée « consommerait »
+      // le code (limite 1 par personne) et bloquerait le client à sa 2e tentative.
+      // L'annulation décrémente le compteur. Sur un statut ambigu (5xx), on ne touche
+      // à rien : le paiement a pu passer malgré tout.
+      if (res.status < 500) {
+        await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'cancelled' }),
+        }).catch(() => { /* non bloquant */ });
+      }
       const d = data as { transactionDetails?: { message?: string }; message?: string };
       const msg =
         d?.transactionDetails?.message ||
