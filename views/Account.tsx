@@ -571,8 +571,10 @@ const Account: React.FC = () => {
         </div>
 
           <p className="mt-6 text-center text-xs text-gray-400">
-            En continuant, vous acceptez nos conditions d'utilisation et notre politique de
-            confidentialité.
+            En continuant, vous acceptez nos{' '}
+            <a href="/conditions-dutilisation" className="text-neo hover:underline">conditions d'utilisation</a>{' '}
+            et notre{' '}
+            <a href="/politique-de-confidentialite" className="text-neo hover:underline">politique de confidentialité</a>.
           </p>
         </div>
       </div>

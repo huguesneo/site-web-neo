@@ -82,8 +82,8 @@ const Footer: React.FC = () => {
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
           <p>&copy; {new Date().getFullYear()} NEO Performance. Tous droits réservés.</p>
           <div className="flex gap-6">
-            <Link href="/confidentialite" className="hover:text-white">Politique de confidentialité</Link>
-            <Link href="/termes" className="hover:text-white">Termes et conditions</Link>
+            <Link href="/politique-de-confidentialite" className="hover:text-white">Politique de confidentialité</Link>
+            <Link href="/conditions-dutilisation" className="hover:text-white">Conditions d'utilisation</Link>
           </div>
         </div>
       </div>

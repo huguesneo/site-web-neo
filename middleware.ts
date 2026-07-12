@@ -37,6 +37,8 @@ const KNOWN_ROUTES = new Set([
   'panier',
   'quiz',
   'studio',
+  'politique-de-confidentialite',
+  'conditions-dutilisation',
 ]);
 
 export function middleware(req: NextRequest) {
