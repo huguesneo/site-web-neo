@@ -38,15 +38,66 @@ const REDIRECTS: Record<string, string> = {
     '/blog/perimenopause-pourquoi-consulter-naturopathe-avant-hormones',
   '/perimenopause-ventre-cortisol-prise-de-poids': '/blog/perimenopause-ventre-cortisol-prise-de-poids',
   '/ton-microbiome-poids-science': '/blog/ton-microbiome-poids-science',
+
+  // ── Anciennes pages « funnel » toujours diffusées (cartes d'affaires,
+  //    réseaux sociaux, publicités). Redirections PERMANENTES : ces liens
+  //    circulent hors du site, ils ne doivent jamais tomber en 404. ──
+  '/rendezvousneo': '/consultation',
+  // Page réelle hébergée hors du site Next.js, sur le funnel GoHighLevel.
+  '/atelier-gratuit': 'https://go.neoperformance.ca/atelier-gratuit',
+  '/quiz-metabolisme': '/quiz',
+
+  // ── Anciens articles WordPress à la racine, confirmés dans Search Console
+  //    (impressions/clics réels). 301 vers l'article équivalent du nouveau
+  //    blogue. Ceux qui se terminaient par un emoji encodé sont indexés ici
+  //    par leur slug ASCII (le suffixe emoji est retiré avant comparaison,
+  //    voir normalizeForLookup ci-dessous). ──
+  '/limpact-du-stress-sur-la-perte-de-poids-comment-gerer-le-stress-pour-reussir-votre-objectif':
+    '/blog/cortisol-belly-mecanisme-graisse-abdominale',
+  '/le-cortisol-et-ta-perte-de-poids': '/blog/cortisol-belly-mecanisme-graisse-abdominale',
+  '/limpact-du-cortisol-sur-la-perte-de-poids-': '/blog/cortisol-belly-mecanisme-graisse-abdominale',
+  '/comprendre-et-combattre-le-cortisol': '/blog/cortisol-belly-mecanisme-graisse-abdominale',
+  '/le-lien-stress-et-poids-le-cortisol-et-votre-metabolisme':
+    '/blog/cortisol-belly-mecanisme-graisse-abdominale',
+  '/la-resistance-a-linsuline-cest-quoi':
+    '/blog/la-resistance-a-linsuline-silencieuse-comment-la-reconnaitre-et-linverser-sans-regime',
+  '/fraicheur-estivale-sans-sucre-ajoute-decouvrez-des-mocktails-savoureux-et-sains-pour-lete':
+    '/blog/mocktails-cortisol-ete-sans-alcool',
+  '/mocktail-mojito-festif-sans-sucre': '/blog/mocktails-cortisol-ete-sans-alcool',
 };
+
+// Retrouve la clé de redirection d'un chemin. On tente trois formes, de la
+// plus fidèle à la plus permissive :
+//   1. le chemin brut (déjà sans slash final) ;
+//   2. sa version décodée (%C3%A9 → é, etc.) ;
+//   3. sa version décodée dont on a retiré tout suffixe non-ASCII — les
+//      anciens titres WordPress finissaient par un emoji (😰, 🤯, 🤷‍♀️…)
+//      dont les octets exacts (ZWJ, sélecteurs de variante) sont pénibles à
+//      reproduire ; on compare donc sur le slug ASCII de base.
+function normalizeForLookup(pathname: string): string | undefined {
+  if (REDIRECTS[pathname]) return REDIRECTS[pathname];
+
+  let decoded = pathname;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    // chemin mal encodé : on garde la forme brute
+  }
+  if (decoded !== pathname && REDIRECTS[decoded]) return REDIRECTS[decoded];
+
+  const asciiStripped = decoded.replace(/[^\x00-\x7F]+$/, '');
+  if (asciiStripped !== decoded && REDIRECTS[asciiStripped]) return REDIRECTS[asciiStripped];
+
+  return undefined;
+}
 
 export function middleware(req: NextRequest) {
   // On enlève l'éventuel slash final (les URLs WordPress en avaient un :
   // /nous-joindre/) pour comparer proprement.
   const pathname = req.nextUrl.pathname.replace(/\/+$/, '') || '/';
 
-  // 1) Renommage explicite de page.
-  const target = REDIRECTS[pathname];
+  // 1) Renommage explicite de page (brut, décodé, ou slug ASCII sans emoji).
+  const target = normalizeForLookup(pathname);
   if (target) {
     return NextResponse.redirect(new URL(target, req.url), 301);
   }
