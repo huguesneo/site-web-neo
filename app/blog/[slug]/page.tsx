@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, Clock, Calendar } from 'lucide-react';
 import Section from '@/components/Section';
 import Button from '@/components/Button';
@@ -40,7 +41,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = await client.fetch<PostData | null>(postQuery, { slug });
   if (!post) return { title: 'Article non trouvé' };
 
-  const image = post.mainImage ? urlForImage(post.mainImage).width(1200).height(630).fit('crop').url() : undefined;
+  // OG : on force le JPEG — certains crawlers sociaux gèrent mal AVIF/WebP.
+  const image = post.mainImage ? urlForImage(post.mainImage).width(1200).height(630).fit('crop').format('jpg').url() : undefined;
   const title = post.seoTitle || post.title;
 
   return {
@@ -65,6 +67,9 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   if (!post) notFound();
 
   const image = post.mainImage ? urlForImage(post.mainImage).width(1600).fit('max').url() : null;
+  // Même source, mais bornée à 1200 px : next/image régénère de toute façon le
+  // srcset par taille d'écran, inutile de lui fournir un original de 1600 px.
+  const heroImage = post.mainImage ? urlForImage(post.mainImage).width(1200).fit('max').url() : null;
   const authorImage = post.author?.image ? urlForImage(post.author.image).width(96).height(96).fit('crop').url() : null;
   const readTime = estimateReadTime(post.body);
 
@@ -117,11 +122,19 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         </div>
       </div>
 
-      {/* Featured Image */}
-      {image && (
+      {/* Featured Image — image LCP de l'article : priorité haute, srcset responsive. */}
+      {heroImage && (
         <div className="container mx-auto px-4 max-w-5xl mb-16">
-          <div className="aspect-[21/9] rounded-3xl overflow-hidden shadow-xl">
-            <img src={image} alt={post.title} className="w-full h-full object-cover" />
+          <div className="relative aspect-[21/9] rounded-3xl overflow-hidden shadow-xl">
+            <Image
+              src={heroImage}
+              alt={post.title}
+              fill
+              priority
+              fetchPriority="high"
+              sizes="(max-width: 768px) 100vw, 1024px"
+              className="object-cover"
+            />
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Section from '../components/Section';
 import Button from '../components/Button';
 import { GHLProduct } from '../data/ghlProducts';
@@ -287,15 +288,17 @@ const Shop: React.FC<{ initialProducts?: GHLProduct[] }> = ({ initialProducts })
                   >
                     {/* Image zone */}
                     <div className="relative bg-gradient-to-b from-gray-50 to-gray-100 aspect-square flex items-center justify-center p-8 overflow-hidden">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className={`w-4/5 h-4/5 object-contain group-hover:scale-[1.06] transition-transform duration-500 ${
-                          product.inStock ? '' : 'opacity-40 grayscale'
-                        }`}
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      {product.image ? (
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                          className={`object-contain p-8 group-hover:scale-[1.06] transition-transform duration-500 ${
+                            product.inStock ? '' : 'opacity-40 grayscale'
+                          }`}
+                        />
+                      ) : null}
                       {/* Category pill */}
                       <div className="absolute top-3 left-3">
                         <span className="text-[9px] font-black text-neo uppercase tracking-[0.18em] bg-white/95 px-2.5 py-1 rounded-full border border-neo/15 shadow-sm">

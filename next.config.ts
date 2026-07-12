@@ -5,10 +5,19 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   images: {
     formats: ['image/webp', 'image/avif'],
+    // Seuls hôtes servant des images à next/image : le CDN Sanity (héro d'article)
+    // et WordPress/WooCommerce (images produits). Le logo est local. On évite le
+    // joker `**` (n'importe quel domaine devient un proxy d'optimisation ouvert).
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'cdn.sanity.io',
+        pathname: '/images/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'wp.neoperformance.ca',
+        pathname: '/wp-content/**',
       },
     ],
   },

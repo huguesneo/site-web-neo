@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { GHLProduct, ProductVariation } from '../data/ghlProducts';
 import { useCart } from '../contexts/CartContext';
 import { useClientStatus } from '../hooks/useClientStatus';
@@ -77,8 +78,20 @@ const ProductDetail: React.FC<{ product: GHLProduct }> = ({ product: p }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-start">
           {/* ───── Galerie ───── */}
           <div className="md:sticky md:top-28">
-            <div className="bg-gradient-to-br from-gray-50 to-neo-50/30 rounded-3xl flex items-center justify-center p-10 aspect-square">
-              <img src={mainImg} alt={p.name} className="w-4/5 h-4/5 object-contain drop-shadow-md" />
+            <div className="relative bg-gradient-to-br from-gray-50 to-neo-50/30 rounded-3xl flex items-center justify-center p-10 aspect-square">
+              {/* Image LCP de la fiche produit : priorité haute + srcset responsive.
+                  Le conteneur reste dimensionné (aspect-square) → CLS = 0. */}
+              {mainImg ? (
+                <Image
+                  src={mainImg}
+                  alt={p.name}
+                  fill
+                  priority
+                  fetchPriority="high"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-contain p-10 drop-shadow-md"
+                />
+              ) : null}
             </div>
             {thumbs.length > 1 && (
               <div className="flex flex-wrap gap-2.5 mt-4">
