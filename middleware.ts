@@ -9,6 +9,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // ──────────────────────────────────────────────────────────────────────────
 
 // Renommage de pages : ancien chemin WordPress → nouveau chemin.
+// Liste FERMÉE et explicite : toute URL absente d'ici tombe en vrai 404.
+// (Surtout pas de redirection générique attrape-tout : ça crée un espace
+// d'URL infini qui piège les crawlers et masque les vrais 404 dans GSC.)
 const REDIRECTS: Record<string, string> = {
   '/a-propos': '/approche',
   '/nous-joindre': '/contact',
@@ -20,26 +23,22 @@ const REDIRECTS: Record<string, string> = {
   '/mon-compte': '/espace-client',
   '/creation-de-compte': '/espace-client',
   '/privacy-policy': '/',
+  // Anciens articles de blogue qui vivaient à la racine du domaine sur
+  // WordPress : chacun 301 vers sa vraie URL sous /blog/<slug>.
+  '/blocage-metabolique': '/blog/blocage-metabolique',
+  '/cortisol-belly-mecanisme-graisse-abdominale': '/blog/cortisol-belly-mecanisme-graisse-abdominale',
+  '/cortisol-viral-tiktok-mal-mesure': '/blog/cortisol-viral-tiktok-mal-mesure',
+  '/inflammaging-silencieuse': '/blog/inflammaging-silencieuse',
+  '/la-resistance-a-linsuline-silencieuse-comment-la-reconnaitre-et-linverser-sans-regime':
+    '/blog/la-resistance-a-linsuline-silencieuse-comment-la-reconnaitre-et-linverser-sans-regime',
+  '/marche-en-intervalles-hormones-femme-40-ans': '/blog/marche-en-intervalles-hormones-femme-40-ans',
+  '/mocktails-cortisol-ete-sans-alcool': '/blog/mocktails-cortisol-ete-sans-alcool',
+  '/ozempic-naturel-stimuler-glp-1-sans-injection': '/blog/ozempic-naturel-stimuler-glp-1-sans-injection',
+  '/perimenopause-pourquoi-consulter-naturopathe-avant-hormones':
+    '/blog/perimenopause-pourquoi-consulter-naturopathe-avant-hormones',
+  '/perimenopause-ventre-cortisol-prise-de-poids': '/blog/perimenopause-ventre-cortisol-prise-de-poids',
+  '/ton-microbiome-poids-science': '/blog/ton-microbiome-poids-science',
 };
-
-// Premiers segments réellement servis par le nouveau site : on ne touche jamais
-// à ces chemins. Tout le reste en un seul segment (ex. un ancien article de
-// blogue WordPress) est considéré comme une URL morte à rediriger vers /blog.
-const KNOWN_ROUTES = new Set([
-  'approche',
-  'blog',
-  'boutique',
-  'consultation',
-  'contact',
-  'equipe',
-  'espace-client',
-  'paiement',
-  'panier',
-  'quiz',
-  'studio',
-  'politique-de-confidentialite',
-  'conditions-dutilisation',
-]);
 
 export function middleware(req: NextRequest) {
   // On enlève l'éventuel slash final (les URLs WordPress en avaient un :
@@ -52,21 +51,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(target, req.url), 301);
   }
 
-  // 2) Anciens articles de blogue WordPress (slugs longs avec tirets, parfois
-  //    des emojis encodés) qui vivaient à la racine du domaine. Ils n'existent
-  //    plus : on les renvoie vers l'index du blogue plutôt qu'en 404.
-  const firstSegment = pathname.split('/')[1] ?? '';
-  const isSingleSegment = pathname.split('/').length === 2;
-  if (
-    isSingleSegment &&
-    firstSegment &&
-    !KNOWN_ROUTES.has(firstSegment) &&
-    firstSegment.includes('-')
-  ) {
-    return NextResponse.redirect(new URL('/blog', req.url), 301);
-  }
-
-  // 2.5) Anciennes URLs produits WooCommerce, imbriquées sous une catégorie :
+  // 2) Anciennes URLs produits WooCommerce, imbriquées sous une catégorie :
   //      /boutique/supplements/[categorie/]<slug>/. Le nouveau site sert le
   //      même slug directement sous /boutique/<slug> : on saute droit au but
   //      plutôt que de renvoyer vers l'index (le slug produit ne change pas).
@@ -78,7 +63,10 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // 3) Slash final sur une page valide (ex. /boutique/) : on 301 vers la
+  // 3) Toute autre URL inconnue traverse le middleware sans redirection et
+  //    aboutit sur app/not-found.tsx avec un vrai statut HTTP 404.
+
+  // 4) Slash final sur une page valide (ex. /boutique/) : on 301 vers la
   //    version canonique sans slash. skipTrailingSlashRedirect étant activé,
   //    c'est ce middleware qui possède désormais cette normalisation, ce qui
   //    garantit un seul saut 301 au lieu d'une chaîne.
