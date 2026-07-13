@@ -10,6 +10,7 @@ import { client } from '@/sanity/lib/client';
 import { postQuery, postSlugsQuery } from '@/sanity/lib/queries';
 import { urlForImage } from '@/sanity/lib/image';
 import { formatDateFR, estimateReadTime } from '@/sanity/lib/utils';
+import { extractFaqFromBody, buildFaqJsonLd } from '@/sanity/lib/faq';
 
 export const revalidate = 60;
 
@@ -21,7 +22,7 @@ interface PostData {
   excerpt?: string;
   publishedAt?: string;
   mainImage?: Parameters<typeof urlForImage>[0];
-  body?: { _type?: string; children?: { text?: string }[] }[];
+  body?: { _type?: string; style?: string; children?: { text?: string }[] }[];
   category?: string;
   author?: {
     name: string;
@@ -72,6 +73,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const heroImage = post.mainImage ? urlForImage(post.mainImage).width(1200).fit('max').url() : null;
   const authorImage = post.author?.image ? urlForImage(post.author.image).width(96).height(96).fit('crop').url() : null;
   const readTime = estimateReadTime(post.body);
+  const faqJsonLd = buildFaqJsonLd(extractFaqFromBody(post.body));
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -88,6 +90,9 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   return (
     <article className="pt-24 min-h-screen bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {faqJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
 
       {/* Header */}
       <div className="container mx-auto px-4 max-w-4xl mb-12">
