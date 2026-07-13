@@ -11,6 +11,7 @@ import { postQuery, postSlugsQuery } from '@/sanity/lib/queries';
 import { urlForImage } from '@/sanity/lib/image';
 import { formatDateFR, estimateReadTime } from '@/sanity/lib/utils';
 import { extractFaqFromBody, buildFaqJsonLd } from '@/sanity/lib/faq';
+import { extractMetaDescription } from '@/sanity/lib/meta';
 
 export const revalidate = 60;
 
@@ -22,7 +23,7 @@ interface PostData {
   excerpt?: string;
   publishedAt?: string;
   mainImage?: Parameters<typeof urlForImage>[0];
-  body?: { _type?: string; style?: string; children?: { text?: string }[] }[];
+  body?: { _type?: string; style?: string; listItem?: string; children?: { text?: string }[] }[];
   category?: string;
   author?: {
     name: string;
@@ -45,14 +46,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // OG : on force le JPEG — certains crawlers sociaux gèrent mal AVIF/WebP.
   const image = post.mainImage ? urlForImage(post.mainImage).width(1200).height(630).fit('crop').format('jpg').url() : undefined;
   const title = post.seoTitle || post.title;
+  const description = extractMetaDescription(post.body, post.excerpt);
 
   return {
     title,
-    description: post.excerpt,
+    description,
     alternates: { canonical: `https://www.neoperformance.ca/blog/${post.slug}` },
     openGraph: {
       title,
-      description: post.excerpt,
+      description,
       url: `https://www.neoperformance.ca/blog/${post.slug}`,
       type: 'article',
       locale: 'fr_CA',
@@ -74,12 +76,13 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const authorImage = post.author?.image ? urlForImage(post.author.image).width(96).height(96).fit('crop').url() : null;
   const readTime = estimateReadTime(post.body);
   const faqJsonLd = buildFaqJsonLd(extractFaqFromBody(post.body));
+  const metaDescription = extractMetaDescription(post.body, post.excerpt);
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
-    description: post.excerpt,
+    description: metaDescription,
     image: image ? [image] : undefined,
     datePublished: post.publishedAt,
     author: { '@type': 'Person', name: post.author?.name },
