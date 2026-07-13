@@ -132,7 +132,7 @@ const Contact: React.FC = () => {
          {/* Map Overlay Card */}
          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-6 py-3 rounded-full shadow-lg border border-white md:hidden">
             <span className="text-sm font-bold text-gray-900 flex items-center gap-2">
-               <MapPin size={16} className="text-neo" /> 7005 Bd Taschereau, Brossard
+               <MapPin size={16} className="text-neo" /> 7005 Bd Taschereau, Suite 350, Brossard
             </span>
          </div>
       </section>

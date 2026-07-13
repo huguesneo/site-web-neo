@@ -52,7 +52,7 @@ const Footer: React.FC = () => {
             <ul className="space-y-4 text-gray-400 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin size={18} className="mt-1 text-neo shrink-0" />
-                <span>7005 boul taschereau<br/>Brossard, QC, J4Z 1A7</span>
+                <span>7005 Bd Taschereau, Suite 350<br/>Brossard, QC J4Z 1A7</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-neo shrink-0" />
@@ -60,7 +60,7 @@ const Footer: React.FC = () => {
               </li>
               <li className="flex items-center gap-3">
                 <Mail size={18} className="text-neo shrink-0" />
-                <span>info@neoperformance.com</span>
+                <span>info@neoperformance.ca</span>
               </li>
             </ul>
           </div>
@@ -69,7 +69,8 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-bold mb-6">Heures d'ouverture</h3>
             <ul className="space-y-2 text-gray-400 text-sm">
-              <li className="flex justify-between"><span>Lundi - Vendred</span> <span>8h00 - 17h00</span></li>
+              <li className="flex justify-between"><span>Lundi - Jeudi</span> <span>8h00 - 17h00</span></li>
+              <li className="flex justify-between"><span>Vendredi</span> <span>8h00 - 12h00</span></li>
               <li className="flex justify-between"><span>Samedi</span> <span>Fermé</span></li>
               <li className="flex justify-between"><span>Dimanche</span> <span>Fermé</span></li>
             </ul>
