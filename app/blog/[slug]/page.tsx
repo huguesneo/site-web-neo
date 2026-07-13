@@ -129,6 +129,8 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
             <span className="flex items-center gap-1"><Clock size={12} /> {readTime} de lecture</span>
           </div>
         </div>
+
+        <MedicalDisclaimer />
       </div>
 
       {/* Featured Image — image LCP de l'article : priorité haute, srcset responsive. */}
@@ -161,7 +163,6 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         >
           <PortableBody value={post.body} />
         </div>
-        <MedicalDisclaimer />
       </div>
 
       {/* CTA */}
