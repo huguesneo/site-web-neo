@@ -119,7 +119,7 @@ const Contact: React.FC = () => {
       {/* MAP SECTION */}
       <section className="h-[400px] w-full bg-gray-200 relative">
          <iframe 
-           src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2797.977467651876!2d-73.4735390238466!3d45.47030807107386!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4cc90570f2305555%3A0x123456789abcdef!2s7005%20Bd%20Taschereau%20suite%20350%2C%20Brossard%2C%20QC%20J4Z%201A7!5e0!3m2!1sfr!2sca!4v1709920000000!5m2!1sfr!2sca" 
+           src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2797.977467651876!2d-73.465332!3d45.4668426!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4cc90f920a39f785%3A0x2375c7e28359dc7d!2sNEO%20Performance!5e0!3m2!1sfr!2sca!4v1709920000000!5m2!1sfr!2sca"
            width="100%" 
            height="100%" 
            style={{ border: 0, filter: 'grayscale(0.2) contrast(1.1)' }} 
