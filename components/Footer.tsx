@@ -80,11 +80,20 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
-          <p>&copy; {new Date().getFullYear()} NEO Performance. Tous droits réservés.</p>
-          <div className="flex gap-6">
-            <Link href="/politique-de-confidentialite" className="hover:text-white">Politique de confidentialité</Link>
-            <Link href="/conditions-dutilisation" className="hover:text-white">Conditions d'utilisation</Link>
+        <div className="border-t border-gray-800 pt-8 flex flex-col gap-6 text-xs text-gray-500">
+          <p className="leading-relaxed max-w-4xl">
+            Le contenu de ce site est fourni à titre informatif seulement et ne constitue
+            pas un avis médical. Il ne remplace pas une consultation avec un professionnel
+            de la santé qualifié. La naturopathie n'est pas une profession réglementée par
+            un ordre professionnel au Québec. Consultez toujours un médecin avant de
+            modifier ou d'interrompre un traitement médical prescrit.
+          </p>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p>&copy; {new Date().getFullYear()} NEO Performance. Tous droits réservés.</p>
+            <div className="flex gap-6">
+              <Link href="/politique-de-confidentialite" className="hover:text-white">Politique de confidentialité</Link>
+              <Link href="/conditions-dutilisation" className="hover:text-white">Conditions d'utilisation</Link>
+            </div>
           </div>
         </div>
       </div>

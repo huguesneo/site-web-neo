@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, Calendar } from 'lucide-react';
 import Section from '@/components/Section';
 import Button from '@/components/Button';
 import PortableBody from '@/components/PortableBody';
+import MedicalDisclaimer from '@/components/MedicalDisclaimer';
 import { client } from '@/sanity/lib/client';
 import { postQuery, postSlugsQuery } from '@/sanity/lib/queries';
 import { urlForImage } from '@/sanity/lib/image';
@@ -160,6 +161,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         >
           <PortableBody value={post.body} />
         </div>
+        <MedicalDisclaimer />
       </div>
 
       {/* CTA */}
