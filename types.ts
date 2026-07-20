@@ -8,6 +8,8 @@ export interface TeamMember {
   bio: string;
   videoUrl?: string; // Optional embedded video URL
   strengths: string[];
+  /** Association professionnelle · numéro de membre (ex. « Membre ANPQ · ND-1938 ») */
+  accreditation?: string;
 }
 
 export interface Testimonial {

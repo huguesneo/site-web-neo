@@ -39,6 +39,11 @@ const TeamCard: React.FC<TeamCardProps> = ({ member, onClick }) => {
         <p className="text-neo font-bold text-xs tracking-wider uppercase mb-2">{member.role}</p>
         <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-neo transition-colors">{member.name}</h3>
         <p className="text-gray-500 text-sm line-clamp-2 leading-relaxed">{member.specialty}</p>
+        {member.accreditation && (
+          <p className="mt-3 inline-block rounded-full bg-neo/10 px-3 py-1 text-[11px] font-bold tracking-wide text-neo-700">
+            {member.accreditation}
+          </p>
+        )}
       </div>
     </div>
   );

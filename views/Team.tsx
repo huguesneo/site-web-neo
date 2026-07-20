@@ -67,7 +67,12 @@ const Team: React.FC = () => {
                 {selectedMember.role}
               </span>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">{selectedMember.name}</h2>
-              <p className="text-gray-500 font-medium mb-6">{selectedMember.specialty}</p>
+              <p className={`text-gray-500 font-medium ${selectedMember.accreditation ? 'mb-2' : 'mb-6'}`}>{selectedMember.specialty}</p>
+              {selectedMember.accreditation && (
+                <p className="mb-6 inline-block rounded-full bg-neo/10 px-3 py-1 text-xs font-bold tracking-wide text-neo-700">
+                  {selectedMember.accreditation}
+                </p>
+              )}
               
               <div className="prose prose-sm text-gray-600 mb-8">
                 <p>{selectedMember.bio}</p>
