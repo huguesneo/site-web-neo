@@ -19,11 +19,16 @@ import Chatbot from '@/components/Chatbot';
  *
  * (/mon-dossier, envoyée au prospect après l'appel, GARDE le menu du site :
  * la personne peut vouloir explorer le reste du site avant de réserver.)
+ *
+ * Masqué aussi sur /lien : page « lien en bio » ouverte depuis Instagram —
+ * expérience plein écran type Linktree, sans navigation ni chatbot.
  */
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isFullScreen =
-    pathname?.startsWith('/studio') || pathname?.startsWith('/protocole-neo');
+    pathname?.startsWith('/studio') ||
+    pathname?.startsWith('/protocole-neo') ||
+    pathname === '/lien';
 
   if (isFullScreen) return <>{children}</>;
 
