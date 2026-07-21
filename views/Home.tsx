@@ -71,11 +71,14 @@ const Home: React.FC = () => {
               </Button>
             </div>
             
-            {/* Social Proof */}
-            <div className="opacity-0 animate-fade-in-up [animation-delay:1000ms] flex items-center gap-4 text-sm font-medium text-gray-500 bg-white/60 backdrop-blur-sm p-4 rounded-2xl w-fit border border-white/50 shadow-sm">
+            {/* Social Proof — cliquable vers la page des résultats/témoignages */}
+            <Link
+              href="/temoignages"
+              className="group opacity-0 animate-fade-in-up [animation-delay:1000ms] inline-flex items-center gap-4 text-sm font-medium text-gray-500 bg-white/60 backdrop-blur-sm p-4 rounded-2xl w-fit border border-white/50 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-neo/30"
+            >
               <div className="flex -space-x-3">
                 {[1,2,3,4].map(i => (
-                  <div key={i} className="w-10 h-10 rounded-full border-2 border-white shadow-md overflow-hidden bg-neo/10 transition-transform hover:scale-110 hover:z-10">
+                  <div key={i} className="w-10 h-10 rounded-full border-2 border-white shadow-md overflow-hidden bg-neo/10">
                      <img src={`/avatar-${i}.jpg`} alt="Client NEO" className="w-full h-full object-cover" loading="lazy" />
                   </div>
                 ))}
@@ -85,8 +88,12 @@ const Home: React.FC = () => {
                   {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
                 </div>
                 <span className="text-gray-900 font-bold">4.9/5</span> <span className="text-gray-500">sur 4000+ avis</span>
+                <span className="ml-1 inline-flex items-center gap-0.5 text-neo font-semibold group-hover:gap-1.5 transition-all">
+                  · Voir leurs résultats
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                </span>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </section>

@@ -1,4 +1,4 @@
-import { Instagram, Facebook, ChevronRight } from 'lucide-react';
+import { Instagram, Facebook, ChevronRight, Star } from 'lucide-react';
 import type { Image as SanityImage } from 'sanity';
 import { urlForImage } from '@/sanity/lib/image';
 
@@ -6,9 +6,15 @@ import { urlForImage } from '@/sanity/lib/image';
  * Page « lien en bio » (/lien) — remplace Linktree.
  *
  * Contenu géré dans Sanity Studio (document « Page Liens »). Rendu 100 %
- * serveur : toutes les animations sont en CSS pur (fond aurore, verre dépoli,
- * bordure lumineuse rotative de la carte vedette, entrées en cascade) — aucun
- * JS client, la page charge instantanément dans le navigateur Instagram.
+ * serveur : toutes les animations sont en CSS pur (entrées en cascade, halo
+ * doux du logo, dérive lente des taches de couleur) — aucun JS client, la page
+ * charge instantanément dans le navigateur Instagram.
+ *
+ * Design aligné sur le reste du site NEO : fond clair et aéré, taches teal
+ * floutées discrètes (comme la page d'accueil), titres Montserrat `font-bold
+ * tracking-tight`, texte dégradé teal, boutons pilule `rounded-full`, cartes
+ * blanches `rounded-2xl` à ombre douce. Fini le look « template » : fond aurore
+ * saturé, bordure arc-en-ciel rotative et balayages de lumière ont été retirés.
  */
 
 export type LienItem = {
@@ -54,6 +60,14 @@ const FALLBACK: LienPageData = {
       enabled: true,
     },
     {
+      _key: 'temoignages',
+      _type: 'lienLink',
+      emoji: '⭐',
+      label: 'Résultats clients (témoignages vidéo)',
+      url: 'https://www.neoperformance.ca/temoignages',
+      enabled: true,
+    },
+    {
       _key: 'quiz',
       _type: 'lienLink',
       emoji: '🔬',
@@ -80,61 +94,29 @@ const FALLBACK: LienPageData = {
   ],
 };
 
-// Styles d'animation propres à cette page (fond aurore, brillance, entrées).
-// Inclus ici plutôt que dans index.css : la page est autonome et rien d'autre
-// ne les utilise.
+// Styles d'animation propres à cette page (entrées en cascade, halo doux du
+// logo, dérive très lente des taches de couleur du fond). Inclus ici plutôt que
+// dans index.css : la page est autonome et rien d'autre ne les utilise.
 //
-// Perf : aucun filtre blur() — les dégradés radiaux sont déjà doux par
-// nature, et les gros calques floutés animés faisaient geler le rendu (testé).
-// La bordure de la carte vedette tourne via @property (rotation du dégradé
-// lui-même, pas d'élément géant en transform) ; les navigateurs trop vieux
-// affichent simplement une bordure dégradée fixe.
+// Perf : aucun filtre blur() animé (gèle le rendu sur mobile) ; on utilise des
+// dégradés radiaux doux par nature. Fini la bordure conique rotative et les
+// balayages de lumière — ils faisaient « gadget » et cassaient le ton premium.
 const css = `
-  @property --lienAngle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
-  }
-  @keyframes lienSpinAngle {
-    to { --lienAngle: 360deg; }
-  }
-  .lien-border {
-    background:
-      conic-gradient(from var(--lienAngle, 0deg),
-        #007F78 0deg, #00BBB1 70deg, #B3EBE8 110deg, #00BBB1 150deg,
-        #007F78 220deg, #00BBB1 290deg, #B3EBE8 330deg, #007F78 360deg);
-    animation: lienSpinAngle 5s linear infinite;
-  }
   @keyframes lienPop {
-    from { opacity: 0; transform: translateY(26px) scale(0.96); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from { opacity: 0; transform: translateY(22px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  @keyframes lienDriftA {
-    0% { transform: translate(-12%, -8%) scale(1); }
-    50% { transform: translate(10%, 12%) scale(1.25); }
-    100% { transform: translate(-12%, -8%) scale(1); }
-  }
-  @keyframes lienDriftB {
-    0% { transform: translate(10%, 6%) scale(1.15); }
-    50% { transform: translate(-14%, -10%) scale(0.9); }
-    100% { transform: translate(10%, 6%) scale(1.15); }
-  }
-  @keyframes lienDriftC {
-    0% { transform: translate(0%, 10%) scale(0.95); }
-    50% { transform: translate(6%, -12%) scale(1.2); }
-    100% { transform: translate(0%, 10%) scale(0.95); }
-  }
-  @keyframes lienShine {
-    0%, 55% { transform: translateX(-120%) skewX(-18deg); }
-    100% { transform: translateX(260%) skewX(-18deg); }
+  @keyframes lienBlob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(4%, 6%) scale(1.08); }
   }
   @keyframes lienHalo {
-    0%, 100% { opacity: 0.55; transform: scale(1); }
-    50% { opacity: 0.9; transform: scale(1.12); }
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.08); }
   }
   .lien-pop {
     opacity: 0;
-    animation: lienPop 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation: lienPop 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
   @media (prefers-reduced-motion: reduce) {
     .lien-root *, .lien-root *::before, .lien-root *::after {
@@ -155,11 +137,11 @@ function TikTokIcon({ className }: { className?: string }) {
 function pop(index: number) {
   return {
     className: 'lien-pop',
-    style: { animationDelay: `${120 + index * 85}ms` },
+    style: { animationDelay: `${120 + index * 80}ms` },
   };
 }
 
-/** Carte vedette : bordure lumineuse rotative + balayage de lumière. */
+/** Carte vedette : le CTA principal, mis en avant façon carte « hero » du site. */
 function FeaturedCard({ item, index }: { item: LienItem; index: number }) {
   const a = pop(index);
   const imageUrl = item.image
@@ -168,10 +150,14 @@ function FeaturedCard({ item, index }: { item: LienItem; index: number }) {
 
   return (
     <a href={item.url} className={`${a.className} block group`} style={a.style}>
-      {/* Bordure lumineuse : le dégradé conique du wrapper tourne (via --lienAngle) */}
-      <div className="lien-border relative rounded-[28px] p-[2.5px] shadow-2xl shadow-neo-900/25 transition-transform duration-300 active:scale-[0.97]">
-        <div className="relative rounded-[26px] overflow-hidden bg-dark-900">
-          <div className="relative overflow-hidden">
+      {/* Lueur teal douce derrière la carte (statique, premium) */}
+      <div className="relative">
+        <div
+          aria-hidden="true"
+          className="absolute -inset-2 rounded-[32px] bg-neo/15 blur-xl opacity-70 transition-opacity duration-300 group-hover:opacity-100"
+        />
+        <div className="relative rounded-3xl overflow-hidden bg-white border border-gray-100 ring-1 ring-neo/10 shadow-xl shadow-neo-900/10 transition-transform duration-300 group-hover:-translate-y-1 active:scale-[0.98]">
+          <div className="relative">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -181,30 +167,24 @@ function FeaturedCard({ item, index }: { item: LienItem; index: number }) {
                 loading="eager"
               />
             ) : (
-              <div className="w-full aspect-[16/9] bg-[radial-gradient(120%_140%_at_20%_0%,#007F78_0%,#004541_45%,#1A1A1A_100%)] flex items-center justify-center">
-                {item.emoji && (
-                  <span className="text-6xl drop-shadow-[0_0_24px_rgba(0,187,177,0.65)]">
-                    {item.emoji}
-                  </span>
-                )}
+              <div className="w-full aspect-[16/9] bg-[radial-gradient(130%_150%_at_20%_0%,#00BBB1_0%,#007F78_50%,#00615C_100%)] flex items-center justify-center">
+                {item.emoji && <span className="text-6xl">{item.emoji}</span>}
               </div>
             )}
-            {/* Balayage de lumière périodique sur l'image */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[lienShine_4.5s_ease-in-out_infinite]"
-            />
-            <span className="absolute top-4 right-4 inline-flex items-center gap-1 bg-neo text-dark-900 text-xs font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-[0_0_18px_rgba(0,187,177,0.6)]">
-              ⭐ Vedette
+            <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-white/85 backdrop-blur-md text-neo-700 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white shadow-sm">
+              <Star size={12} fill="currentColor" /> Vedette
             </span>
           </div>
           <div className="px-6 py-6">
-            <h2 className="text-white text-2xl font-extrabold leading-tight">
+            <h2 className="text-gray-900 text-2xl font-bold tracking-tight leading-tight">
               {item.label} {item.emoji && imageUrl ? item.emoji : ''}
             </h2>
-            {item.subtitle && <p className="text-gray-400 mt-1.5">{item.subtitle}</p>}
-            <span className="mt-4 inline-flex items-center gap-1.5 bg-neo text-dark-900 font-bold px-5 py-3 rounded-xl shadow-[0_8px_24px_rgba(0,187,177,0.45)]">
-              {item.ctaLabel || 'Découvrir →'}
+            {item.subtitle && (
+              <p className="text-gray-600 mt-2 leading-relaxed">{item.subtitle}</p>
+            )}
+            <span className="mt-5 inline-flex items-center gap-1.5 bg-neo hover:bg-neo-600 text-white font-semibold px-6 py-3 rounded-full shadow-lg shadow-neo/30 transition-colors">
+              {item.ctaLabel || 'Découvrir'}
+              <ChevronRight className="h-4 w-4" />
             </span>
           </div>
         </div>
@@ -213,7 +193,7 @@ function FeaturedCard({ item, index }: { item: LienItem; index: number }) {
   );
 }
 
-/** Lien standard : carte en verre dépoli sur le fond aurore. */
+/** Lien standard : carte blanche épurée, cohérente avec les cartes du site. */
 function LinkCard({ item, index }: { item: LienItem; index: number }) {
   const a = pop(index);
   const thumbUrl = item.image
@@ -223,7 +203,7 @@ function LinkCard({ item, index }: { item: LienItem; index: number }) {
   return (
     <a
       href={item.url}
-      className={`${a.className} group flex items-center gap-4 bg-white/80 rounded-2xl pl-4 pr-5 py-3.5 border border-white/90 shadow-lg shadow-neo-900/[0.07] transition-all duration-300 active:scale-[0.97] hover:shadow-xl hover:shadow-neo-900/[0.12] hover:bg-white/95`}
+      className={`${a.className} group flex items-center gap-4 bg-white rounded-2xl pl-4 pr-5 py-4 border border-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-neo-900/10 hover:border-neo/30 active:scale-[0.98]`}
       style={a.style}
     >
       {thumbUrl ? (
@@ -231,24 +211,24 @@ function LinkCard({ item, index }: { item: LienItem; index: number }) {
         <img
           src={thumbUrl}
           alt=""
-          className="h-11 w-11 rounded-xl object-cover shrink-0 shadow-sm"
+          className="h-12 w-12 rounded-xl object-cover shrink-0"
           loading="lazy"
         />
       ) : (
         <span
-          className="h-11 w-11 rounded-xl bg-gradient-to-br from-neo-50 to-neo-100 ring-1 ring-neo-200/60 flex items-center justify-center text-xl shrink-0"
+          className="h-12 w-12 rounded-xl bg-neo/10 ring-1 ring-neo/15 flex items-center justify-center text-xl shrink-0"
           aria-hidden="true"
         >
           {item.emoji || '🔗'}
         </span>
       )}
       <span className="flex-1 min-w-0">
-        <span className="block font-semibold text-gray-900">{item.label}</span>
+        <span className="block font-semibold text-gray-900 leading-snug">{item.label}</span>
         {item.subtitle && (
           <span className="block text-sm text-gray-500 mt-0.5">{item.subtitle}</span>
         )}
       </span>
-      <ChevronRight className="h-5 w-5 text-neo-600 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+      <ChevronRight className="h-5 w-5 text-neo shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
     </a>
   );
 }
@@ -268,35 +248,25 @@ export default function LienBio({ data }: { data: LienPageData | null }) {
   let animIndex = 0;
 
   return (
-    <div className="lien-root relative min-h-screen overflow-hidden bg-[#EDFAF9]">
+    <div className="lien-root relative min-h-screen overflow-hidden bg-gradient-to-b from-neo-50/60 via-white to-white">
       <style dangerouslySetInnerHTML={{ __html: css }} />
 
-      {/* Fond aurore : nappes de couleur qui dérivent lentement. Pas de filtre
-          blur (trop coûteux) : le fondu vient du dégradé radial lui-même. */}
-      <div aria-hidden="true" className="fixed inset-0 pointer-events-none">
-        <div
-          className="absolute -top-[15%] -left-[20%] h-[60vh] w-[85vw] opacity-45 animate-[lienDriftA_19s_ease-in-out_infinite]"
-          style={{ background: 'radial-gradient(ellipse at center, #00BBB1 0%, rgba(0,187,177,0.35) 35%, transparent 68%)' }}
-        />
-        <div
-          className="absolute top-[30%] -right-[25%] h-[55vh] w-[80vw] opacity-40 animate-[lienDriftB_24s_ease-in-out_infinite]"
-          style={{ background: 'radial-gradient(ellipse at center, #4DD1CA 0%, rgba(77,209,202,0.3) 35%, transparent 68%)' }}
-        />
-        <div
-          className="absolute -bottom-[20%] left-[5%] h-[55vh] w-[75vw] opacity-35 animate-[lienDriftC_28s_ease-in-out_infinite]"
-          style={{ background: 'radial-gradient(ellipse at center, #80DED9 0%, rgba(128,222,217,0.3) 35%, transparent 68%)' }}
-        />
+      {/* Fond : taches teal floutées très discrètes, comme la page d'accueil.
+          Elles dérivent à peine — présence, pas spectacle. */}
+      <div aria-hidden="true" className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-24 -right-16 h-72 w-72 rounded-full bg-neo/10 blur-3xl animate-[lienBlob_22s_ease-in-out_infinite]" />
+        <div className="absolute top-1/3 -left-20 h-72 w-72 rounded-full bg-neo-200/25 blur-3xl animate-[lienBlob_26s_ease-in-out_infinite]" />
+        <div className="absolute bottom-0 right-1/4 h-64 w-64 rounded-full bg-neo/[0.08] blur-3xl animate-[lienBlob_30s_ease-in-out_infinite]" />
       </div>
 
-      <main className="relative max-w-md mx-auto px-5 pt-12 pb-16">
+      <main className="relative max-w-md mx-auto px-5 pt-14 pb-16">
         {/* En-tête */}
         <header className="text-center">
           <div className="lien-pop inline-block relative" style={{ animationDelay: '0ms' }}>
-            {/* Halo lumineux pulsant derrière le logo */}
+            {/* Halo teal doux derrière le logo */}
             <div
               aria-hidden="true"
-              className="absolute inset-[-45%] rounded-full animate-[lienHalo_5s_ease-in-out_infinite]"
-              style={{ background: 'radial-gradient(circle, rgba(0,187,177,0.5) 0%, rgba(0,187,177,0.2) 45%, transparent 70%)' }}
+              className="absolute inset-[-40%] rounded-full bg-[radial-gradient(circle,rgba(0,187,177,0.35)_0%,transparent_70%)] animate-[lienHalo_6s_ease-in-out_infinite]"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -306,30 +276,49 @@ export default function LienBio({ data }: { data: LienPageData | null }) {
             />
           </div>
           <h1
-            className="lien-pop mt-4 text-xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-neo-800 via-neo-600 to-neo-800"
+            className="lien-pop mt-4 text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-neo-700 via-neo to-neo-700"
             style={{ animationDelay: '70ms' }}
           >
             @neoperformance
           </h1>
           {page.tagline && (
             <p
-              className="lien-pop mt-2 text-gray-700 leading-relaxed"
+              className="lien-pop mt-2 text-gray-600 leading-relaxed"
               style={{ animationDelay: '130ms' }}
             >
               {page.tagline}
             </p>
           )}
+
+          {/* Preuve sociale — étoiles + note réelle. Pas de photos : les avatars
+              génériques faisaient « stock/IA » et minaient la crédibilité. */}
+          <div
+            className="lien-pop mt-5 inline-flex items-center gap-2.5 bg-white/70 backdrop-blur-sm border border-gray-100 shadow-sm rounded-full px-4 py-2"
+            style={{ animationDelay: '175ms' }}
+          >
+            <span className="flex text-yellow-400">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} size={14} fill="currentColor" />
+              ))}
+            </span>
+            <span className="text-[13px] text-gray-700">
+              <span className="font-bold text-gray-900">4,9/5</span>
+              <span className="text-gray-400"> · </span>
+              4000+ avis vérifiés
+            </span>
+          </div>
+
           {socials.length > 0 && (
             <div
               className="lien-pop mt-5 flex items-center justify-center gap-3"
-              style={{ animationDelay: '190ms' }}
+              style={{ animationDelay: '220ms' }}
             >
               {socials.map(({ url, label, Icon }) => (
                 <a
                   key={label}
                   href={url}
                   aria-label={label}
-                  className="h-12 w-12 rounded-full bg-white/80 border border-white/90 shadow-lg shadow-neo-900/[0.07] flex items-center justify-center text-neo-800 transition-all duration-300 active:scale-90 hover:bg-white/95 hover:shadow-xl"
+                  className="h-11 w-11 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center text-neo transition-all duration-300 active:scale-90 hover:-translate-y-0.5 hover:shadow-md hover:text-neo-600"
                 >
                   <Icon className="h-5 w-5" />
                 </a>
@@ -350,11 +339,11 @@ export default function LienBio({ data }: { data: LienPageData | null }) {
                   className={`${a.className} flex items-center gap-3 pt-4`}
                   style={a.style}
                 >
-                  <span className="h-px flex-1 bg-gradient-to-r from-transparent to-neo-300" />
+                  <span className="h-px flex-1 bg-gradient-to-r from-transparent to-neo-200" />
                   <h2 className="text-center text-neo-700 font-bold uppercase tracking-[0.15em] text-xs">
                     {item.heading}
                   </h2>
-                  <span className="h-px flex-1 bg-gradient-to-l from-transparent to-neo-300" />
+                  <span className="h-px flex-1 bg-gradient-to-l from-transparent to-neo-200" />
                 </div>
               );
             }
@@ -369,7 +358,7 @@ export default function LienBio({ data }: { data: LienPageData | null }) {
         <footer className="lien-pop mt-12 text-center" style={{ animationDelay: '700ms' }}>
           <a
             href="https://www.neoperformance.ca"
-            className="text-xs font-medium text-gray-500 hover:text-neo-700 transition-colors"
+            className="text-xs font-medium text-gray-400 hover:text-neo-700 transition-colors"
           >
             neoperformance.ca
           </a>
