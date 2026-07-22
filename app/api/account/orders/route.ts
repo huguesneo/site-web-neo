@@ -110,20 +110,75 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // WooCommerce recherche le courriel parmi les champs de la commande. On
-    // refiltre ensuite STRICTEMENT par courriel de facturation pour ne jamais
-    // renvoyer la commande d'un autre client (la recherche est approximative).
-    const res = await fetch(
-      wc(`/orders?search=${encodeURIComponent(email)}&per_page=50&orderby=date&order=desc`),
-      { cache: 'no-store' },
+    // Le paramètre `search` de l'endpoint commandes est IGNORÉ par cette boutique
+    // (vérifié : une recherche bidon retourne quand même des résultats) et
+    // `billing_email` n'est pas supporté. On combine donc DEUX sources fiables :
+    //   1. les commandes liées au compte client WordPress (customers?email= →
+    //      orders?customer=id) — couvre les commandes de l'ancien site, peu
+    //      importe leur âge ;
+    //   2. un balayage des ~1000 commandes les plus récentes (allégé via
+    //      _fields) filtré STRICTEMENT par courriel de facturation — couvre les
+    //      commandes « invité », dont TOUTES celles créées par ce site (le
+    //      checkout attache maintenant le compte WP quand il existe, donc cette
+    //      part se réduit avec le temps).
+    // Limite assumée : une très ancienne commande invité sans compte WP (avant
+    // ~1000 commandes) n'apparaît pas.
+
+    // Source 1 : compte WordPress lié.
+    const customerOrdersPromise = (async (): Promise<WCOrder[]> => {
+      try {
+        const cRes = await fetch(wc(`/customers?email=${encodeURIComponent(email)}&per_page=1`), { cache: 'no-store' });
+        if (!cRes.ok) return [];
+        const customers: Array<{ id: number; email?: string }> = await cRes.json();
+        const cust = Array.isArray(customers)
+          ? customers.find((c) => (c.email || '').toLowerCase() === email)
+          : undefined;
+        if (!cust) return [];
+        const out: WCOrder[] = [];
+        for (let page = 1; page <= 2; page++) {
+          const oRes = await fetch(wc(`/orders?customer=${cust.id}&per_page=100&page=${page}`), { cache: 'no-store' });
+          if (!oRes.ok) break;
+          const batch: WCOrder[] = await oRes.json();
+          if (!Array.isArray(batch) || batch.length === 0) break;
+          out.push(...batch);
+          if (batch.length < 100) break;
+        }
+        return out;
+      } catch {
+        return [];
+      }
+    })();
+
+    // Source 2 : balayage léger des commandes récentes (ids + courriel seulement).
+    const SCAN_PAGES = 10;
+    const scannedIdsPromise = Promise.all(
+      Array.from({ length: SCAN_PAGES }, (_, i) =>
+        fetch(wc(`/orders?per_page=100&page=${i + 1}&orderby=date&order=desc&_fields=id,billing`), { cache: 'no-store' })
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+      ),
+    ).then((pages: Array<Array<{ id: number; billing?: { email?: string } }>>) =>
+      pages.flat().filter((o) => (o?.billing?.email || '').toLowerCase() === email).map((o) => o.id),
     );
-    if (!res.ok) {
-      return NextResponse.json({ error: `Erreur WooCommerce ${res.status}` }, { status: 502 });
+
+    const [customerOrders, scannedIds] = await Promise.all([customerOrdersPromise, scannedIdsPromise]);
+
+    // Recharge les commandes invité trouvées au balayage (celles pas déjà couvertes).
+    const knownIds = new Set(customerOrders.map((o) => o.id));
+    const guestIds = scannedIds.filter((id) => !knownIds.has(id)).slice(0, 100);
+    let guestOrders: WCOrder[] = [];
+    if (guestIds.length > 0) {
+      const gRes = await fetch(wc(`/orders?include=${guestIds.join(',')}&per_page=100`), { cache: 'no-store' });
+      if (gRes.ok) {
+        const batch = await gRes.json();
+        if (Array.isArray(batch)) guestOrders = batch;
+      }
     }
-    const raw: WCOrder[] = await res.json();
-    const mine = (Array.isArray(raw) ? raw : []).filter(
-      (o) => (o.billing?.email || '').toLowerCase() === email,
-    );
+
+    const mine = [...customerOrders, ...guestOrders]
+      .filter((o, i, arr) => arr.findIndex((x) => x.id === o.id) === i)
+      .sort((a, b) => (a.date_created < b.date_created ? 1 : -1))
+      .slice(0, 50);
 
     const orders = mine.map((o) => ({
       id: o.id,

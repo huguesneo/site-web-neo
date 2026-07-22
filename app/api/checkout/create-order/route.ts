@@ -382,11 +382,28 @@ export async function POST(req: NextRequest) {
     giftCard = { id: card.id, number: card.number, balance: card.balance };
   }
 
+  // Rattache la commande au compte client WordPress s'il en existe un pour ce
+  // courriel : le paramètre `search` des commandes étant ignoré par la boutique,
+  // `orders?customer=id` est le seul filtre fiable pour l'historique de l'espace
+  // client — chaque commande rattachée ici le rend pérenne. Non bloquant.
+  let wpCustomerId = 0;
+  try {
+    const cRes = await fetch(wc(`/customers?email=${encodeURIComponent(billingEmail)}&per_page=1`));
+    if (cRes.ok) {
+      const customers: Array<{ id: number; email?: string }> = await cRes.json();
+      const cust = Array.isArray(customers)
+        ? customers.find((c) => (c.email || '').toLowerCase() === billingEmail.toLowerCase())
+        : undefined;
+      if (cust) wpCustomerId = cust.id;
+    }
+  } catch { /* commande invité */ }
+
   const orderData: Record<string, unknown> = {
     status: 'pending',
     currency: 'CAD',
     payment_method: 'moneris',
     payment_method_title: 'Moneris',
+    ...(wpCustomerId ? { customer_id: wpCustomerId } : {}),
     billing: body.billing ?? {},
     shipping: body.shipping ?? {},
     line_items,
