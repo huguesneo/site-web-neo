@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag, Gift } from 'lucide-react';
 import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import { supabase } from '../services/supabaseClient';
 import Section from '../components/Section';
@@ -80,6 +80,46 @@ const Checkout: React.FC = () => {
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [couponError, setCouponError] = useState('');
 
+  // ── Carte-cadeau (paiement) ──────────────────────────────────────────────────
+  // Le solde est validé côté serveur (/api/gift-card/validate — les clés restent
+  // sur le serveur). Le montant est appliqué APRÈS taxes et livraison, comme de
+  // l'argent comptant, et la carte n'est débitée qu'après paiement approuvé.
+  const [giftCard, setGiftCard] = useState<{ number: string; balance: number } | null>(null);
+  const [giftInput, setGiftInput] = useState('');
+  const [giftStatus, setGiftStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [giftError, setGiftError] = useState('');
+  // Le client estimait 0 $ à payer mais le serveur exige un montant → on ré-affiche
+  // le formulaire de carte bancaire.
+  const [forceCardForm, setForceCardForm] = useState(false);
+
+  async function handleApplyGiftCard() {
+    if (!giftInput.trim()) return;
+    setGiftStatus('loading');
+    setGiftError('');
+    try {
+      const res = await fetch('/api/gift-card/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: giftInput }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Carte-cadeau invalide.');
+      setGiftCard({ number: data.number, balance: Number(data.balance) || 0 });
+      setGiftStatus('idle');
+      setGiftInput('');
+    } catch (e: unknown) {
+      setGiftError(e instanceof Error ? e.message : 'Carte-cadeau invalide.');
+      setGiftStatus('error');
+    }
+  }
+
+  function removeGiftCard() {
+    setGiftCard(null);
+    setGiftError('');
+    setGiftStatus('idle');
+    setForceCardForm(false);
+  }
+
   async function handleApplyCoupon() {
     if (!couponInput.trim()) return;
     setCouponStatus('loading');
@@ -100,12 +140,13 @@ const Checkout: React.FC = () => {
   });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [orderInfo, setOrderInfo] = useState<{ orderId: number; total: number } | null>(null);
+  const [orderInfo, setOrderInfo] = useState<{ orderId: number; total: number; giftApplied?: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   // Contexte de la commande en cours, lu par le gestionnaire de message de l'iframe
   const pendingRef = useRef<{
     orderId: number;
     total: number;
+    giftApplied?: number;
     customer: { firstName: string; lastName: string; email: string; phone: string };
   } | null>(null);
   const finalizedRef = useRef(false);
@@ -122,6 +163,11 @@ const Checkout: React.FC = () => {
   const taxableBase = Math.max(0, netGoods - digitalSubtotal) + shipping;
   const taxes = taxableBase * 0.14975;
   const total = netGoods + shipping + taxes;
+  // Carte-cadeau : appliquée en dernier, sur le total taxes+livraison incluses
+  // (comme de l'argent comptant). Le montant RÉEL est recalculé côté serveur.
+  const giftApplied = giftCard ? Math.min(giftCard.balance, Math.round(total * 100) / 100) : 0;
+  const totalToPay = Math.max(0, total - giftApplied);
+  const cardFormNeeded = !giftCard || totalToPay > 0.005 || forceCardForm;
 
   useEffect(() => {
     if (hydrated && items.length === 0 && status === 'idle') {
@@ -208,9 +254,14 @@ const Checkout: React.FC = () => {
 
           <h1 className="text-2xl font-bold text-white mb-1">Paiement réussi !</h1>
           <p className="text-gray-400 text-sm mb-1">Commande #{orderInfo.orderId}</p>
-          <p className="text-neo text-2xl font-extrabold mb-6 tracking-tight">
+          <p className={`text-neo text-2xl font-extrabold tracking-tight ${(orderInfo.giftApplied ?? 0) > 0 ? 'mb-1' : 'mb-6'}`}>
             {orderInfo.total.toFixed(2)} $
           </p>
+          {(orderInfo.giftApplied ?? 0) > 0 && (
+            <p className="text-gray-400 text-xs mb-6 flex items-center justify-center gap-1.5">
+              <Gift size={13} className="text-neo" /> Carte-cadeau utilisée : −{(orderInfo.giftApplied ?? 0).toFixed(2)} $
+            </p>
+          )}
           <p className="text-gray-400 text-sm mb-8">
             Merci pour ta commande ! Un courriel de confirmation te sera envoyé. Expédition sous 24/48h.
           </p>
@@ -265,7 +316,7 @@ const Checkout: React.FC = () => {
       // La commande est marquée payée côté serveur après encaissement.
 
       clearCart();
-      setOrderInfo({ orderId: ctx.orderId, total: ctx.total });
+      setOrderInfo({ orderId: ctx.orderId, total: ctx.total, giftApplied: ctx.giftApplied });
       setStatus('success');
     } catch (e: unknown) {
       finalizedRef.current = false;
@@ -277,7 +328,9 @@ const Checkout: React.FC = () => {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!HT_PROFILE_ID) {
+    // Le Profile ID Moneris n'est requis que si un paiement bancaire est nécessaire
+    // (une commande entièrement couverte par une carte-cadeau s'en passe).
+    if (!HT_PROFILE_ID && cardFormNeeded) {
       setErrorMsg('Configuration de paiement incomplète (Profile ID Moneris manquant).');
       setStatus('error');
       return;
@@ -327,6 +380,7 @@ const Checkout: React.FC = () => {
           shipping,
           customer_note: form.notes,
           couponCode: coupon?.code ?? null,
+          giftCardNumber: giftCard?.number ?? null,
           accessToken,
         }),
       });
@@ -338,15 +392,44 @@ const Checkout: React.FC = () => {
 
       const orderId: number = order.id ?? order.orderId;
       const authoritativeTotal: number = Number.isFinite(order.total) ? order.total : total;
+      const serverGiftApplied: number = Number(order.giftCardApplied) || 0;
 
-      // 2) Mémoriser le contexte puis demander à l'iframe de tokeniser la carte.
-      //    La réponse arrive dans le gestionnaire de message (-> payWithToken).
+      // 2a) Commande ENTIÈREMENT couverte par la carte-cadeau → aucun paiement
+      //     Moneris : le serveur débite la carte et marque la commande payée.
+      if (giftCard && authoritativeTotal <= 0.005) {
+        const freeRes = await fetch('/api/checkout/complete-free-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId }),
+        });
+        const free = await freeRes.json().catch(() => ({}));
+        if (!freeRes.ok || !free.approved) {
+          throw new Error(free.error || 'La commande n’a pas pu être finalisée. Réessaie.');
+        }
+        clearCart();
+        setOrderInfo({ orderId, total: 0, giftApplied: serverGiftApplied });
+        setStatus('success');
+        return;
+      }
+
+      // Le client estimait 0 $ à payer (formulaire de carte masqué) mais le total
+      // autoritatif exige un paiement → on ré-affiche le formulaire de carte.
+      if (!cardFormNeeded) {
+        setForceCardForm(true);
+        throw new Error(
+          `Il reste ${authoritativeTotal.toFixed(2)} $ à payer par carte bancaire. Entre les informations de ta carte, puis confirme de nouveau.`,
+        );
+      }
+
+      // 2b) Mémoriser le contexte puis demander à l'iframe de tokeniser la carte.
+      //     La réponse arrive dans le gestionnaire de message (-> payWithToken).
       pendingRef.current = {
         orderId,
         total: authoritativeTotal,
+        giftApplied: serverGiftApplied,
         customer: { firstName: form.firstName, lastName: form.lastName, email: form.email, phone: form.phone },
       };
-      setOrderInfo({ orderId, total: authoritativeTotal });
+      setOrderInfo({ orderId, total: authoritativeTotal, giftApplied: serverGiftApplied });
 
       const frame = iframeRef.current?.contentWindow;
       if (!frame) throw new Error('Formulaire de carte non chargé. Recharge la page.');
@@ -415,19 +498,31 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
 
-              {/* Paiement — formulaire de carte sécurisé (iframe Moneris) */}
+              {/* Paiement — formulaire de carte sécurisé (iframe Moneris). Masqué si la
+                  carte-cadeau couvre tout le total (aucun paiement bancaire requis). */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                 <h2 className="text-lg font-bold text-gray-900 mb-1">Paiement par carte</h2>
-                <p className="text-xs text-gray-500 mb-4 flex items-center gap-1.5">
-                  <Lock size={13} className="text-neo" /> Tes informations de carte sont saisies dans un formulaire sécurisé Moneris et ne transitent jamais par nos serveurs.
-                </p>
-                <iframe
-                  ref={iframeRef}
-                  title="Paiement sécurisé Moneris"
-                  src={HT_IFRAME_SRC}
-                  scrolling="no"
-                  className="w-full h-[290px] border-0 bg-transparent"
-                />
+                {cardFormNeeded ? (
+                  <>
+                    <p className="text-xs text-gray-500 mb-4 flex items-center gap-1.5">
+                      <Lock size={13} className="text-neo" /> Tes informations de carte sont saisies dans un formulaire sécurisé Moneris et ne transitent jamais par nos serveurs.
+                    </p>
+                    <iframe
+                      ref={iframeRef}
+                      title="Paiement sécurisé Moneris"
+                      src={HT_IFRAME_SRC}
+                      scrolling="no"
+                      className="w-full h-[290px] border-0 bg-transparent"
+                    />
+                  </>
+                ) : (
+                  <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-4 text-green-700 mt-3">
+                    <Gift size={20} className="shrink-0" />
+                    <p className="text-sm">
+                      Ta carte-cadeau couvre la totalité de la commande — aucun paiement par carte bancaire n’est requis.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {status === 'error' && (
@@ -509,6 +604,52 @@ const Checkout: React.FC = () => {
                   )}
                 </div>
 
+                {/* Carte-cadeau (paiement) */}
+                <div className="border-t border-gray-100 pt-4 mb-4">
+                  {giftCard ? (
+                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+                      <div className="min-w-0">
+                        <span className="text-sm font-semibold text-green-700 flex items-center gap-1.5">
+                          <Gift size={14} /> Carte-cadeau …{giftCard.number.slice(-4)}
+                        </span>
+                        <span className="text-xs text-green-600">Solde : {giftCard.balance.toFixed(2)} $</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeGiftCard}
+                        className="text-xs text-gray-500 hover:text-red-600 font-medium shrink-0"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="text-xs font-medium text-gray-500 mb-1.5 block">Carte-cadeau</label>
+                      <div className="flex gap-2">
+                        <input
+                          value={giftInput}
+                          onChange={(e) => setGiftInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyGiftCard(); } }}
+                          placeholder="XXXX-XXXX-XXXX-XXXX"
+                          autoComplete="off"
+                          className="flex-1 min-w-0 border border-gray-200 rounded-xl px-3 py-2.5 text-sm uppercase focus:border-neo focus:ring-2 focus:ring-neo/20 outline-none text-gray-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyGiftCard}
+                          disabled={giftStatus === 'loading' || !giftInput.trim()}
+                          className="px-4 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {giftStatus === 'loading' ? '…' : 'Appliquer'}
+                        </button>
+                      </div>
+                      {giftStatus === 'error' && (
+                        <p className="text-xs text-red-600 mt-1.5">{giftError}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 <div className="border-t border-gray-100 pt-4 flex flex-col gap-2 text-sm text-gray-600">
                   <div className="flex justify-between">
                     <span>Sous-total</span>
@@ -544,9 +685,21 @@ const Checkout: React.FC = () => {
                     <span>TPS + TVQ</span>
                     <span className="font-medium text-gray-900">{taxes.toFixed(2)} $</span>
                   </div>
+                  {giftCard && giftApplied > 0 && (
+                    <>
+                      <div className="flex justify-between text-gray-500 border-t border-gray-100 pt-2 mt-1">
+                        <span>Sous-total (taxes incl.)</span>
+                        <span className="font-medium">{total.toFixed(2)} $</span>
+                      </div>
+                      <div className="flex justify-between text-green-600">
+                        <span className="flex items-center gap-1"><Gift size={13} /> Carte-cadeau (…{giftCard.number.slice(-4)})</span>
+                        <span className="font-medium">-{giftApplied.toFixed(2)} $</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between font-bold text-gray-900 text-base border-t border-gray-100 pt-2 mt-1">
-                    <span>Total</span>
-                    <span>{total.toFixed(2)} $</span>
+                    <span>{giftCard && giftApplied > 0 ? 'Total à payer' : 'Total'}</span>
+                    <span>{totalToPay.toFixed(2)} $</span>
                   </div>
                 </div>
 
@@ -557,7 +710,9 @@ const Checkout: React.FC = () => {
                 >
                   {status === 'loading'
                     ? <><Loader2 size={20} className="animate-spin" /> Traitement…</>
-                    : <><Lock size={18} /> Confirmer et payer</>
+                    : cardFormNeeded
+                      ? <><Lock size={18} /> Confirmer et payer</>
+                      : <><Gift size={18} /> Confirmer la commande</>
                   }
                 </button>
 

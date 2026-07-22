@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { LogOut, Package, ArrowRight, FolderOpen, Smartphone } from 'lucide-react';
 import Button from './Button';
+import AccountGiftCards from './AccountGiftCards';
 import { supabase } from '../services/supabaseClient';
 
 // Trouve le prénom à afficher. L'application de suivi peut stocker le nom
@@ -134,6 +135,9 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
               </Link>
             )}
           </div>
+
+          {/* Mes cartes-cadeaux — s'affiche seulement si le client en possède */}
+          <AccountGiftCards />
 
           {/* Application NEO Performance — clients de la clinique seulement */}
           {isClinicClient && (

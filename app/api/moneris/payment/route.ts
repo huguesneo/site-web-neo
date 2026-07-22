@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import { fetchGiftCardByNumber, adjustGiftCardBalance, readGiftCardMeta, GC_META_DEBITED } from '../../../../lib/gift-card';
 
 /**
  * Route serveur — encaisse un paiement via la NOUVELLE API Moneris.
@@ -47,10 +48,11 @@ function wc(path: string): string {
 
 /**
  * Lit la commande WooCommerce et renvoie le montant AUTORITATIF en cents
- * (prix réels + taxes + rabais, calculés par WooCommerce). Refuse une
- * commande déjà payée. Ne renvoie jamais un montant venant du client.
+ * (prix réels + taxes + rabais, calculés par WooCommerce) + la commande
+ * elle-même (pour lire les meta carte-cadeau). Refuse une commande déjà
+ * payée. Ne renvoie jamais un montant venant du client.
  */
-async function getAuthoritativeAmountCents(orderId: string | number): Promise<number> {
+async function getAuthoritativeOrder(orderId: string | number): Promise<{ amountCents: number; order: Record<string, unknown> }> {
   const res = await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`));
   if (!res.ok) throw new Error(`Commande introuvable (${res.status}).`);
   const order = await res.json();
@@ -62,7 +64,7 @@ async function getAuthoritativeAmountCents(orderId: string | number): Promise<nu
   if (!Number.isFinite(total) || total <= 0) {
     throw new Error('Total de commande invalide.');
   }
-  return Math.round(total * 100);
+  return { amountCents: Math.round(total * 100), order };
 }
 
 /** Marque la commande WooCommerce comme payée (côté serveur). */
@@ -121,13 +123,51 @@ export async function POST(req: NextRequest) {
   // Montant relu depuis WooCommerce — jamais celui du navigateur. Fail-closed :
   // si on ne peut pas obtenir un total fiable, on n'encaisse rien.
   let amountCents: number;
+  let wcOrder: Record<string, unknown>;
   try {
-    amountCents = await getAuthoritativeAmountCents(orderId);
+    ({ amountCents, order: wcOrder } = await getAuthoritativeOrder(orderId));
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Montant de commande indisponible.' },
       { status: 400 }
     );
+  }
+
+  // Carte-cadeau appliquée à la commande (paiement fractionné) : le montant
+  // encaissé par Moneris = total WooCommerce − montant carte-cadeau. On revérifie
+  // le solde MAINTENANT (il a pu être dépensé entre la création de la commande et
+  // le paiement). La carte n'est débitée qu'APRÈS l'approbation Moneris — jamais
+  // avant, pour ne pas laisser de débit orphelin si le client abandonne.
+  const gc = readGiftCardMeta(wcOrder as { meta_data?: Array<{ key: string; value: unknown }> });
+  if (gc) {
+    amountCents -= Math.round(gc.amount * 100);
+    if (amountCents <= 0) {
+      // Commande entièrement couverte par la carte → c'est la route
+      // /api/checkout/complete-free-order qui doit la finaliser, sans Moneris.
+      return NextResponse.json({ error: 'Cette commande est entièrement couverte par la carte-cadeau.' }, { status: 400 });
+    }
+  }
+  if (gc && !gc.debited) {
+    const card = await fetchGiftCardByNumber(gc.number);
+    if (card === undefined) {
+      return NextResponse.json(
+        { error: 'Impossible de vérifier la carte-cadeau. Réessayez dans un instant.' },
+        { status: 502 },
+      );
+    }
+    if (!card || !card.active || card.balance + 0.005 < gc.amount) {
+      // Le solde ne couvre plus le montant promis → on annule la commande (le
+      // client devra recommencer ; son code promo est libéré par l'annulation).
+      await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
+      }).catch(() => { /* non bloquant */ });
+      return NextResponse.json(
+        { error: 'Le solde de la carte-cadeau a changé depuis l’ajout au panier. Recommence ta commande.' },
+        { status: 402 },
+      );
+    }
   }
 
   try {
@@ -204,7 +244,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Paiement approuvé → on marque la commande payée côté serveur.
+    // Paiement approuvé → on débite la carte-cadeau (si présente), puis on
+    // marque la commande payée. Si le débit échoue malgré le solde vérifié
+    // plus haut (cas très rare), on n'annule PAS le paiement déjà encaissé :
+    // on trace l'échec sur la commande pour correction manuelle dans l'admin.
+    if (gc && !gc.debited) {
+      const debited = await adjustGiftCardBalance(gc.id, -gc.amount, `Commande #${orderId} — neoperformance.ca`);
+      await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meta_data: [{ key: GC_META_DEBITED, value: debited ? 'yes' : 'ECHEC-A-DEBITER-MANUELLEMENT' }],
+        }),
+      }).catch(() => { /* non bloquant */ });
+      if (!debited) {
+        console.error(`[GIFT-CARD] Débit ÉCHOUÉ pour la commande #${orderId} — carte ${gc.number}, montant ${gc.amount.toFixed(2)} $. À débiter manuellement.`);
+      }
+    }
+
     const ok = data as {
       paymentId?: string;
       transactionDetails?: { authorizationCode?: string };

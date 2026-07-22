@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount, giftCardFaceValue, shippingFeeFor, SHIPPING_LABEL, NEO_ACCOMPANIMENT_WC_CATEGORY_ID } from '../../../../constants';
 import { fetchCouponByCode, priceCartLines, evaluateCoupon, emailAllowed, perUserLimitReached, releaseUnpaidCouponHolds } from '../../../../lib/coupon-rules';
+import { normalizeGiftCardNumber, fetchGiftCardByNumber, isExpired, GC_META_NUMBER, GC_META_ID, GC_META_AMOUNT } from '../../../../lib/gift-card';
 
 /**
  * Route serveur — crée la commande WooCommerce de façon SÛRE.
@@ -40,6 +41,7 @@ interface Body {
   shipping: Record<string, string>;
   customer_note?: string;
   couponCode?: string | null;
+  giftCardNumber?: string | null;
   accessToken?: string | null;
 }
 
@@ -348,6 +350,38 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Carte-cadeau (paiement) ─────────────────────────────────────────────────
+  // Le client paie une partie (ou la totalité) de sa commande avec une carte-cadeau
+  // PW. On la valide ICI (fail-closed : si l'API PW est injoignable, on refuse la
+  // commande plutôt que d'ignorer silencieusement la carte). Le montant appliqué est
+  // calculé APRÈS le total autoritatif WooCommerce (taxes + livraison incluses),
+  // comme de l'argent comptant — puis la carte est débitée seulement après paiement.
+  let giftCard: { id: string; number: string; balance: number } | null = null;
+  const giftInput = (body.giftCardNumber || '').trim();
+  if (giftInput) {
+    const number = normalizeGiftCardNumber(giftInput);
+    if (!number) {
+      return NextResponse.json({ error: 'Numéro de carte-cadeau invalide.' }, { status: 400 });
+    }
+    const card = await fetchGiftCardByNumber(number);
+    if (card === undefined) {
+      return NextResponse.json(
+        { error: 'Impossible de vérifier la carte-cadeau pour le moment. Réessayez ou retirez-la.' },
+        { status: 502 },
+      );
+    }
+    if (card === null || !card.active) {
+      return NextResponse.json({ error: 'Cette carte-cadeau est introuvable ou désactivée.' }, { status: 400 });
+    }
+    if (isExpired(card)) {
+      return NextResponse.json({ error: 'Cette carte-cadeau est expirée.' }, { status: 400 });
+    }
+    if (card.balance <= 0) {
+      return NextResponse.json({ error: 'Le solde de cette carte-cadeau est épuisé.' }, { status: 400 });
+    }
+    giftCard = { id: card.id, number: card.number, balance: card.balance };
+  }
+
   const orderData: Record<string, unknown> = {
     status: 'pending',
     currency: 'CAD',
@@ -405,10 +439,61 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* on conserve la commande sans frais de livraison */ }
 
+    // Carte-cadeau : PAIEMENT FRACTIONNÉ, comme le fait nativement PW Gift Cards.
+    // La commande garde son total et ses taxes COMPLETS (comptabilité intacte) ;
+    // c'est le montant encaissé par Moneris qui est réduit du montant de la carte,
+    // appliqué en dernier sur le total autoritatif (taxes + livraison incluses),
+    // comme de l'argent comptant. NB : une ligne de remise négative ne convient pas —
+    // WooCommerce retire proportionnellement les taxes de tout frais négatif.
+    // Le montant est tracé en meta (lu au moment du débit, après paiement approuvé)
+    // + une note visible dans l'admin. Fail-closed : si la meta ne peut pas être
+    // écrite, la route de paiement chargerait le total complet — on annule plutôt.
+    let giftCardApplied = 0;
+    if (giftCard) {
+      const currentTotal = parseFloat(order.total) || 0;
+      giftCardApplied = Math.round(Math.min(giftCard.balance, currentTotal) * 100) / 100;
+      if (giftCardApplied > 0) {
+        const upd = await fetch(wc(`/orders/${order.id}`), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            meta_data: [
+              { key: GC_META_NUMBER, value: giftCard.number },
+              { key: GC_META_ID, value: giftCard.id },
+              { key: GC_META_AMOUNT, value: giftCardApplied.toFixed(2) },
+            ],
+          }),
+        }).catch(() => null);
+        if (!upd || !upd.ok) {
+          await fetch(wc(`/orders/${order.id}`), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'cancelled' }),
+          }).catch(() => { /* non bloquant */ });
+          return NextResponse.json(
+            { error: 'Impossible d’appliquer la carte-cadeau. Réessayez ou retirez-la.' },
+            { status: 502 },
+          );
+        }
+        order = await upd.json();
+        // Note visible dans l'admin WooCommerce (non bloquante).
+        await fetch(wc(`/orders/${order.id}/notes`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            note: `Carte-cadeau ${giftCard.number} appliquée : ${giftCardApplied.toFixed(2)} $ sur le total de ${order.total} $. Le reste (${(parseFloat(order.total) - giftCardApplied).toFixed(2)} $) est encaissé par Moneris ; la carte est débitée automatiquement au paiement.`,
+            customer_note: false,
+          }),
+        }).catch(() => { /* non bloquant */ });
+      }
+    }
+
     return NextResponse.json({
       orderId: order.id,
-      total: parseFloat(order.total),                 // total autoritatif (prix réels + taxes + rabais + livraison)
+      // Montant À PAYER par le client (total autoritatif WooCommerce − carte-cadeau).
+      total: Math.round((parseFloat(order.total) - giftCardApplied) * 100) / 100,
       discountTotal: parseFloat(order.discount_total || '0'),
+      giftCardApplied,
       isClient,
     });
   } catch (err) {
