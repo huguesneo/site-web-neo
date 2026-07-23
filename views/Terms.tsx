@@ -19,7 +19,7 @@ const Terms: React.FC = () => {
         </div>
       </div>
 
-      <Section className="bg-white relative z-10 -mt-10 pt-0 pb-20">
+      <Section className="bg-white relative z-10 -mt-10 pt-0 pb-20" noAnimation>
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 sm:p-10 lg:p-14">
             <div className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2 prose-p:text-gray-600 prose-p:leading-relaxed prose-li:text-gray-600 prose-strong:text-gray-900 prose-a:text-neo prose-a:no-underline hover:prose-a:underline">

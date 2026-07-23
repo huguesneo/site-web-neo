@@ -15,11 +15,11 @@ const Privacy: React.FC = () => {
             <ShieldCheck size={30} />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-4">Politique de confidentialité</h1>
-          <p className="text-sm text-gray-400">Dernière mise à jour : 22 octobre 2025</p>
+          <p className="text-sm text-gray-400">Dernière mise à jour : 23 juillet 2026</p>
         </div>
       </div>
 
-      <Section className="bg-white relative z-10 -mt-10 pt-0 pb-20">
+      <Section className="bg-white relative z-10 -mt-10 pt-0 pb-20" noAnimation>
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 sm:p-10 lg:p-14">
             <div className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2 prose-p:text-gray-600 prose-p:leading-relaxed prose-li:text-gray-600 prose-strong:text-gray-900 prose-a:text-neo prose-a:no-underline hover:prose-a:underline">
@@ -34,6 +34,13 @@ const Privacy: React.FC = () => {
                   strictement confidentielle.
                 </p>
               </div>
+
+              <p>
+                La présente Politique de confidentialité s'applique au site web <a href="https://www.neoperformance.ca">www.neoperformance.ca</a> ainsi
+                qu'à l'application mobile <strong>NEO Performance</strong> (iOS et Android). Elle décrit les renseignements
+                que nous recueillons, la façon dont nous les utilisons, la durée pendant laquelle nous les conservons
+                et les droits dont vous disposez.
+              </p>
 
               <h2>1. Informations que nous recueillons</h2>
 
@@ -57,6 +64,18 @@ const Privacy: React.FC = () => {
                 <li>Détails de rendez-vous et préférences</li>
                 <li>Commentaires ou retours sur les services reçus</li>
               </ul>
+
+              <h3>Données recueillies via l'application mobile</h3>
+              <p>Lorsque vous utilisez l'application mobile NEO Performance, nous recueillons également, avec votre consentement :</p>
+              <ul>
+                <li>Vos informations de compte (identifiants de connexion, profil client)</li>
+                <li>Vos réponses aux questionnaires et évaluations de santé et d'habitudes de vie</li>
+                <li>Vos données de santé et d'activité physique (p. ex. poids, mesures, pas, fréquence cardiaque) que vous choisissez de synchroniser depuis Apple Santé ou d'entrer manuellement</li>
+                <li>Vos photos de progression, si vous choisissez d'en téléverser</li>
+                <li>Vos messages échangés dans la messagerie de l'application, incluant les conversations avec l'assistant Léo</li>
+                <li>Vos plans alimentaires, plans d'entraînement et données de suivi de progression</li>
+              </ul>
+              <p>Les données de santé ne sont jamais utilisées à des fins publicitaires ni vendues à des tiers.</p>
 
               <h2>2. Utilisation de vos informations</h2>
               <p>Nous utilisons ces données afin de :</p>
@@ -150,7 +169,26 @@ const Privacy: React.FC = () => {
               </ul>
               <p>Aucune méthode électronique n'étant infaillible, nous nous efforçons d'utiliser les meilleures pratiques commerciales pour protéger vos données.</p>
 
-              <h2>6. Témoins et technologies de suivi</h2>
+              <h2>6. Conservation des données</h2>
+              <p>
+                Nous conservons vos renseignements personnels uniquement le temps nécessaire aux fins pour lesquelles
+                ils ont été recueillis, ou tel que requis par la loi. Voici nos durées de conservation :
+              </p>
+              <ul>
+                <li><strong>Données de compte et dossier client</strong> (nom, coordonnées, questionnaires, évaluations, plans alimentaires et d'entraînement) : conservées pendant toute la durée de votre relation avec NEO Performance, puis supprimées ou anonymisées au plus tard 3 ans après la fin de celle-ci, sauf obligation légale contraire.</li>
+                <li><strong>Données de santé et d'activité physique</strong> (mesures synchronisées depuis Apple Santé, suivi de progression, photos) : conservées tant que votre compte est actif ; supprimées lors de la fermeture de votre compte ou sur demande.</li>
+                <li><strong>Messages et conversations</strong> (messagerie de l'application, incluant l'assistant Léo) : conservés tant que votre compte est actif, puis supprimés avec celui-ci.</li>
+                <li><strong>Données d'inscription et de consentement SMS</strong> (numéro de téléphone, horodatages de consentement) : conservées tant que votre consentement est actif, puis le temps requis pour démontrer la conformité aux lois applicables.</li>
+                <li><strong>Données de facturation et transactions</strong> : conservées 7 ans conformément aux exigences fiscales et comptables applicables au Québec et au Canada.</li>
+                <li><strong>Données de navigation et témoins (cookies)</strong> : conservés pour une durée maximale de 24 mois.</li>
+              </ul>
+              <p>
+                Vous pouvez demander la suppression de vos données en tout temps (voir la section
+                « Vos droits et choix » ci-dessous). Lorsque la suppression complète n'est pas possible en raison
+                d'une obligation légale, vos données sont isolées et protégées jusqu'à leur suppression définitive.
+              </p>
+
+              <h2>7. Témoins et technologies de suivi</h2>
               <p>Nous utilisons des cookies pour :</p>
               <ul>
                 <li>Analyser le trafic et le comportement des utilisateurs</li>
@@ -160,24 +198,29 @@ const Privacy: React.FC = () => {
               </ul>
               <p>Vous pouvez désactiver les cookies via votre navigateur, mais cela peut limiter certaines fonctionnalités du site.</p>
 
-              <h2>7. Vos droits et choix</h2>
+              <h2>8. Vos droits et choix</h2>
               <p>Vous avez le droit de :</p>
               <ul>
                 <li>Accéder, modifier ou supprimer vos renseignements personnels</li>
+                <li>Demander la suppression de votre compte et des données associées dans l'application mobile</li>
                 <li>Vous désabonner de nos courriels (lien « Se désinscrire »)</li>
                 <li>Vous désabonner des SMS (réponse « STOP »)</li>
                 <li>Demander des détails sur la façon dont vos données sont traitées</li>
-                <li>Retirer votre consentement à tout moment</li>
+                <li>Retirer votre consentement à tout moment, incluant l'accès aux données de santé (via les réglages de votre appareil)</li>
               </ul>
-              <p>Pour exercer ces droits : <a href="mailto:info@neoperformance.ca">info@neoperformance.ca</a></p>
+              <p>
+                Pour exercer ces droits, écrivez-nous à <a href="mailto:info@neoperformance.ca">info@neoperformance.ca</a>.
+                Nous traitons les demandes de suppression dans un délai maximal de 30 jours, sous réserve des données
+                que la loi nous oblige à conserver.
+              </p>
 
-              <h2>8. Liens vers des sites tiers</h2>
+              <h2>9. Liens vers des sites tiers</h2>
               <p>Notre site peut contenir des liens vers des sites externes. Nous ne sommes pas responsables de leurs pratiques de confidentialité. Cette politique s'applique uniquement aux données recueillies par NEO Performance.</p>
 
-              <h2>9. Modifications de la politique</h2>
+              <h2>10. Modifications de la politique</h2>
               <p>Nous pouvons mettre à jour cette politique à tout moment. La version la plus récente sera publiée sur notre site avec la date d'entrée en vigueur. En cas de changement majeur, une notification sera envoyée par courriel ou publiée sur le site.</p>
 
-              <h2>10. Nous contacter</h2>
+              <h2>11. Nous contacter</h2>
               <p>Pour toute question concernant cette Politique de confidentialité :</p>
               <p>
                 <strong>NEO Performance</strong><br />
@@ -186,7 +229,7 @@ const Privacy: React.FC = () => {
                 🌐 Site : <a href="https://www.neoperformance.ca">www.neoperformance.ca</a><br />
                 📍 Adresse : 7005 boul Taschereau, suite 350, Brossard, J4Z 1A7
               </p>
-              <p>En utilisant notre site et nos services, vous consentez à la présente Politique de confidentialité.</p>
+              <p>En utilisant notre site, notre application mobile et nos services, vous consentez à la présente Politique de confidentialité.</p>
 
             </div>
           </div>
