@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { fetchGiftCardByNumber, adjustGiftCardBalance, readGiftCardMeta, GC_META_DEBITED } from '../../../../lib/gift-card';
+import { paidStatusFor } from '../../../../lib/paid-status';
 
 /**
  * Route serveur — encaisse un paiement via la NOUVELLE API Moneris.
@@ -67,12 +68,16 @@ async function getAuthoritativeOrder(orderId: string | number): Promise<{ amount
   return { amountCents: Math.round(total * 100), order };
 }
 
-/** Marque la commande WooCommerce comme payée (côté serveur). */
-async function markOrderPaid(orderId: string | number, transactionId: string): Promise<void> {
+/**
+ * Marque la commande WooCommerce comme payée (côté serveur). Le statut vient de
+ * paidStatusFor : « completed » si la commande ne contient que des cartes-cadeaux
+ * (déclenche la génération PW Gift Cards + courriel), sinon « processing ».
+ */
+async function markOrderPaid(orderId: string | number, transactionId: string, status: 'completed' | 'processing'): Promise<void> {
   await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'processing', set_paid: true, transaction_id: transactionId }),
+    body: JSON.stringify({ status, set_paid: true, transaction_id: transactionId }),
   }).catch(() => { /* paiement déjà encaissé ; non bloquant */ });
 }
 
@@ -267,7 +272,7 @@ export async function POST(req: NextRequest) {
       transactionDetails?: { authorizationCode?: string };
       amount?: { amount?: number };
     };
-    await markOrderPaid(orderId, ok.paymentId ?? '');
+    await markOrderPaid(orderId, ok.paymentId ?? '', paidStatusFor(wcOrder.line_items));
 
     return NextResponse.json({
       approved: true,

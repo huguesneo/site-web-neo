@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchGiftCardByNumber, adjustGiftCardBalance, readGiftCardMeta, GC_META_DEBITED } from '../../../../lib/gift-card';
+import { paidStatusFor } from '../../../../lib/paid-status';
 
 /**
  * Route serveur — finalise une commande ENTIÈREMENT payée par carte-cadeau
@@ -90,11 +91,13 @@ export async function POST(req: NextRequest) {
     }).catch(() => { /* non bloquant */ });
   }
 
-  // Marque payée (transaction « carte-cadeau », pas de Moneris).
+  // Marque payée (transaction « carte-cadeau », pas de Moneris). Statut
+  // « completed » si la commande ne contient que des cartes-cadeaux → PW
+  // génère la carte et envoie le courriel (voir lib/paid-status).
   await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'processing', set_paid: true, transaction_id: `carte-cadeau-${gc.number.slice(-4)}` }),
+    body: JSON.stringify({ status: paidStatusFor(order.line_items), set_paid: true, transaction_id: `carte-cadeau-${gc.number.slice(-4)}` }),
   }).catch(() => { /* non bloquant : le débit est tracé sur la commande */ });
 
   return NextResponse.json({ approved: true, giftCardApplied: gc.amount });
