@@ -37,24 +37,39 @@ const LeadModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    const params = new URLSearchParams({
+      firstName: form.prenom,
+      lastName: form.nom,
+      email: form.email,
+      phone: form.telephone,
+    });
+
+    // Le webhook renvoie l'ID du contact GHL, qu'on passe à la VSL pour suivre l'écoute.
+    // Si Make tarde ou échoue, on redirige quand même sans l'ID : le visiteur ne doit
+    // jamais rester bloqué sur le formulaire. Abandonner l'attente n'annule pas le
+    // traitement côté Make, le contact est créé dans tous les cas.
+    let cid = '';
     try {
-      const params = new URLSearchParams({
-        firstName: form.prenom,
-        lastName: form.nom,
-        email: form.email,
-        phone: form.telephone,
-      });
-      await fetch(WEBHOOK_URL, {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString(),
-        mode: 'no-cors',
+        signal: controller.signal,
       });
-      window.location.href = REDIRECT_URL;
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data?.cid === 'string') cid = data.cid;
+      }
     } catch {
-      setError('Une erreur est survenue. Veuillez réessayer.');
-      setLoading(false);
+      // On poursuit sans identifiant : seul le tracking de la vidéo sera perdu.
     }
+
+    window.location.href = cid
+      ? `${REDIRECT_URL}?cid=${encodeURIComponent(cid)}`
+      : REDIRECT_URL;
   };
 
   return (
