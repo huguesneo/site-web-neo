@@ -15,7 +15,7 @@ const Privacy: React.FC = () => {
             <ShieldCheck size={30} />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-4">Politique de confidentialité</h1>
-          <p className="text-sm text-gray-400">Dernière mise à jour : 23 juillet 2026</p>
+          <p className="text-sm text-gray-400">Dernière mise à jour : 30 juillet 2026</p>
         </div>
       </div>
 
@@ -70,7 +70,7 @@ const Privacy: React.FC = () => {
               <ul>
                 <li>Vos informations de compte (identifiants de connexion, profil client)</li>
                 <li>Vos réponses aux questionnaires et évaluations de santé et d'habitudes de vie</li>
-                <li>Vos données de santé et d'activité physique (p. ex. poids, mesures, pas, fréquence cardiaque) que vous choisissez de synchroniser depuis Apple Santé ou d'entrer manuellement</li>
+                <li>Vos données de santé et d'activité physique (p. ex. poids, mesures, pas, fréquence cardiaque) que vous choisissez de synchroniser depuis Apple Santé (iPhone) ou Health Connect (Android), ou d'entrer manuellement</li>
                 <li>Vos photos de progression, si vous choisissez d'en téléverser</li>
                 <li>Vos messages échangés dans la messagerie de l'application, incluant les conversations avec l'assistant Léo</li>
                 <li>Vos plans alimentaires, plans d'entraînement et données de suivi de progression</li>
@@ -140,7 +140,76 @@ const Privacy: React.FC = () => {
               </ul>
               <p>Nous appliquons des mesures strictes de sécurité pour protéger ces données.</p>
 
-              <h2>4. Partage et divulgation des informations</h2>
+              <h2>4. Connexion santé : Apple Santé et Health Connect</h2>
+              <p>
+                Notre application mobile peut, avec votre autorisation explicite et uniquement si vous l'activez,
+                lire certaines données de santé depuis Apple Santé sur iPhone ou depuis Health Connect sur Android.
+              </p>
+
+              <h3>Données lues, et pourquoi</h3>
+              <div className="not-prose overflow-x-auto my-6">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="text-left font-bold text-gray-900 px-4 py-3 border border-gray-200">Donnée</th>
+                      <th className="text-left font-bold text-gray-900 px-4 py-3 border border-gray-200">Pourquoi nous la lisons</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-600">
+                    <tr>
+                      <td className="px-4 py-3 border border-gray-200">Pas</td>
+                      <td className="px-4 py-3 border border-gray-200">Estimer votre niveau d'activité quotidien</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 border border-gray-200">Calories actives et de base</td>
+                      <td className="px-4 py-3 border border-gray-200">Ajuster vos besoins énergétiques et votre plan alimentaire</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 border border-gray-200">Fréquence cardiaque au repos</td>
+                      <td className="px-4 py-3 border border-gray-200">Suivre l'adaptation cardiovasculaire dans le temps</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 border border-gray-200">Variabilité de la fréquence cardiaque (VFC)</td>
+                      <td className="px-4 py-3 border border-gray-200">Évaluer votre récupération et votre charge de stress</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 border border-gray-200">Poids</td>
+                      <td className="px-4 py-3 border border-gray-200">Suivre l'évolution de la composition corporelle</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 border border-gray-200">Sommeil (durée et stades)</td>
+                      <td className="px-4 py-3 border border-gray-200">Ajuster les protocoles de récupération et de gestion du stress</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h3>Ce que nous ne faisons pas</h3>
+              <ul>
+                <li>Nous n'écrivons jamais de données dans Apple Santé ou Health Connect — l'accès est en lecture seule.</li>
+                <li>Nous ne vendons ni ne partageons ces données à des fins publicitaires, de marketing ou avec des courtiers de données.</li>
+                <li>Nous ne les transmettons à aucun tiers autre que notre hébergeur infonuagique sécurisé.</li>
+              </ul>
+
+              <p>
+                <strong>Qui y a accès :</strong> vous, et le naturopathe de NEO Performance responsable de votre dossier.
+                Elles servent exclusivement à personnaliser votre accompagnement.
+              </p>
+              <p>
+                <strong>Où elles sont stockées :</strong> sur notre infrastructure infonuagique sécurisée (Supabase),
+                chiffrées en transit et au repos.
+              </p>
+              <p>
+                <strong>Comment retirer l'accès :</strong> à tout moment, dans les réglages de Health Connect (Android)
+                ou de Santé (iPhone), en révoquant les autorisations accordées à NEO performance. Vous pouvez aussi nous
+                demander la suppression des données déjà synchronisées en écrivant à <a href="mailto:info@neoperformance.ca">info@neoperformance.ca</a>.
+              </p>
+              <p>
+                <strong>Conservation :</strong> les données de santé synchronisées sont conservées selon les délais décrits
+                à la section « Conservation des données », et supprimées à la fermeture de votre compte.
+              </p>
+
+              <h2>5. Partage et divulgation des informations</h2>
               <p>Nous ne vendons, ne louons ni n'échangeons vos informations personnelles. Nous pouvons partager certaines données avec :</p>
 
               <h3>Fournisseurs de services</h3>
@@ -157,7 +226,7 @@ const Privacy: React.FC = () => {
               <p>En cas de fusion, acquisition ou vente d'actifs, vos données demeureront protégées selon la présente politique.</p>
               <p>Toutes ces situations excluent les données d'inscription et de consentement SMS.</p>
 
-              <h2>5. Sécurité des données</h2>
+              <h2>6. Sécurité des données</h2>
               <p>Nous mettons en œuvre des mesures de sécurité raisonnables, incluant :</p>
               <ul>
                 <li>Chiffrement des données sensibles (en transit et au repos)</li>
@@ -169,7 +238,7 @@ const Privacy: React.FC = () => {
               </ul>
               <p>Aucune méthode électronique n'étant infaillible, nous nous efforçons d'utiliser les meilleures pratiques commerciales pour protéger vos données.</p>
 
-              <h2>6. Conservation des données</h2>
+              <h2>7. Conservation des données</h2>
               <p>
                 Nous conservons vos renseignements personnels uniquement le temps nécessaire aux fins pour lesquelles
                 ils ont été recueillis, ou tel que requis par la loi. Voici nos durées de conservation :
@@ -188,7 +257,7 @@ const Privacy: React.FC = () => {
                 d'une obligation légale, vos données sont isolées et protégées jusqu'à leur suppression définitive.
               </p>
 
-              <h2>7. Témoins et technologies de suivi</h2>
+              <h2>8. Témoins et technologies de suivi</h2>
               <p>Nous utilisons des cookies pour :</p>
               <ul>
                 <li>Analyser le trafic et le comportement des utilisateurs</li>
@@ -198,7 +267,7 @@ const Privacy: React.FC = () => {
               </ul>
               <p>Vous pouvez désactiver les cookies via votre navigateur, mais cela peut limiter certaines fonctionnalités du site.</p>
 
-              <h2>8. Vos droits et choix</h2>
+              <h2>9. Vos droits et choix</h2>
               <p>Vous avez le droit de :</p>
               <ul>
                 <li>Accéder, modifier ou supprimer vos renseignements personnels</li>
@@ -206,7 +275,7 @@ const Privacy: React.FC = () => {
                 <li>Vous désabonner de nos courriels (lien « Se désinscrire »)</li>
                 <li>Vous désabonner des SMS (réponse « STOP »)</li>
                 <li>Demander des détails sur la façon dont vos données sont traitées</li>
-                <li>Retirer votre consentement à tout moment, incluant l'accès aux données de santé (via les réglages de votre appareil)</li>
+                <li>Retirer votre consentement à tout moment, incluant l'accès aux données de santé — via les réglages Apple Santé sur iPhone ou Health Connect sur Android</li>
               </ul>
               <p>
                 Pour exercer ces droits, écrivez-nous à <a href="mailto:info@neoperformance.ca">info@neoperformance.ca</a>.
@@ -214,13 +283,13 @@ const Privacy: React.FC = () => {
                 que la loi nous oblige à conserver.
               </p>
 
-              <h2>9. Liens vers des sites tiers</h2>
+              <h2>10. Liens vers des sites tiers</h2>
               <p>Notre site peut contenir des liens vers des sites externes. Nous ne sommes pas responsables de leurs pratiques de confidentialité. Cette politique s'applique uniquement aux données recueillies par NEO Performance.</p>
 
-              <h2>10. Modifications de la politique</h2>
+              <h2>11. Modifications de la politique</h2>
               <p>Nous pouvons mettre à jour cette politique à tout moment. La version la plus récente sera publiée sur notre site avec la date d'entrée en vigueur. En cas de changement majeur, une notification sera envoyée par courriel ou publiée sur le site.</p>
 
-              <h2>11. Nous contacter</h2>
+              <h2>12. Nous contacter</h2>
               <p>Pour toute question concernant cette Politique de confidentialité :</p>
               <p>
                 <strong>NEO Performance</strong><br />
