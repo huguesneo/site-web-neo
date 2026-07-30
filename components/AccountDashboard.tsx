@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { LogOut, Package, ArrowRight, FolderOpen, Smartphone } from 'lucide-react';
+import { LogOut, Package, ArrowRight, FolderOpen, Smartphone, Globe } from 'lucide-react';
 import Button from './Button';
 import AccountGiftCards from './AccountGiftCards';
 import { supabase } from '../services/supabaseClient';
@@ -152,48 +152,59 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({ user, onSignOut, si
                 Accédez à votre profil, vos programmes et votre suivi personnalisé directement depuis
                 l'application.
               </p>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                {clientToken ? (
+              {/* Accès web — action principale */}
+              <a
+                href={
+                  clientToken
+                    ? `https://app.neoperformance.ca/client/${clientToken}`
+                    : 'https://app.neoperformance.ca'
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-neo text-white text-sm font-semibold hover:bg-neo-600 transition-colors w-full sm:w-auto"
+              >
+                <Globe size={17} />
+                Accéder à l&apos;application sur le Web
+              </a>
+
+              {/* Téléchargement mobile */}
+              <div className="mt-5 pt-5 border-t border-gray-100">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">
+                  Ou téléchargez l&apos;application mobile
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href={`https://app.neoperformance.ca/client/${clientToken}`}
+                    href="https://apps.apple.com/ca/app/neo-performance/id6756714068"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-neo text-white text-sm font-semibold hover:bg-neo-600 transition-colors w-full sm:w-auto"
+                    className="flex-1 inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-700 transition-colors justify-center sm:justify-start"
+                    aria-label="Télécharger NEO Performance sur l'App Store"
                   >
-                    <Smartphone size={17} />
-                    Accéder à l'application NEO Performance
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white shrink-0" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.13-2.19 1.28-2.17 3.82.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.76M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                    </svg>
+                    <div className="text-left leading-tight">
+                      <div className="text-[10px] text-gray-300">Télécharger dans</div>
+                      <div className="text-sm font-semibold">l&apos;App Store</div>
+                    </div>
                   </a>
-                ) : (
                   <a
-                    href="https://app.neoperformance.ca"
+                    href="https://play.google.com/store/apps/details?id=ca.neoperformance.app&hl=fr_CA"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-neo text-white text-sm font-semibold hover:bg-neo-600 transition-colors w-full sm:w-auto"
+                    className="flex-1 inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-700 transition-colors justify-center sm:justify-start"
+                    aria-label="Télécharger NEO Performance sur Google Play"
                   >
-                    <Smartphone size={17} />
-                    Accéder à l'application NEO Performance
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white shrink-0" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594zM1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l10.703-10.63L1.337.924zM12.98 12.943l3.238 3.216-12.8 7.246 9.562-10.462zm0-1.775L3.395.668l12.822 7.259-3.237 3.241z"/>
+                    </svg>
+                    <div className="text-left leading-tight">
+                      <div className="text-[10px] text-gray-300">Disponible sur</div>
+                      <div className="text-sm font-semibold">Google Play</div>
+                    </div>
                   </a>
-                )}
-                <a
-                  href="https://apps.apple.com/ca/app/neo-performance/id6756714068"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-700 transition-colors shrink-0 w-full sm:w-auto justify-center sm:justify-start"
-                  aria-label="Télécharger sur l'App Store"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white shrink-0" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.13-2.19 1.28-2.17 3.82.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.76M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                  </svg>
-                  <div className="text-left leading-tight">
-                    <div className="text-[10px] text-gray-300">Télécharger dans</div>
-                    <div className="text-sm font-semibold">l&apos;App Store</div>
-                  </div>
-                </a>
+                </div>
               </div>
-              <p className="mt-3 text-xs text-gray-400 flex items-center gap-1.5">
-                <span className="inline-block w-3.5 h-3.5 rounded-full border border-gray-300 text-gray-300 text-[9px] flex items-center justify-center leading-none">i</span>
-                L&apos;application Google Play arrive sous peu.
-              </p>
             </div>
           )}
 
