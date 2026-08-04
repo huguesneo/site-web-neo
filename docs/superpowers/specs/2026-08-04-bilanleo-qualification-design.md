@@ -129,15 +129,15 @@ Identiques pour Q3 et Q4, sélectionnés par l'objectif correspondant.
 
 ### Q6 — « Qu'est-ce que tu as déjà essayé ? »
 
-Champ texte long, minimum 100 caractères, compteur de caractères visible.
-Le bouton « Suivant » reste inactif sous 100 caractères.
+Champ texte long, sans longueur minimale et sans compteur. Obligatoire comme
+toutes les autres : le bouton « Suivant » se débloque dès qu'il y a du texte.
 
 Texte d'aide sous le champ : « Deux ou trois phrases. Ce qui a fonctionné au
 début, et ce qui a arrêté de fonctionner. »
 
 ### Q7 — Disponibilité
 
-« Es-tu disponible pour une rencontre de 75 minutes entre le 17 et le 31 août ? »
+« Es-tu disponible pour une rencontre de 75 minutes entre le 10 et le 31 août ? »
 
 - Oui, en clinique à Brossard
 - Oui, en visioconférence
@@ -273,7 +273,7 @@ ajoutée côté site.
   `objectif_secondaire_detail` part vide.
 - Q2 n'affiche jamais l'option déjà choisie en Q1.
 - Q3 et Q4 servent le bon bloc conditionnel pour chacun des six objectifs.
-- Q6 bloque sous 100 caractères et débloque à 100.
+- Q6 bloque tant que le champ est vide et débloque dès le premier caractère.
 - Le courriel et le téléphone rejettent les formats invalides.
 - Le retour conserve les réponses ; changer Q1 invalide Q3.
 - La charge utile du webhook contient les huit clés attendues.

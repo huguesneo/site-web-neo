@@ -111,12 +111,11 @@ export const Q5 = {
 export const Q6 = {
   question: 'Qu’est-ce que tu as déjà essayé ?',
   aide: 'Deux ou trois phrases. Ce qui a fonctionné au début, et ce qui a arrêté de fonctionner.',
-  minimum: 100,
 };
 
 export const Q7 = {
   question:
-    'Es-tu disponible pour une rencontre de 75 minutes entre le 17 et le 31 août ?',
+    'Es-tu disponible pour une rencontre de 75 minutes entre le 10 et le 31 août ?',
   options: [
     'Oui, en clinique à Brossard',
     'Oui, en visioconférence',

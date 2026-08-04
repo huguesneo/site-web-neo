@@ -151,7 +151,7 @@ export default function BilanFlow() {
       case 'q5':
         return reponses.duree !== null;
       case 'q6':
-        return reponses.dejaEssaye.trim().length >= Q6.minimum;
+        return reponses.dejaEssaye.trim().length > 0;
       case 'q7':
         return reponses.disponibilite !== null;
       case 'q8':
@@ -273,7 +273,6 @@ export default function BilanFlow() {
           <TextScreen
             question={Q6.question}
             aide={Q6.aide}
-            minimum={Q6.minimum}
             valeur={reponses.dejaEssaye}
             onChange={(v) => setReponses((r) => ({ ...r, dejaEssaye: v }))}
           />
