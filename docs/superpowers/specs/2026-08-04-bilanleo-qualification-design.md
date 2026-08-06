@@ -48,11 +48,57 @@ question par écran, barre de progression en haut, bouton retour.
 | `components/bilanleo/QuestionScreen.tsx` | Rendu d'une question : choix unique ou champ texte long |
 | `components/bilanleo/ContactScreen.tsx` | Prénom, nom, courriel, cellulaire + validation |
 | `components/bilanleo/AnalysisScreen.tsx` | Animation de 3 s, 3 états de texte |
+| `components/bilanleo/ExitScreen.tsx` | Les deux écrans de sortie du filtrage |
 | `components/bilanleo/ResultScreen.tsx` | Écran « qualifié », deux boutons, calendrier GHL intégré |
 | `app/api/bilanleo/route.ts` | Route serveur qui relaie la charge utile vers Make |
 
 Chaque unité a une frontière claire : le contenu vit dans les données, la
 navigation dans un seul composant, la présentation dans les écrans.
+
+## Filtrage (avant le questionnaire)
+
+Beaucoup de clientes actives réservent par cette page. Deux questions les
+détournent d'entrée : leur faire remplir huit questions pour leur annoncer
+ensuite que le bilan leur est offert autrement gaspille leur temps.
+
+Le filtrage n'apparaît pas dans la barre de progression, qui reflète le
+questionnaire seul.
+
+**Filtrage 1 — « Es-tu présentement cliente chez NEO Performance ? »**
+- Oui, je suis suivie en ce moment → écran de sortie « cliente actuelle »
+- Non → filtrage 2
+
+**Filtrage 2 — « As-tu déjà été suivie chez NEO au cours des six derniers mois ? »**
+- Oui → écran de sortie « ex-cliente »
+- Non → le questionnaire commence
+
+### Écran de sortie — cliente actuelle
+
+> **Tu fais déjà partie de NEO.**
+>
+> Le bilan métabolique existe pour faire découvrir la clinique à de nouvelles
+> personnes. Mais on ne va pas te le refuser pour autant : on te l'offre
+> gratuitement à ta prochaine rencontre. Demande-le simplement à ta naturopathe,
+> vous le ferez ensemble.
+
+Aucune action, aucun calendrier : elle passe par sa naturopathe.
+
+### Écran de sortie — ex-cliente de moins de six mois
+
+> **Ça nous fait plaisir de te revoir.**
+>
+> Le bilan métabolique sert à faire découvrir NEO aux nouvelles personnes. Comme
+> tu nous connais déjà, on fait mieux : réserve une rencontre à la carte avec ta
+> naturopathe, et on fait le bilan gratuitement avec toi, en plus de ton suivi.
+
+Bouton « Envoie-nous un courriel pour prendre ton rendez-vous » → lien `mailto`
+vers `info@neoperformance.ca`, sujet pré-rempli « Je veux reprendre rendez-vous
+de suivi avec un bilan métabolique gratuit ».
+
+### Aucun envoi vers Make
+
+Les deux sorties arrivent avant l'écran des coordonnées : il n'y a ni nom ni
+courriel à transmettre. Aucun webhook n'est déclenché sur ces chemins.
 
 ## Le questionnaire
 
@@ -269,6 +315,10 @@ ajoutée côté site.
 
 ## Tests
 
+- Le filtrage 1 = « Oui » mène à l'écran cliente actuelle, sans webhook.
+- Le filtrage 2 = « Oui » mène à l'écran ex-cliente, sans webhook.
+- Deux « Non » ouvrent le questionnaire ; la barre affiche 1 / 10 sur Q1.
+- Changer le filtrage 1 de « Oui » à « Non » invalide la réponse au filtrage 2.
 - Le saut de Q4 quand Q2 = « Aucun autre » : la progression reste cohérente et
   `objectif_secondaire_detail` part vide.
 - Q2 n'affiche jamais l'option déjà choisie en Q1.

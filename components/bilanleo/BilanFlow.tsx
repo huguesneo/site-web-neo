@@ -14,10 +14,15 @@ import ContactScreen, {
 } from './ContactScreen';
 import AnalysisScreen from './AnalysisScreen';
 import ResultScreen from './ResultScreen';
+import ExitScreen from './ExitScreen';
 import {
   AUCUN_AUTRE,
   BLOCS_CONDITIONNELS,
+  FILTRE_1,
+  FILTRE_2,
   OBJECTIFS,
+  SORTIE_CLIENTE,
+  SORTIE_EX_CLIENTE,
   Q1_TITRE,
   Q2_TITRE,
   Q5,
@@ -28,10 +33,24 @@ import {
   type ObjectifId,
 } from './questions';
 
-type EtapeId = 'q1' | 'q2' | 'q3' | 'q4' | 'q5' | 'q6' | 'q7' | 'q8' | 'contact';
-type Phase = 'quiz' | 'analyse' | 'resultat';
+type EtapeId =
+  | 'filtre1'
+  | 'filtre2'
+  | 'q1'
+  | 'q2'
+  | 'q3'
+  | 'q4'
+  | 'q5'
+  | 'q6'
+  | 'q7'
+  | 'q8'
+  | 'contact';
+type Phase = 'quiz' | 'analyse' | 'resultat' | 'sortie_cliente' | 'sortie_ex_cliente';
 
 interface Reponses {
+  /** Filtrage : réponses aux deux questions posées avant le questionnaire. */
+  clienteActuelle: string | null;
+  exCliente: string | null;
   objectifPrincipal: ObjectifId | null;
   /** `'aucun'` correspond à l'option « Aucun autre » de Q2, qui saute Q4. */
   objectifSecondaire: ObjectifId | 'aucun' | null;
@@ -44,6 +63,8 @@ interface Reponses {
 }
 
 const REPONSES_VIDES: Reponses = {
+  clienteActuelle: null,
+  exCliente: null,
   objectifPrincipal: null,
   objectifSecondaire: null,
   detailPrincipal: null,
@@ -87,20 +108,28 @@ export default function BilanFlow() {
   const [index, setIndex] = useState(0);
   const reduitLeMouvement = useReducedMotion();
 
-  // Q4 n'existe que si un objectif secondaire réel a été choisi.
+  // Le filtrage ouvre le parcours ; la deuxième question n'apparaît que si la
+  // personne n'est pas cliente en ce moment. Q4 n'existe que si un objectif
+  // secondaire réel a été choisi.
   const etapes = useMemo<EtapeId[]>(() => {
-    const suite: EtapeId[] = ['q1', 'q2', 'q3'];
+    const suite: EtapeId[] = ['filtre1'];
+    if (reponses.clienteActuelle === FILTRE_1.options[1]) suite.push('filtre2');
+    suite.push('q1', 'q2', 'q3');
     if (reponses.objectifSecondaire && reponses.objectifSecondaire !== 'aucun') {
       suite.push('q4');
     }
     suite.push('q5', 'q6', 'q7', 'q8', 'contact');
     return suite;
-  }, [reponses.objectifSecondaire]);
+  }, [reponses.clienteActuelle, reponses.objectifSecondaire]);
 
   // On suppose Q4 présente tant que Q2 n'a pas répondu : la barre peut ainsi
   // bondir en avant quand Q4 disparaît, mais ne recule jamais.
   const total = reponses.objectifSecondaire === 'aucun' ? 9 : 10;
   const etape = etapes[index];
+  const estFiltre = etape === 'filtre1' || etape === 'filtre2';
+  // Le filtrage ne compte pas dans la progression : la barre doit refléter le
+  // questionnaire seul, sinon il a l'air plus long qu'il ne l'est.
+  const numero = index - etapes.filter((e) => e.startsWith('filtre')).length + 1;
   const erreursCoordonnees = erreursContact(contact);
 
   useEffect(() => {
@@ -140,6 +169,10 @@ export default function BilanFlow() {
 
   const valide = (() => {
     switch (etape) {
+      case 'filtre1':
+        return reponses.clienteActuelle !== null;
+      case 'filtre2':
+        return reponses.exCliente !== null;
       case 'q1':
         return reponses.objectifPrincipal !== null;
       case 'q2':
@@ -163,6 +196,18 @@ export default function BilanFlow() {
 
   const suivant = () => {
     if (!valide) return;
+
+    // Les deux sorties du filtrage court-circuitent le questionnaire : aucune
+    // donnée n'est collectée, donc rien ne part vers Make.
+    if (etape === 'filtre1' && reponses.clienteActuelle === FILTRE_1.options[0]) {
+      setPhase('sortie_cliente');
+      return;
+    }
+    if (etape === 'filtre2' && reponses.exCliente === FILTRE_2.options[0]) {
+      setPhase('sortie_ex_cliente');
+      return;
+    }
+
     if (etape !== 'contact') {
       setIndex((i) => i + 1);
       return;
@@ -200,9 +245,52 @@ export default function BilanFlow() {
 
   if (phase === 'analyse') return <AnalysisScreen onTermine={terminerAnalyse} />;
   if (phase === 'resultat') return <ResultScreen contact={contact} />;
+  if (phase === 'sortie_cliente') {
+    return <ExitScreen titre={SORTIE_CLIENTE.titre} corps={SORTIE_CLIENTE.corps} />;
+  }
+  if (phase === 'sortie_ex_cliente') {
+    return (
+      <ExitScreen
+        titre={SORTIE_EX_CLIENTE.titre}
+        corps={SORTIE_EX_CLIENTE.corps}
+        action={{
+          libelle: SORTIE_EX_CLIENTE.bouton,
+          courriel: SORTIE_EX_CLIENTE.courriel,
+          sujet: SORTIE_EX_CLIENTE.sujet,
+        }}
+      />
+    );
+  }
 
   const contenu = () => {
     switch (etape) {
+      case 'filtre1':
+        return (
+          <QuestionScreen
+            question={FILTRE_1.question}
+            options={FILTRE_1.options}
+            valeur={reponses.clienteActuelle}
+            onChange={(v) =>
+              setReponses((r) =>
+                r.clienteActuelle === v
+                  ? r
+                  : // Changer d'avis ici rend la deuxième question caduque.
+                    { ...r, clienteActuelle: v, exCliente: null },
+              )
+            }
+          />
+        );
+
+      case 'filtre2':
+        return (
+          <QuestionScreen
+            question={FILTRE_2.question}
+            options={FILTRE_2.options}
+            valeur={reponses.exCliente}
+            onChange={(v) => setReponses((r) => ({ ...r, exCliente: v }))}
+          />
+        );
+
       case 'q1':
         return (
           <QuestionScreen
@@ -320,17 +408,21 @@ export default function BilanFlow() {
         </button>
 
         <div className="flex-1">
-          <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-neo transition-all duration-500 ease-out"
-              style={{ width: `${((index + 1) / total) * 100}%` }}
-            />
-          </div>
+          {!estFiltre && (
+            <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-neo transition-all duration-500 ease-out"
+                style={{ width: `${(numero / total) * 100}%` }}
+              />
+            </div>
+          )}
         </div>
 
-        <span className="shrink-0 text-sm font-semibold text-gray-400 tabular-nums">
-          {index + 1} / {total}
-        </span>
+        {!estFiltre && (
+          <span className="shrink-0 text-sm font-semibold text-gray-400 tabular-nums">
+            {numero} / {total}
+          </span>
+        )}
       </div>
 
       <AnimatePresence mode="wait">

@@ -31,6 +31,36 @@ export const OBJECTIFS: Objectif[] = [
 /** Option supplémentaire de Q2 : quand elle est choisie, Q4 est sautée. */
 export const AUCUN_AUTRE = "Aucun autre, c'est vraiment juste ça";
 
+/**
+ * Filtrage placé avant le questionnaire : une cliente actuelle ou récente n'a
+ * pas à répondre à huit questions pour apprendre que le bilan lui est déjà
+ * offert autrement.
+ */
+export const FILTRE_1 = {
+  question: 'Es-tu présentement cliente chez NEO Performance ?',
+  options: ['Oui, je suis suivie en ce moment', 'Non'],
+};
+
+export const FILTRE_2 = {
+  question: 'As-tu déjà été suivie chez NEO au cours des six derniers mois ?',
+  options: ['Oui', 'Non'],
+};
+
+export const SORTIE_CLIENTE = {
+  titre: 'Tu fais déjà partie de NEO.',
+  corps:
+    'Le bilan métabolique existe pour faire découvrir la clinique à de nouvelles personnes. Mais on ne va pas te le refuser pour autant : on te l’offre gratuitement à ta prochaine rencontre. Demande-le simplement à ta naturopathe, vous le ferez ensemble.',
+};
+
+export const SORTIE_EX_CLIENTE = {
+  titre: 'Ça nous fait plaisir de te revoir.',
+  corps:
+    'Le bilan métabolique sert à faire découvrir NEO aux nouvelles personnes. Comme tu nous connais déjà, on fait mieux : réserve une rencontre à la carte avec ta naturopathe, et on fait le bilan gratuitement avec toi, en plus de ton suivi.',
+  bouton: 'Envoie-nous un courriel pour prendre ton rendez-vous',
+  courriel: 'info@neoperformance.ca',
+  sujet: 'Je veux reprendre rendez-vous de suivi avec un bilan métabolique gratuit',
+};
+
 export const Q1_TITRE = 'Quel est ton objectif numéro un en ce moment ?';
 export const Q2_TITRE = 'Et ton objectif secondaire ?';
 
