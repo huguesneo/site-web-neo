@@ -16,7 +16,7 @@ const Header: React.FC = () => {
 
   // Pages dont le hero (haut de page) est foncé : le texte du menu doit y être
   // clair tant qu'on n'a pas scrollé (sinon illisible sur fond sombre).
-  const DARK_HERO_ROUTES = ['/approche', '/contact'];
+  const DARK_HERO_ROUTES = ['/approche', '/contact', '/bilanleo'];
   const onDarkHero = DARK_HERO_ROUTES.includes(pathname);
   // Vrai quand le header est transparent par-dessus un hero foncé.
   const lightText = onDarkHero && !isScrolled && !isMobileMenuOpen;

@@ -15,11 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return (
-    <div className="bg-white min-h-screen pt-32 pb-20 px-4">
-      <div className="max-w-2xl mx-auto">
-        <BilanFlow />
-      </div>
-    </div>
-  );
+  // BilanFlow gère sa propre mise en page : bande foncée pleine largeur, carte
+  // en surplomb, FAQ. La page ne fait que le monter.
+  return <BilanFlow />;
 }

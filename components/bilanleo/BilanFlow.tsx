@@ -15,6 +15,8 @@ import ContactScreen, {
 import AnalysisScreen from './AnalysisScreen';
 import ResultScreen from './ResultScreen';
 import ExitScreen from './ExitScreen';
+import Hero from './Hero';
+import Faq from './Faq';
 import {
   AUCUN_AUTRE,
   BLOCS_CONDITIONNELS,
@@ -243,24 +245,31 @@ export default function BilanFlow() {
 
   const terminerAnalyse = useCallback(() => setPhase('resultat'), []);
 
-  if (phase === 'analyse') return <AnalysisScreen onTermine={terminerAnalyse} />;
-  if (phase === 'resultat') return <ResultScreen contact={contact} />;
-  if (phase === 'sortie_cliente') {
-    return <ExitScreen titre={SORTIE_CLIENTE.titre} corps={SORTIE_CLIENTE.corps} />;
-  }
-  if (phase === 'sortie_ex_cliente') {
-    return (
-      <ExitScreen
-        titre={SORTIE_EX_CLIENTE.titre}
-        corps={SORTIE_EX_CLIENTE.corps}
-        action={{
-          libelle: SORTIE_EX_CLIENTE.bouton,
-          courriel: SORTIE_EX_CLIENTE.courriel,
-          sujet: SORTIE_EX_CLIENTE.sujet,
-        }}
-      />
-    );
-  }
+  /** Les écrans qui remplacent le questionnaire : analyse, résultat, sorties. */
+  const horsQuiz = () => {
+    switch (phase) {
+      case 'analyse':
+        return <AnalysisScreen onTermine={terminerAnalyse} />;
+      case 'resultat':
+        return <ResultScreen contact={contact} />;
+      case 'sortie_cliente':
+        return <ExitScreen titre={SORTIE_CLIENTE.titre} corps={SORTIE_CLIENTE.corps} />;
+      case 'sortie_ex_cliente':
+        return (
+          <ExitScreen
+            titre={SORTIE_EX_CLIENTE.titre}
+            corps={SORTIE_EX_CLIENTE.corps}
+            action={{
+              libelle: SORTIE_EX_CLIENTE.bouton,
+              courriel: SORTIE_EX_CLIENTE.courriel,
+              sujet: SORTIE_EX_CLIENTE.sujet,
+            }}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   const contenu = () => {
     switch (etape) {
@@ -393,10 +402,19 @@ export default function BilanFlow() {
     }
   };
 
-  return (
+  const ecranHorsQuiz = horsQuiz();
+  // Le hero complet n'a sa place qu'au tout premier écran : ailleurs, il
+  // repousserait la question sous la ligne de flottaison sur mobile.
+  const premierEcran = phase === 'quiz' && index === 0;
+  // La FAQ traite les objections aux deux moments où elles bloquent : avant de
+  // commencer, et devant le calendrier. Entre les deux, elle distrait.
+  const afficherFaq = premierEcran || phase !== 'quiz';
+
+  const questionnaire = (
     <div>
-      {/* Barre de progression */}
-      <div className="flex items-center gap-4 mb-10">
+      {/* Barre de progression — masquée au tout premier écran, où elle n'aurait
+          ni retour ni progression à montrer et ne laisserait qu'un blanc. */}
+      <div className={`flex items-center gap-4 mb-10 ${index === 0 && estFiltre ? 'hidden' : ''}`}>
         <button
           type="button"
           onClick={() => setIndex((i) => Math.max(i - 1, 0))}
@@ -443,5 +461,26 @@ export default function BilanFlow() {
         </Button>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      <Hero compact={!premierEcran} />
+
+      <div className="bg-gray-50 pb-20">
+        {/* La carte chevauche la bande foncée : c'est ce décalage qui donne du relief. */}
+        {/* `relative z-10` obligatoire : le hero est positionné, donc sans ça il
+            se peint par-dessus la carte et lui mange le haut. */}
+        <div
+          className={`relative z-10 mx-auto px-4 ${phase === 'resultat' ? 'max-w-3xl' : 'max-w-2xl'}`}
+        >
+          <div className="-mt-16 md:-mt-20 rounded-3xl bg-white p-6 md:p-10 shadow-2xl shadow-gray-900/10">
+            {ecranHorsQuiz ?? questionnaire}
+          </div>
+        </div>
+
+        {afficherFaq && <Faq />}
+      </div>
+    </>
   );
 }
