@@ -6,15 +6,15 @@ import { Building2, Video } from 'lucide-react';
 import type { Contact } from './ContactScreen';
 import { normaliserTelephone } from './ContactScreen';
 
-type Lieu = 'clinique' | 'visio';
+import { CALENDRIERS_BILAN, type Disponibilites, type LieuBilan as Lieu } from '@/lib/bilanleo';
 
 const CALENDRIERS: Record<Lieu, { base: string; iframeId: string }> = {
   clinique: {
-    base: 'https://api.leadconnectorhq.com/widget/booking/JoFdnQsmZzd5lO0EQPH5',
+    base: `https://api.leadconnectorhq.com/widget/booking/${CALENDRIERS_BILAN.clinique}`,
     iframeId: 'JO6tHfBQVXGN96AuXP3o_1785868037708',
   },
   visio: {
-    base: 'https://api.leadconnectorhq.com/widget/booking/YCEFrPWQDpvfi30usnPF',
+    base: `https://api.leadconnectorhq.com/widget/booking/${CALENDRIERS_BILAN.visio}`,
     iframeId: 'JO6tHfBQVXGN96AuXP3o_1785868051182',
   },
 };
@@ -38,8 +38,16 @@ function urlCalendrier(lieu: Lieu, contact: Contact): string {
  * script form_embed.js de GHL qui redimensionne l'iframe ; s'il est bloqué, la
  * hauteur minimale garde le calendrier utilisable.
  */
-export default function ResultScreen({ contact }: { contact: Contact }) {
-  const [lieu, setLieu] = useState<Lieu | null>(null);
+export default function ResultScreen({
+  contact,
+  disponibilites,
+}: {
+  contact: Contact;
+  disponibilites: Disponibilites;
+}) {
+  const offerts = (Object.keys(CALENDRIERS) as Lieu[]).filter((l) => disponibilites[l]);
+  // Un seul lieu disponible : on le sélectionne d'office, choisir n'a plus de sens.
+  const [lieu, setLieu] = useState<Lieu | null>(offerts.length === 1 ? offerts[0] : null);
 
   const bouton = (
     valeur: Lieu,
@@ -75,20 +83,29 @@ export default function ResultScreen({ contact }: { contact: Contact }) {
         Il te reste à choisir ton moment. La rencontre dure 75 minutes.
       </p>
 
-      <div className="mt-10 flex flex-col md:flex-row gap-4">
-        {bouton(
-          'clinique',
-          'En clinique à Brossard',
-          'Inclut l’analyse de composition corporelle InBody',
-          Building2,
-        )}
-        {bouton(
-          'visio',
-          'En visioconférence',
-          'Même évaluation, sans le test InBody',
-          Video,
-        )}
-      </div>
+      {/* Un lieu complet n'est pas affiché du tout : montrer un bouton qui mène à
+          un calendrier vide donne l'impression que la réservation est brisée. */}
+      {offerts.length > 1 && (
+        <div className="mt-10 flex flex-col md:flex-row gap-4">
+          {offerts.includes('clinique') &&
+            bouton(
+              'clinique',
+              'En clinique à Brossard',
+              'Inclut l’analyse de composition corporelle InBody',
+              Building2,
+            )}
+          {offerts.includes('visio') &&
+            bouton('visio', 'En visioconférence', 'Même évaluation, sans le test InBody', Video)}
+        </div>
+      )}
+
+      {offerts.length === 1 && (
+        <p className="mt-8 rounded-2xl bg-neo-50 px-5 py-4 text-center text-base text-neo-900">
+          {offerts[0] === 'clinique'
+            ? 'Il reste des places en clinique à Brossard, avec l’analyse InBody. La visioconférence est complète pour le moment.'
+            : 'Il reste des places en visioconférence. La clinique de Brossard est complète pour le moment.'}
+        </p>
+      )}
 
       {lieu && (
         <div className="mt-10">

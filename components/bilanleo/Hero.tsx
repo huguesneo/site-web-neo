@@ -14,7 +14,9 @@ export default function Hero({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={`relative overflow-hidden bg-gray-900 text-white text-center ${
-        compact ? 'pt-28 pb-14 md:pb-16' : 'pt-32 pb-28 md:pb-32'
+        // Le bas doit rester plus grand que le chevauchement de la carte
+        // (-mt-16 / -mt-20), sinon elle recouvre le titre.
+        compact ? 'pt-28 pb-24 md:pb-28' : 'pt-32 pb-28 md:pb-32'
       }`}
     >
       {/* Halo turquoise diffus, comme sur /approche */}

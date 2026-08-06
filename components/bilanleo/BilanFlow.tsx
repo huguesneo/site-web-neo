@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Hourglass } from 'lucide-react';
+import type { Disponibilites } from '@/lib/bilanleo';
 import Button from '@/components/Button';
 import QuestionScreen from './QuestionScreen';
 import TextScreen from './TextScreen';
@@ -22,6 +23,7 @@ import {
   BLOCS_CONDITIONNELS,
   FILTRE_1,
   FILTRE_2,
+  LISTE_ATTENTE,
   OBJECTIFS,
   SORTIE_CLIENTE,
   SORTIE_EX_CLIENTE,
@@ -47,7 +49,27 @@ type EtapeId =
   | 'q7'
   | 'q8'
   | 'contact';
-type Phase = 'quiz' | 'analyse' | 'resultat' | 'sortie_cliente' | 'sortie_ex_cliente';
+type Phase =
+  | 'quiz'
+  | 'analyse'
+  | 'resultat'
+  | 'liste_attente'
+  | 'sortie_cliente'
+  | 'sortie_ex_cliente';
+
+/**
+ * Repli quand GHL n'a pas répondu à temps ou a échoué : on ouvre les deux
+ * calendriers. Envoyer quelqu'un sur la liste d'attente à cause d'une panne
+ * serait pire que de lui montrer un calendrier peut-être complet.
+ */
+const DISPONIBILITES_PAR_DEFAUT: Disponibilites = {
+  clinique: true,
+  visio: true,
+  verifie: false,
+};
+
+/** Au-delà, on cesse d'attendre GHL et on applique le repli. */
+const ATTENTE_MAX_MS = 2200;
 
 interface Reponses {
   /** Filtrage : réponses aux deux questions posées avant le questionnaire. */
@@ -108,7 +130,14 @@ export default function BilanFlow() {
   const [reponses, setReponses] = useState<Reponses>(REPONSES_VIDES);
   const [contact, setContact] = useState<Contact>(CONTACT_VIDE);
   const [index, setIndex] = useState(0);
+  const [disponibilites, setDisponibilites] = useState<Disponibilites | null>(null);
   const reduitLeMouvement = useReducedMotion();
+
+  // La vérification des places part dès que le questionnaire commence, pas à la
+  // fin : elle a ainsi deux ou trois minutes pour répondre pendant que la
+  // personne répond aux questions, et l'attente devient invisible.
+  const verification = useRef<Promise<Disponibilites> | null>(null);
+  const dernieresDisponibilites = useRef<Disponibilites | null>(null);
 
   // Le filtrage ouvre le parcours ; la deuxième question n'apparaît que si la
   // personne n'est pas cliente en ce moment. Q4 n'existe que si un objectif
@@ -137,6 +166,20 @@ export default function BilanFlow() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [index, phase]);
+
+  useEffect(() => {
+    if (etape !== 'q1' || verification.current) return;
+    verification.current = fetch('/api/bilanleo/disponibilites')
+      .then((r) => (r.ok ? (r.json() as Promise<Disponibilites>) : DISPONIBILITES_PAR_DEFAUT))
+      .catch((erreur) => {
+        console.error('[bilanleo] disponibilités injoignables', erreur);
+        return DISPONIBILITES_PAR_DEFAUT;
+      })
+      .then((d) => {
+        dernieresDisponibilites.current = d;
+        return d;
+      });
+  }, [etape]);
 
   const choisirPrincipal = (label: string) => {
     const objectif = OBJECTIFS.find((o) => o.label === label);
@@ -215,12 +258,37 @@ export default function BilanFlow() {
       return;
     }
 
-    // Le webhook part avant l'animation et n'est jamais attendu.
-    envoyerWebhook({
+    setPhase('analyse');
+
+    // L'animation dure trois secondes : elle couvre l'attente du verdict de GHL,
+    // qui a de toute façon commencé plusieurs minutes plus tôt. On envoie ensuite
+    // un seul webhook, déjà porteur du bon statut.
+    void (async () => {
+      const dispo = await Promise.race([
+        verification.current ?? Promise.resolve(DISPONIBILITES_PAR_DEFAUT),
+        new Promise<Disponibilites>((resoudre) =>
+          setTimeout(
+            () => resoudre(dernieresDisponibilites.current ?? DISPONIBILITES_PAR_DEFAUT),
+            ATTENTE_MAX_MS,
+          ),
+        ),
+      ]);
+
+      dernieresDisponibilites.current = dispo;
+      setDisponibilites(dispo);
+      envoyerWebhook(chargeUtile(dispo));
+    })();
+  };
+
+  /** Construit la charge envoyée à Make, statut inclus. */
+  const chargeUtile = (dispo: Disponibilites) => {
+    const resteDesPlaces = dispo.clinique || dispo.visio;
+    return {
       firstName: contact.firstName.trim(),
       lastName: contact.lastName.trim(),
       email: contact.email.trim(),
       phone: normaliserTelephone(contact.phone),
+      statut: resteDesPlaces ? 'qualifie' : 'liste_attente',
       reponses: {
         objectif_principal: reponses.objectifPrincipal
           ? labelObjectif(reponses.objectifPrincipal)
@@ -238,12 +306,13 @@ export default function BilanFlow() {
         disponibilite: reponses.disponibilite ?? '',
         tests_ok: reponses.testsOk ?? '',
       },
-    });
-
-    setPhase('analyse');
+    };
   };
 
-  const terminerAnalyse = useCallback(() => setPhase('resultat'), []);
+  const terminerAnalyse = useCallback(() => {
+    const dispo = dernieresDisponibilites.current ?? DISPONIBILITES_PAR_DEFAUT;
+    setPhase(dispo.clinique || dispo.visio ? 'resultat' : 'liste_attente');
+  }, []);
 
   /** Les écrans qui remplacent le questionnaire : analyse, résultat, sorties. */
   const horsQuiz = () => {
@@ -251,7 +320,28 @@ export default function BilanFlow() {
       case 'analyse':
         return <AnalysisScreen onTermine={terminerAnalyse} />;
       case 'resultat':
-        return <ResultScreen contact={contact} />;
+        return (
+          <ResultScreen
+            contact={contact}
+            disponibilites={disponibilites ?? DISPONIBILITES_PAR_DEFAUT}
+          />
+        );
+      case 'liste_attente':
+        return (
+          <ExitScreen
+            titre={LISTE_ATTENTE.titre}
+            corps={LISTE_ATTENTE.corps}
+            icone={Hourglass}
+            secondaire={{
+              titre: LISTE_ATTENTE.secondaire.titre,
+              corps: LISTE_ATTENTE.secondaire.corps,
+              action: {
+                libelle: LISTE_ATTENTE.secondaire.bouton,
+                href: LISTE_ATTENTE.secondaire.lien,
+              },
+            }}
+          />
+        );
       case 'sortie_cliente':
         return <ExitScreen titre={SORTIE_CLIENTE.titre} corps={SORTIE_CLIENTE.corps} />;
       case 'sortie_ex_cliente':
@@ -261,8 +351,9 @@ export default function BilanFlow() {
             corps={SORTIE_EX_CLIENTE.corps}
             action={{
               libelle: SORTIE_EX_CLIENTE.bouton,
-              courriel: SORTIE_EX_CLIENTE.courriel,
-              sujet: SORTIE_EX_CLIENTE.sujet,
+              href: `mailto:${SORTIE_EX_CLIENTE.courriel}?subject=${encodeURIComponent(
+                SORTIE_EX_CLIENTE.sujet,
+              )}`,
             }}
           />
         );

@@ -51,6 +51,8 @@ question par écran, barre de progression en haut, bouton retour.
 | `components/bilanleo/ExitScreen.tsx` | Les deux écrans de sortie du filtrage |
 | `components/bilanleo/ResultScreen.tsx` | Écran « qualifié », deux boutons, calendrier GHL intégré |
 | `app/api/bilanleo/route.ts` | Route serveur qui relaie la charge utile vers Make |
+| `app/api/bilanleo/disponibilites/route.ts` | Interroge les places libres des deux calendriers GHL |
+| `lib/bilanleo.ts` | Identifiants des calendriers, partagés serveur et client |
 
 Chaque unité a une frontière claire : le contenu vit dans les données, la
 navigation dans un seul composant, la présentation dans les écrans.
@@ -221,9 +223,47 @@ Transitions en fondu-glissé avec `motion`, déjà présent dans les dépendance
 
 ## Qualification
 
-Tous les répondants voient l'écran « qualifié ». Aucune branche alternative,
-aucun écran de disqualification. Le tri se fait en aval, dans Make, à partir des
-réponses reçues.
+Tous les répondants passent le questionnaire : aucun écran de disqualification.
+Ce qu'ils voient à la fin dépend uniquement des places restantes.
+
+## Disponibilités et liste d'attente
+
+`/api/bilanleo/disponibilites` interroge les deux calendriers via
+`/calendars/{id}/free-slots` de Go High Level, avec la clé `GHL_API_KEY` déjà
+utilisée ailleurs dans le projet. GHL refuse les fenêtres de plus de 31 jours :
+la route découpe donc l'horizon en trois tranches de 30 jours, soit environ 90
+jours. Résultat mis en cache cinq minutes côté serveur.
+
+L'appel part **à l'arrivée sur Q1**, pas à la fin : il dispose ainsi des deux ou
+trois minutes du questionnaire pour répondre. L'animation d'analyse sert de
+tampon, avec une attente supplémentaire plafonnée à 2,2 secondes.
+
+| Places restantes | Écran final |
+|---|---|
+| Les deux calendriers | Les deux boutons, comme avant |
+| Un seul | Ce calendrier seul, avec une phrase expliquant que l'autre est complet |
+| Aucun | Écran de liste d'attente |
+
+Un calendrier complet n'est jamais affiché : un bouton menant à un widget vide
+donne l'impression que la réservation est brisée.
+
+**Repli obligatoire :** si GHL échoue ou tarde, on considère les deux calendriers
+ouverts. Envoyer quelqu'un sur la liste d'attente à cause d'une panne serait pire
+que de lui montrer un calendrier peut-être complet.
+
+### Écran de liste d'attente
+
+Aucun formulaire : les coordonnées sont déjà connues, l'inscription est faite.
+Le message le confirme, puis un bloc secondaire propose la consultation de 30
+minutes (`/consultation`) à celles qui ne veulent pas attendre. Bouton en
+contour, pour ne pas voler la vedette au message principal.
+
+### Statut transmis à Make
+
+La charge du webhook porte un champ `statut` au même niveau que `firstName` :
+`"qualifie"` ou `"liste_attente"`. Le scénario Make « onboarding bilan » filtre
+dessus pour ajouter l'étiquette `listeattentebilanleo`. Un seul appel par
+personne, jamais deux.
 
 ## Webhook vers Make
 
@@ -243,6 +283,7 @@ Charge utile :
   "lastName": "",
   "email": "",
   "phone": "",
+  "statut": "qualifie | liste_attente",
   "reponses": {
     "objectif_principal": "",
     "objectif_principal_detail": "",

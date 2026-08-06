@@ -61,6 +61,24 @@ export const SORTIE_EX_CLIENTE = {
   sujet: 'Je veux reprendre rendez-vous de suivi avec un bilan métabolique gratuit',
 };
 
+/**
+ * Affiché à la place des calendriers quand GHL ne retourne plus aucune plage.
+ * Les coordonnées sont déjà connues à ce stade : l'inscription est faite, il n'y
+ * a rien à remplir de plus.
+ */
+export const LISTE_ATTENTE = {
+  titre: 'Tu es sur la liste d’attente.',
+  corps:
+    'Les places du bilan métabolique sont toutes prises pour le moment. On t’a inscrite avec les coordonnées que tu viens de nous donner : dès qu’une place se libère ou qu’on ouvre de nouvelles dates, on te contacte. Les personnes sur la liste passent avant tout le monde, et tu n’as rien d’autre à faire.',
+  secondaire: {
+    titre: 'Tu ne veux pas attendre ?',
+    corps:
+      'On offre une consultation de 30 minutes, disponible plus rapidement. On y regarde concrètement tes objectifs et on t’explique l’accompagnement au complet.',
+    bouton: 'Voir la consultation de 30 minutes',
+    lien: '/consultation',
+  },
+};
+
 export const Q1_TITRE = 'Quel est ton objectif numéro un en ce moment ?';
 export const Q2_TITRE = 'Et ton objectif secondaire ?';
 
