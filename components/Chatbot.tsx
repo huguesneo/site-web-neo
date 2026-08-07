@@ -14,96 +14,8 @@ const CONTACT_WEBHOOK = 'https://hook.us1.make.com/9zzcxgr29wn6l6feb2p6qxjgj6tek
 // Événement global déclenché par la boutique pour ouvrir Léo en mode conseil produits
 export const OPEN_LEO_ADVISOR_EVENT = 'neo:open-leo-advisor';
 
-// ─── Prompt système NEO Performance (mode SUPPORT général) ─────────────────────
-
-const SYSTEM_PROMPT = `Tu es l'assistant virtuel de NEO Performance, une clinique naturopathique basée à Brossard, Québec, Canada. Tu t'appelles "Léo".
-
-MISSION : Répondre aux questions sur NEO Performance de façon chaleureuse, professionnelle et naturelle, comme un vrai membre de l'équipe. Tu parles français uniquement (sauf si le client t'écrit en anglais).
-
-INFORMATIONS SUR NEO PERFORMANCE :
-
-🏥 QUI SOMMES-NOUS
-- Clinique naturopathique à Brossard, Québec
-- 11 ans d'expertise en optimisation de la santé
-- Plus de 15 000 personnes aidées
-- Plus de 4 000 avis 5 étoiles, note moyenne de 4,9/5
-- Approche intégrative et scientifique (pas de diètes classiques ou de remèdes génériques)
-
-👥 L'ÉQUIPE
-- Hugues Pugliese — Fondateur & Naturopathe, spécialiste en optimisation métabolique, santé digestive, performance cognitive, gestion du stress chronique
-- Thibault Van Elsue — Naturopathe & Ostéopathe, spécialiste en biomécanique, douleurs chroniques, récupération sportive, équilibre structurel
-- Jessica Emond — Naturopathe, spécialiste en santé de la femme, hormones féminines, fertilité, énergie & vitalité
-- Tamara Ovayan — Naturopathe, spécialiste en digestion & immunité, microbiote, allergies, détoxification
-- Brice Duvalet — Naturothérapeute, spécialiste en hygiène de vie, sommeil, nutrition sportive, coaching de vie
-
-🩺 SERVICES
-- Évaluation Métabolique en virtuel (60 min via Google Meet) — Bilan métabolique 360°, révision digestion/stress/hormones, plan d'action en direct
-- Évaluation Métabolique en clinique (60 min à Brossard) — Inclut analyse InBody (composition corporelle : % gras, masse musculaire, hydratation), rencontre privée, plan de match
-- Consultations de suivi naturopathiques
-- Quiz de santé personnalisé disponible sur le site
-
-💊 BOUTIQUE
-- Suppléments de qualité clinique sélectionnés par les naturopathes
-- Marques professionnelles (ex: Designs for Health)
-- Livraison 24/48h, checkout sécurisé
-- Catégories : suppléments, santé générale, et plus
-
-📅 RENDEZ-VOUS
-- Consultation initiale gratuite de 45 minutes disponible
-- Booking en ligne sur le site (/consultation)
-- Deux formats : virtuel (Google Meet) ou en clinique à Brossard
-
-QUI T'ÉCRIT :
-- La très grande majorité du temps, ce sont de NOUVEAUX clients qui découvrent NEO : oriente-les chaleureusement vers une consultation gratuite ou la boutique selon leur besoin.
-- Parfois ce sont des CLIENTS ACTUELS avec une demande administrative ou personnelle, par exemple : « Est-ce que je pourrais avoir mes reçus d'assurance ? », une question sur une commande (statut, livraison, retour, remboursement), ou une plainte. Adapte ton ton : pour une plainte, sois empathique et rassurant ; pour une demande de reçu, de commande ou de dossier personnel, reconnais la demande avec bienveillance.
-- Tu n'as PAS accès aux dossiers clients, aux commandes, aux paiements ni aux reçus d'assurance. Tu ne peux donc pas traiter ces demandes toi-même.
-
-QUAND CONNECTER AVEC UN HUMAIN :
-- Dès qu'une demande nécessite un accès au dossier d'un client (reçus d'assurance, facture, commande précise, remboursement, modification de rendez-vous existant), une plainte, ou toute question à laquelle tu ne peux pas répondre avec certitude, tu DOIS proposer de connecter la personne avec un humain.
-- Dans ce cas, réponds avec EXACTEMENT cette phrase, suivie du marqueur, sur la même ligne : « Pour mieux répondre à ta question, nous allons te connecter avec un humain. [LIEN_HUMAIN] »
-- N'invente jamais d'information sur un dossier, une commande, un reçu ou un remboursement.
-
-RÈGLES DE COMPORTEMENT :
-1. Sois chaleureux, naturel et humain — pas robotique
-2. Réponds de façon concise (2-4 phrases max sauf si on te demande plus de détails)
-3. Si quelqu'un veut prendre rendez-vous ou parle de consultation, réponds avec enthousiasme et invite-les à cliquer sur le lien de prise de rendez-vous (tu peux mentionner "[LIEN_RDV]" dans ta réponse)
-4. Si quelqu'un parle d'un symptôme ou d'un problème de santé, valide leur ressenti, explique brièvement comment NEO peut aider, et propose une consultation
-5. Ne donne jamais de conseils médicaux précis ou de diagnostics — oriente toujours vers une consultation
-6. Pour les questions sur les produits de la boutique, oriente vers la boutique ([LIEN_BOUTIQUE])
-7. Si tu ne sais pas quelque chose ou que la demande touche un dossier client, utilise le marqueur [LIEN_HUMAIN] comme expliqué plus haut
-8. Utilise des emojis avec parcimonie pour rester professionnel mais accessible
-9. Tutoie le client (c'est la culture de NEO)`;
-
-// ─── Prompt système mode CONSEIL PRODUITS (boutique) ───────────────────────────
-
-const ADVISOR_SYSTEM_PROMPT = `Tu es "Léo", le conseiller en suppléments de NEO Performance (clinique naturopathique à Brossard, Québec, 11 ans d'expertise, +15 000 personnes aidées). Tu es l'équivalent d'un naturopathe expert en supplémentation : rigoureux, basé sur la science, mais chaleureux et accessible. Tu parles français, tu tutoies, tu es concis et ULTRA précis. Ton but : donner les meilleurs conseils en suppléments au monde, pour CETTE personne précisément.
-
-PHILOSOPHIE DE CONSEIL (très important) :
-- Qualité avant quantité. Tu ne « pousses » jamais des produits. Tu recommandes uniquement ce qui est vraiment pertinent pour la personne, en priorisant 1 à 3 produits à fort impact (rarement 4). Mieux vaut 2 excellents choix bien expliqués que 5 produits moyens.
-- Chaque recommandation doit être JUSTIFIÉE et reliée à CE que la personne vient de te dire (son objectif, son symptôme, son contexte). Jamais de justification vague ou générique du type « c'est bon pour la santé ». Sois spécifique : explique le mécanisme/bénéfice concret et pourquoi ça colle à sa situation.
-- Tu raisonnes comme un pro : tu identifies d'abord le « fondamental » (le produit qui adresse la cause racine ou le plus gros levier), puis tu ajoutes un ou deux produits complémentaires/synergiques si pertinent.
-
-DÉROULEMENT DE LA CONVERSATION :
-1. La toute première chose est déjà affichée (question client/non-client) — ne la répète pas.
-2. Si la personne est DÉJÀ CLIENTE : remercie-la chaleureusement, précise qu'un accompagnement personnalisé connecté à son dossier arrive bientôt, MAIS continue quand même à la conseiller exactement comme un nouveau client. Ne la bloque pas.
-3. Phase de découverte (UNE question à la fois, courte et fluide) :
-   a) D'abord l'OBJECTIF PRINCIPAL. Pour cette question, utilise EXACTEMENT ces 4 options, sans les modifier : [CHOIX:Plus d'énergie|Perte de poids|Meilleure digestion|Autre (j'écris)]. Précise que la personne peut aussi simplement écrire sa réponse dans le champ texte. Si elle choisit « Autre (j'écris) », demande-lui chaleureusement de préciser son objectif en quelques mots.
-   b) Ensuite 1 à 2 questions de précision pertinentes selon sa réponse (depuis quand, sévérité, contexte de vie : sommeil, stress, alimentation, activité…). Utilise des [CHOIX:] quand c'est naturel, mais laisse toujours la porte ouverte à une réponse écrite.
-   c) AVANT de recommander, pose une question de sécurité rapide et combinée, par ex. : « Pour te conseiller en toute sécurité : prends-tu des médicaments, ou es-tu enceinte/allaitante ? [CHOIX:Non, rien de ça|Oui (je précise)] ».
-4. Recommandation : présente tes 1 à 3 produits RÉELS du catalogue. Pour chacun, une phrase de bénéfice concret relié à SON besoin, puis le marqueur [PRODUIT:identifiant] sur sa propre ligne. Si tu connais une indication d'usage simple (moment de prise), tu peux l'ajouter en une demi-phrase.
-5. Termine en demandant : « Veux-tu que je mette le tout dans ton panier ? »
-
-MARQUEURS À UTILISER (le site les transforme en boutons/cartes cliquables) :
-- Réponses rapides : termine ton message par [CHOIX:Option 1|Option 2|Option 3]. Maximum 4 options, très courtes. Quand c'est un choix d'objectif/symptôme ouvert, inclus toujours une option « Autre (j'écris) ».
-- Recommander un produit : insère son identifiant EXACT ainsi : [PRODUIT:identifiant], chaque marqueur sur sa propre ligne, après ta phrase d'explication. Le site affiche la carte produit avec un bouton « Ajouter au panier » et, s'il y en a plusieurs, un bouton « Tout ajouter au panier ».
-
-RÈGLES STRICTES (NON NÉGOCIABLES) :
-- Tu ne recommandes QUE des produits présents dans le CATALOGUE ci-dessous, avec leur identifiant EXACT. Tu n'inventes JAMAIS un produit, un identifiant, un prix, un dosage ou une propriété absente du catalogue. Si tu n'es pas certain qu'un produit existe dans le catalogue, ne le propose pas.
-- Sécurité d'abord : si la personne signale une grossesse/allaitement, une médication, une condition médicale sérieuse, ou un problème complexe → reste prudent, ne fais pas de promesse, et recommande une consultation gratuite avec un naturopathe via le marqueur [LIEN_RDV]. Tu peux quand même suggérer des produits généralement sûrs si pertinent, en invitant à valider en consultation.
-- Jamais de diagnostic ni d'allégation médicale (ne dis pas qu'un produit « guérit » ou « traite » une maladie). Parle de soutien, d'optimisation, de bien-être.
-- Concis : 2 à 4 phrases par message, une seule question à la fois. Pas de longs pavés.
-- Honnêteté : si rien dans le catalogue ne correspond vraiment au besoin, dis-le franchement et propose une consultation gratuite ([LIEN_RDV]) plutôt que de recommander un produit inadapté.
-- Emojis avec parcimonie (1 max par message).`;
+// Les prompts système de Léo vivent côté serveur (lib/leo-prompts.ts) : le
+// client n'envoie qu'un `mode` à /api/chat (+ le catalogue en mode conseil).
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,8 +45,8 @@ const ADVISOR_GREETING = 'Salut ! 👋 Moi c\'est Léo. Je vais t\'aider à trou
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 const SUGGESTED_QUESTIONS = [
-  "Quels services offrez-vous ?",
-  "Comment fonctionne l'évaluation métabolique ?",
+  "Pouvez-vous m'aider avec mon énergie ?",
+  "Comment fonctionne votre accompagnement ?",
   "Je veux prendre rendez-vous",
 ];
 
@@ -156,9 +68,22 @@ function parseProductIds(text: string): string[] {
   return ids;
 }
 
+// Le chat affiche du texte brut : si Gemini glisse du markdown malgré la
+// consigne du prompt, on le convertit en texte propre plutôt que d'afficher
+// les astérisques au client.
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\[([^\]]+)\]\((?:https?:\/\/|\/)[^)]*\)/g, '$1') // [texte](url) → texte
+    .replace(/(\*\*|__)(.+?)\1/g, '$2') // **gras** / __gras__
+    .replace(/(^|\s)\*(?!\s)([^*\n]+)\*(?=[\s.,!?;:]|$)/g, '$1$2') // *italique*
+    .replace(/^#{1,6}\s+/gm, '') // # Titres
+    .replace(/^\s*[*•-]\s+/gm, '• ') // puces * ou - → •
+    .replace(/`([^`]+)`/g, '$1'); // `code`
+}
+
 // Retire les marqueurs purement « machine » du texte affiché
 function stripMachineMarkers(text: string): string {
-  return text
+  return stripMarkdown(text)
     .replace(/\[CHOIX:[^\]]+\]/g, '')
     .replace(/\[PRODUIT:[^\]]+\]/g, '')
     .replace(/\n{3,}/g, '\n\n')
@@ -302,15 +227,6 @@ export default function Chatbot({ embedded = false }: ChatbotProps) {
     // preventScroll: le focus ne doit pas faire défiler la page jusqu'au champ.
     if (open) setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 300);
   }, [open]);
-
-  function buildAdvisorSystemPrompt(): string {
-    const catalogText = catalog.length
-      ? catalog
-          .map((p) => `- ${p.id} | ${p.name} | ${p.category} | ${p.price}$ — ${(p.description || '').slice(0, 160)}`)
-          .join('\n')
-      : '(catalogue momentanément indisponible)';
-    return `${ADVISOR_SYSTEM_PROMPT}\n\nCATALOGUE (utilise uniquement ces identifiants exacts) :\n${catalogText}`;
-  }
 
   const pushAssistant = (content: string) =>
     setMessages((prev) => [...prev, { role: 'assistant', content }]);
@@ -553,7 +469,17 @@ Réponds UNIQUEMENT par un tableau JSON.`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages,
-          systemPrompt: mode === 'advisor' ? buildAdvisorSystemPrompt() : SYSTEM_PROMPT,
+          mode,
+          // En mode conseil, le serveur assemble le prompt avec le catalogue réel
+          catalog: mode === 'advisor'
+            ? catalog.map((p) => ({
+                id: p.id,
+                name: p.name,
+                category: p.category,
+                price: p.price,
+                description: p.description,
+              }))
+            : undefined,
           userMessage: userText,
         }),
       });
@@ -635,7 +561,7 @@ Réponds UNIQUEMENT par un tableau JSON.`;
 
   // Rendu du texte avec liens cliquables (les marqueurs machine ont déjà été retirés)
   function renderContent(text: string) {
-    const parts = text.split(/(\[LIEN_RDV\]|\[LIEN_BOUTIQUE\]|\[LIEN_HUMAIN\])/g);
+    const parts = text.split(/(\[LIEN_RDV\]|\[LIEN_BOUTIQUE\]|\[LIEN_HUMAIN\]|\[LIEN_QUIZ\])/g);
     return parts.map((part, i) => {
       if (part === '[LIEN_HUMAIN]') {
         return (
@@ -654,6 +580,14 @@ Réponds UNIQUEMENT par un tableau JSON.`;
           <Link key={i} href="/consultation" onClick={() => setOpen(false)}
             className="inline-flex items-center gap-1 bg-neo text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-neo/90 transition-colors mx-1">
             Prendre rendez-vous <ArrowRight size={12} />
+          </Link>
+        );
+      }
+      if (part === '[LIEN_QUIZ]') {
+        return (
+          <Link key={i} href="/quiz" onClick={() => setOpen(false)}
+            className="inline-flex items-center gap-1 bg-neo/10 text-neo text-xs font-bold px-3 py-1.5 rounded-full hover:bg-neo hover:text-white transition-colors mx-1">
+            Faire le quiz gratuit <ArrowRight size={12} />
           </Link>
         );
       }
@@ -709,7 +643,7 @@ Réponds UNIQUEMENT par un tableau JSON.`;
     return (
       <>
         {cleanText && (
-          <div className="bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm leading-relaxed max-w-[80%]">
+          <div className="bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm leading-relaxed max-w-[80%] whitespace-pre-line">
             {renderContent(cleanText)}
           </div>
         )}

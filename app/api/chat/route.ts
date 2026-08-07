@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import {
+  SUPPORT_SYSTEM_PROMPT,
+  buildAdvisorSystemPrompt,
+  AdvisorCatalogItem,
+} from '../../../lib/leo-prompts';
 
 export const runtime = 'nodejs';
 
@@ -9,7 +14,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Clé Gemini manquante côté serveur.' }, { status: 500 });
   }
 
-  const { messages, systemPrompt, userMessage } = await req.json();
+  // Les prompts vivent côté serveur : le client n'envoie qu'un mode (+ catalogue
+  // pour le conseil boutique). Empêche la lecture/l'injection du prompt système.
+  const { messages, mode, catalog, userMessage } = await req.json();
+
+  if (typeof userMessage !== 'string' || !userMessage.trim()) {
+    return NextResponse.json({ error: 'Message manquant.' }, { status: 400 });
+  }
+
+  const systemPrompt =
+    mode === 'advisor'
+      ? buildAdvisorSystemPrompt(Array.isArray(catalog) ? (catalog as AdvisorCatalogItem[]) : [])
+      : SUPPORT_SYSTEM_PROMPT;
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
