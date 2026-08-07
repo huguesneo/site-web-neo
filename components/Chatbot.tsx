@@ -45,7 +45,7 @@ const ADVISOR_GREETING = 'Salut ! 👋 Moi c\'est Léo. Je vais t\'aider à trou
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 const SUGGESTED_QUESTIONS = [
-  "Pouvez-vous m'aider avec mon énergie ?",
+  "Je n'arrive pas à perdre du poids. Pouvez-vous m'aider ?",
   "Comment fonctionne votre accompagnement ?",
   "Je veux prendre rendez-vous",
 ];
