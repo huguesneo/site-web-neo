@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, X, Send, Loader2, ArrowRight, Mail, ChevronLeft, ShoppingCart, CheckCircle, Lock, LogIn } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, ArrowRight, Mail, ChevronLeft, ShoppingCart, CheckCircle, Lock, LogIn, SlidersHorizontal } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useGHLProducts } from '../hooks/useGHLProducts';
 import { GHLProduct } from '../data/ghlProducts';
@@ -504,16 +504,25 @@ Réponds UNIQUEMENT par un tableau JSON.`;
     }
   }
 
+  // Produit à formats/saveurs : impossible de l'ajouter au panier depuis le chat,
+  // sinon la commande WooCommerce part sans `variation_id` (format absent du
+  // courriel et du bon de préparation, stock de la variante non décrémenté).
+  // On renvoie vers la fiche produit pour que la cliente choisisse — même
+  // comportement que la grille boutique.
+  const hasVariations = (p: GHLProduct) => !!p.variations?.length;
+
   function handleAddProduct(product: GHLProduct) {
+    if (hasVariations(product)) return;
     addItem(product);
     setAddedIds((prev) => new Set(prev).add(product.id));
   }
 
   function handleAddAll(prods: GHLProduct[]) {
-    prods.forEach((p) => addItem(p));
+    const simples = prods.filter((p) => !hasVariations(p));
+    simples.forEach((p) => addItem(p));
     setAddedIds((prev) => {
       const next = new Set(prev);
-      prods.forEach((p) => next.add(p.id));
+      simples.forEach((p) => next.add(p.id));
       return next;
     });
   }
@@ -603,9 +612,12 @@ Réponds UNIQUEMENT par un tableau JSON.`;
     });
   }
 
-  // Carte produit recommandée par Léo, avec bouton « Ajouter au panier »
+  // Carte produit recommandée par Léo, avec bouton « Ajouter au panier ».
+  // Produit à formats/saveurs → bouton « Choisir » vers la fiche produit.
   function renderProductCard(product: GHLProduct) {
     const added = addedIds.has(product.id);
+    const variable = hasVariations(product);
+    const btnClass = 'shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-colors';
     return (
       <div key={product.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl p-2.5 shadow-sm">
         <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 overflow-hidden">
@@ -615,18 +627,28 @@ Réponds UNIQUEMENT par un tableau JSON.`;
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-gray-900 leading-snug line-clamp-2">{product.name}</p>
-          <p className="text-xs font-extrabold text-neo">{product.price} $</p>
+          <p className="text-xs font-extrabold text-neo">
+            {variable ? `À partir de ${product.price} $` : `${product.price} $`}
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={() => handleAddProduct(product)}
-          disabled={added}
-          className={`shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
-            added ? 'bg-green-500 text-white' : 'bg-gray-900 text-white hover:bg-neo'
-          }`}
-        >
-          {added ? <><CheckCircle size={12} /> Ajouté</> : <><ShoppingCart size={12} /> Ajouter</>}
-        </button>
+        {variable ? (
+          <Link
+            href={`/boutique/${product.slug}`}
+            onClick={() => setOpen(false)}
+            className={`${btnClass} bg-gray-900 text-white hover:bg-neo`}
+          >
+            <SlidersHorizontal size={12} /> Choisir
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => handleAddProduct(product)}
+            disabled={added}
+            className={`${btnClass} ${added ? 'bg-green-500 text-white' : 'bg-gray-900 text-white hover:bg-neo'}`}
+          >
+            {added ? <><CheckCircle size={12} /> Ajouté</> : <><ShoppingCart size={12} /> Ajouter</>}
+          </button>
+        )}
       </div>
     );
   }
@@ -639,6 +661,9 @@ Réponds UNIQUEMENT par un tableau JSON.`;
       .filter((p): p is GHLProduct => Boolean(p));
     const choices = isLast ? parseChoices(content) : [];
     const cleanText = stripMachineMarkers(content);
+    // « Tout ajouter » ne couvre que les produits simples : ceux à formats
+    // exigent un choix sur leur fiche (bouton « Choisir » de la carte).
+    const addables = recommended.filter((p) => !hasVariations(p));
 
     return (
       <>
@@ -651,13 +676,13 @@ Réponds UNIQUEMENT par un tableau JSON.`;
         {recommended.length > 0 && (
           <div className="flex flex-col gap-2 mt-2 w-full max-w-[88%]">
             {recommended.map(renderProductCard)}
-            {recommended.length > 1 && (
+            {addables.length > 1 && (
               <button
                 type="button"
-                onClick={() => handleAddAll(recommended)}
+                onClick={() => handleAddAll(addables)}
                 className="w-full justify-center bg-neo text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-neo/90 transition-colors"
               >
-                <ShoppingCart size={14} /> Tout ajouter au panier ({recommended.length})
+                <ShoppingCart size={14} /> Tout ajouter au panier ({addables.length})
               </button>
             )}
           </div>
