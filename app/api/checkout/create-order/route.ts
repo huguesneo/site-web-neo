@@ -222,6 +222,41 @@ async function findOutOfStockNames(
   }
 }
 
+/**
+ * Produits à formats/saveurs envoyés SANS variation.
+ *
+ * WooCommerce accepte la ligne mais l'enregistre sur le produit parent : format absent
+ * du courriel et du bon de préparation, prix du parent facturé, stock de la variante
+ * non décrémenté. L'interface empêche ce cas, mais un panier resté en localStorage
+ * avant le correctif peut encore le produire — on refuse donc la commande.
+ *
+ * Fail-open sur échec réseau (on ne casse pas une vente pour une panne passagère) :
+ * on ne bloque que si l'on SAIT que le produit est variable.
+ */
+async function findMissingVariationNames(
+  lineItems: Array<{ product_id: number; variation_id?: number }>,
+): Promise<string[]> {
+  try {
+    const suspects = lineItems.filter((i) => !i.variation_id);
+    if (suspects.length === 0) return [];
+    const ids = [...new Set(suspects.map((i) => i.product_id))];
+    const res = await fetch(wc(`/products?include=${ids.join(',')}&per_page=100`));
+    if (!res.ok) return [];
+    const products: Array<{ id: number; name: string; type: string }> = await res.json();
+    const variableById = new Map(
+      products.filter((p) => p.type === 'variable').map((p) => [p.id, p.name]),
+    );
+    const out = new Set<string>();
+    for (const li of suspects) {
+      const name = variableById.get(li.product_id);
+      if (name) out.add(name);
+    }
+    return [...out];
+  } catch {
+    return [];
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!WC_BASE || !WC_KEY || !WC_SECRET) {
     return NextResponse.json({ error: 'Configuration WooCommerce manquante côté serveur.' }, { status: 500 });
@@ -250,8 +285,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Panier vide ou articles invalides.' }, { status: 400 });
   }
 
-  // Filet de sécurité : un article a-t-il basculé en rupture depuis l'affichage ?
-  const outOfStock = await findOutOfStockNames(line_items);
+  // Filets de sécurité : rupture depuis l'affichage, et format manquant sur un
+  // produit à variantes (panier obsolète). Les deux checks sont indépendants.
+  const [outOfStock, missingVariation] = await Promise.all([
+    findOutOfStockNames(line_items),
+    findMissingVariationNames(line_items),
+  ]);
+
+  if (missingVariation.length > 0) {
+    const liste = missingVariation.join(', ');
+    const plural = missingVariation.length > 1;
+    return NextResponse.json(
+      {
+        error: `Il manque un choix de format pour ${liste}. Veuillez ${plural ? 'retirer ces produits' : 'retirer ce produit'} de votre panier et ${plural ? 'les' : 'le'} rajouter en choisissant le format souhaité.`,
+        missingVariation,
+      },
+      { status: 400 },
+    );
+  }
+
   if (outOfStock.length > 0) {
     const liste = outOfStock.join(', ');
     return NextResponse.json(
