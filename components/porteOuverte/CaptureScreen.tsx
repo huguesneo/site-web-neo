@@ -89,7 +89,7 @@ export default function CaptureScreen({
           onChange={(e) => onChange({ ...valeur, [cle]: e.target.value })}
           onBlur={() => setTouches((t) => ({ ...t, [cle]: true }))}
           aria-invalid={Boolean(erreur)}
-          className={`w-full rounded-xl border-2 bg-white px-4 py-3 text-base text-gray-900 transition-colors focus:outline-none ${
+          className={`w-full rounded-2xl border-2 bg-white px-4 py-3.5 text-base text-gray-900 transition-colors focus:outline-none ${
             erreur ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-neo'
           }`}
         />
@@ -102,14 +102,14 @@ export default function CaptureScreen({
 
   return (
     <div>
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-snug mb-2">
+      <h1 className="mb-1.5 text-[21px] font-extrabold leading-tight tracking-tight text-gray-900 text-pretty md:mb-2 md:text-[28px]">
         Voyons si le 11 septembre est fait pour toi
       </h1>
-      <p className="text-gray-600 mb-8">
+      <p className="mb-5 text-sm leading-relaxed text-gray-600 md:mb-7 md:text-[15px]">
         Trois champs, puis quelques questions. Compte deux minutes en tout.
       </p>
 
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3.5 md:gap-4.5">
         {champ('prenom', 'Prénom', 'text', 'given-name', 'text')}
         {champ('courriel', 'Courriel', 'email', 'email', 'email')}
         {champ('telephone', 'Cellulaire', 'tel', 'tel', 'tel')}

@@ -1,14 +1,23 @@
 import type { Metadata } from 'next';
-import { Montserrat } from 'next/font/google';
+import { IBM_Plex_Mono, Montserrat } from 'next/font/google';
 import '@/index.css';
 
-// Police self-hostée par Next (plus de requête bloquante vers Google Fonts, plus
-// de CLS de police). `display: swap` + variable CSS branchée dans index.css.
-// Quicksand a été retirée : elle était chargée mais jamais utilisée.
+// Polices self-hostées par Next (plus de requête bloquante vers Google Fonts,
+// plus de CLS de police). `display: swap` + variables CSS branchées dans
+// index.css. Quicksand a été retirée : elle était chargée mais jamais utilisée.
 const montserrat = Montserrat({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
   variable: '--font-montserrat',
+  display: 'swap',
+});
+
+// Réservée aux valeurs mesurées de /porte-ouverte : la chasse fixe fait lire les
+// chiffres comme des données relevées, pas comme un argument de vente.
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-ibm-plex-mono',
   display: 'swap',
 });
 import { CartProvider } from '@/contexts/CartContext';
@@ -80,7 +89,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={montserrat.variable}>
+    <html lang="fr" className={`${montserrat.variable} ${ibmPlexMono.variable}`}>
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

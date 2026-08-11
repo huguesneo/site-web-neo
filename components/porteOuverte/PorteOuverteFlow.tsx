@@ -37,6 +37,7 @@ import BookingScreen from './BookingScreen';
 import WaitlistScreen from './WaitlistScreen';
 import DisqualifiedScreen from './DisqualifiedScreen';
 import Hero from './Hero';
+import SalesSections from './SalesSections';
 
 type Phase = 'capture' | 'questions' | 'verification' | 'booking' | 'attente' | 'dq';
 
@@ -482,7 +483,7 @@ export default function PorteOuverteFlow() {
               onChange={setCoordonnees}
               erreurs={erreursContact}
             />
-            <div className="mt-10">
+            <div className="mt-7">
               <Button
                 onClick={commencerQuestions}
                 disabled={Object.keys(erreursContact).length > 0}
@@ -490,6 +491,23 @@ export default function PorteOuverteFlow() {
               >
                 Voir si je suis admissible
               </Button>
+              <p className="mt-3.5 text-center text-[13px] leading-normal text-gray-500">
+                Réservé aux personnes qui ne sont pas déjà clientes de NEO Performance.
+              </p>
+            </div>
+
+            {/* Le dépôt est annoncé ici, pas découvert à l'écran de paiement :
+                une demande d'argent surprise sur une page qui dit « gratuit »
+                fait abandonner. */}
+            <div className="mt-6 flex items-start gap-3 border-t border-gray-100 pt-5">
+              <span className="inline-flex h-[26px] w-11 shrink-0 items-center justify-center rounded-full bg-neo-50 text-xs font-extrabold text-neo-900">
+                20 $
+              </span>
+              <p className="text-[13px] leading-relaxed text-gray-500">
+                Un dépôt de 20 $ confirme ta place le 11 septembre. Il t’est remis en argent le
+                jour même, à ton arrivée. C’est ce qui fait que les 48 places vont à des personnes
+                qui se présentent.
+              </p>
             </div>
           </div>
         );
@@ -523,18 +541,26 @@ export default function PorteOuverteFlow() {
     <>
       <Hero compact={phase !== 'capture'} />
 
-      <div className="bg-gray-50 pb-20">
+      <div className={`bg-gray-50 ${phase === 'capture' ? 'pb-16 md:pb-26' : 'pb-20'}`}>
         {/* La carte chevauche la bande foncée : c'est ce décalage qui donne du
             relief. `relative z-10` obligatoire, sinon le hero, qui est
             positionné, se peint par-dessus et lui mange le haut. */}
         <div
           className={`relative z-10 mx-auto px-4 ${phase === 'booking' ? 'max-w-3xl' : 'max-w-2xl'}`}
         >
-          <div className="-mt-16 md:-mt-20 rounded-3xl bg-white p-6 md:p-10 shadow-2xl shadow-gray-900/10">
+          {/* L'ancre sert au bouton du rappel final, qui ramène ici. */}
+          <div
+            id="po-formulaire"
+            className="-mt-16 scroll-mt-24 rounded-3xl bg-white p-6 shadow-2xl shadow-gray-900/10 md:-mt-20 md:p-10"
+          >
             {contenu()}
           </div>
         </div>
       </div>
+
+      {/* Les blocs de vente n'existent qu'au premier écran : passé le premier
+          clic, ils ne convainquent plus personne et allongent la page. */}
+      {phase === 'capture' && <SalesSections />}
     </>
   );
 }

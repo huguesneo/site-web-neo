@@ -18,8 +18,9 @@
   --color-dark-900: #1A1A1A;
   --color-dark-800: #2D2D2D;
 
-  /* Polices — variable injectée par next/font (self-host, voir app/layout.tsx) */
+  /* Polices — variables injectées par next/font (self-host, voir app/layout.tsx) */
   --font-sans: var(--font-montserrat), 'Montserrat', sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
 
   /* Animations */
   --animate-fade-in-up: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
