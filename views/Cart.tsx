@@ -215,7 +215,7 @@ const Cart: React.FC = () => {
                 >
                   <Sparkles size={16} className="text-neo shrink-0" />
                   <span className="text-[13px] text-gray-700 leading-tight">
-                    <span className="font-bold text-neo">En tant que client NEO Performance, vous auriez économisé {potentialClientDiscount.toFixed(2)} $.</span>
+                    <span className="font-bold text-neo">En tant que client NEO Performance, vous auriez économisé <span className="blur-[3px] select-none">{potentialClientDiscount.toFixed(2)} $</span>.</span>
                     <span className="block text-[11px] text-gray-500 mt-0.5">Déjà client ? Connectez-vous à votre espace client.</span>
                   </span>
                 </Link>

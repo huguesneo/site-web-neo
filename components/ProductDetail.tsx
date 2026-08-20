@@ -170,7 +170,7 @@ const ProductDetail: React.FC<{ product: GHLProduct }> = ({ product: p }) => {
                       <Sparkles size={15} className="text-neo" />
                     </div>
                     <div className="leading-tight">
-                      <p className="text-[13px] font-extrabold text-neo">En tant que client NEO, vous économiseriez {fmt(displayPrice - prixClient(displayPrice))} $</p>
+                      <p className="text-[13px] font-extrabold text-neo">En tant que client NEO, vous économiseriez <span className="blur-[3px] select-none">{fmt(displayPrice - prixClient(displayPrice))} $</span></p>
                       <p className="text-[11px] text-gray-500">Déjà client ? Connectez-vous à votre espace client.</p>
                     </div>
                   </div>

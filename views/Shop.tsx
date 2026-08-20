@@ -34,7 +34,7 @@ const CardPriceTag: React.FC<{ regular: number; isClient: boolean; noDiscount?: 
         <span className="text-lg font-extrabold text-gray-900 tracking-tight">{Prefix}{fmt(regular)} $</span>
         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neo whitespace-nowrap">
           <Sparkles size={10} className="shrink-0" />
-          Client&nbsp;· jusqu'à&nbsp;−{Math.round(giftCardUpTo)}&nbsp;$
+          Client&nbsp;· jusqu'à&nbsp;<span className={isClient ? '' : 'blur-[3px] select-none'}>−{Math.round(giftCardUpTo)}&nbsp;$</span>
         </span>
       </div>
     );
@@ -59,7 +59,7 @@ const CardPriceTag: React.FC<{ regular: number; isClient: boolean; noDiscount?: 
       <span className="text-lg font-extrabold text-gray-900 tracking-tight">{Prefix}{fmt(regular)} $</span>
       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neo whitespace-nowrap">
         <Sparkles size={10} className="shrink-0" />
-        Client&nbsp;{fmt(client)}&nbsp;$
+        Client&nbsp;<span className="blur-[3px] select-none">{fmt(client)}&nbsp;$</span>
       </span>
     </div>
   );
