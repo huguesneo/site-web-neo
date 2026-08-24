@@ -36,10 +36,48 @@ const ETAPES = [
   },
 ];
 
+/**
+ * Trois dossiers réels, trois marqueurs différents. Les prénoms sont publiés
+ * avec l'accord des personnes ; les noms de famille restent hors ligne.
+ *
+ * `lecture` décrit ce que le chiffre veut dire — ce n'est PAS une citation et
+ * ça ne doit jamais être mis entre guillemets ni attribué à la personne. Le
+ * jour où on a leurs vrais mots, on ajoute un champ `citation` distinct.
+ */
 const FICHES_PREUVE = [
-  { marqueur: 'Marqueur A', dossier: 'Dossier A · femme, 4X ans' },
-  { marqueur: 'Marqueur B', dossier: 'Dossier B · femme, 4X ans' },
-  { marqueur: 'Marqueur C', dossier: 'Dossier C · femme, 4X ans' },
+  {
+    marqueur: 'Poids',
+    personne: 'Mélanie, 38 ans',
+    unite: 'lbs',
+    depart: { date: '3 mars 2025', valeur: '166,0' },
+    arrivee: { date: '13 juin 2025', valeur: '136,4' },
+    delta: '−29,6 lbs (−17,8 %)',
+    duree: '15 semaines',
+    lecture:
+      'Presque 30 lbs en moins, sans diète de privation : le corps relâche quand le métabolisme redémarre.',
+  },
+  {
+    marqueur: 'Test de stress',
+    personne: 'Camille, 41 ans',
+    unite: 'pts',
+    depart: { date: '3 avril 2026', valeur: '101' },
+    arrivee: { date: '9 juillet 2026', valeur: '22' },
+    delta: '−79 pts',
+    duree: '14 semaines',
+    lecture:
+      'De « stress chronique » à « équilibre normal » — deux catégories complètes franchies en un trimestre.',
+  },
+  {
+    marqueur: 'Transit digestif',
+    personne: 'Sonia, 46 ans',
+    unite: 'h',
+    depart: { date: '3 mars 2026', valeur: '96,3' },
+    arrivee: { date: '20 juin 2026', valeur: '24,3' },
+    delta: '−72 h',
+    duree: '15 semaines',
+    lecture:
+      'Quatre jours de transit ramenés à un seul : la digestion cesse d’être un frein au métabolisme.',
+  },
 ];
 
 /**
@@ -180,59 +218,69 @@ export default function SalesSections() {
             On ne te montre pas des photos. On te montre des chiffres.
           </h2>
           <p className="mb-6 max-w-[640px] text-[15px] leading-relaxed text-gray-600 md:mb-12 md:text-[17px]">
-            Trois dossiers suivis sur 13 semaines. Même marqueur, deux mesures, la phrase de la
-            personne.
+            Trois dossiers réels, trois marqueurs différents, environ quinze semaines chacun. Deux
+            mesures datées, et ce que l’écart veut dire.
           </p>
 
           <div className="grid gap-3.5 md:grid-cols-3 md:gap-6">
             {FICHES_PREUVE.map((fiche) => (
               <div
                 key={fiche.marqueur}
-                className="rounded-3xl border-[1.5px] border-dashed border-neo-200 bg-neo-50/25 p-5 md:p-8"
+                className="flex flex-col rounded-3xl border border-neo-100 bg-neo-50/40 p-5 md:p-8"
               >
-                <div className="mb-4 flex items-center justify-between md:mb-6">
+                <div className="mb-4 flex items-center justify-between gap-3 md:mb-6">
                   <span className="text-xs font-bold uppercase tracking-[0.08em] text-neo-900 md:text-[13px]">
                     {fiche.marqueur}
                   </span>
-                  <span className="rounded-full border border-neo-100 px-2 py-[3px] font-mono text-[10px] uppercase tracking-[0.06em] text-neo md:px-[9px] md:py-1 md:text-[10.5px]">
-                    à confirmer
+                  <span className="shrink-0 rounded-full border border-neo-100 bg-white px-2 py-[3px] font-mono text-[10px] uppercase tracking-[0.06em] text-neo md:px-[9px] md:py-1 md:text-[10.5px]">
+                    {fiche.duree}
                   </span>
                 </div>
 
-                <div className="mb-4 grid grid-cols-[1fr_auto_1fr] items-end gap-3 md:mb-6 md:gap-3.5">
+                <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3 md:mb-4 md:gap-3.5">
                   <div>
-                    <div className="mb-[5px] font-mono text-[10.5px] text-gray-400 md:mb-1.5 md:text-[11px]">
-                      SEMAINE 1
+                    <div className="mb-[5px] font-mono text-[10.5px] uppercase text-gray-400 md:mb-1.5 md:text-[11px]">
+                      {fiche.depart.date}
                     </div>
                     <div className="font-mono text-[30px] font-medium leading-none text-gray-400 md:text-[34px]">
-                      00,0
+                      {fiche.depart.valeur}
+                      <span className="ml-1 text-[13px] md:text-sm">{fiche.unite}</span>
                     </div>
                   </div>
                   <ArrowRight size={20} className="mb-[5px] text-neo md:mb-1.5 md:size-[22px]" />
                   <div>
-                    <div className="mb-[5px] font-mono text-[10.5px] text-neo md:mb-1.5 md:text-[11px]">
-                      SEMAINE 13
+                    <div className="mb-[5px] font-mono text-[10.5px] uppercase text-neo md:mb-1.5 md:text-[11px]">
+                      {fiche.arrivee.date}
                     </div>
                     <div className="font-mono text-[30px] font-medium leading-none text-neo md:text-[34px]">
-                      00,0
+                      {fiche.arrivee.valeur}
+                      <span className="ml-1 text-[13px] md:text-sm">{fiche.unite}</span>
                     </div>
                   </div>
                 </div>
 
-                <p className="mb-3 text-sm italic leading-relaxed text-gray-700 text-pretty md:mb-4 md:text-[15px]">
-                  « [Phrase de la personne — une ligne, dans ses mots, à valider avec elle avant
-                  publication.] »
+                <div className="mb-3 font-mono text-[12.5px] font-medium text-neo md:mb-4 md:text-[13px]">
+                  {fiche.delta}
+                </div>
+
+                {/* Texte descriptif de NEO, jamais une citation : pas de
+                    guillemets ni d'italique, pour qu'on ne puisse pas le lire
+                    comme les mots de la personne. */}
+                <p className="mb-3 text-sm leading-relaxed text-gray-700 text-pretty md:mb-4 md:text-[15px]">
+                  {fiche.lecture}
                 </p>
-                <div className="text-[12.5px] font-semibold text-gray-500 md:text-[13px]">
-                  {fiche.dossier}
+
+                <div className="mt-auto text-[12.5px] font-semibold text-gray-500 md:text-[13px]">
+                  {fiche.personne}
                 </div>
               </div>
             ))}
           </div>
 
-          <p className="mt-5 font-mono text-[11px] leading-relaxed text-gray-400 md:mt-7 md:text-xs">
-            Fiches provisoires. Marqueurs, valeurs et citations à remplacer par les dossiers réels
-            avant mise en ligne.
+          <p className="mt-5 max-w-[820px] text-[11px] leading-relaxed text-gray-400 md:mt-7 md:text-xs">
+            Dossiers réels, publiés avec l’accord des personnes. Prénoms seulement. Ces résultats
+            sont les leurs et ne constituent pas une promesse : chaque métabolisme répond à son
+            rythme.
           </p>
         </div>
       </section>
