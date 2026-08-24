@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, XCircle } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Smartphone, XCircle } from 'lucide-react';
 
 /**
  * Les blocs de vente sous la carte d'inscription, d'après la maquette Claude
@@ -10,10 +10,9 @@ import { ArrowRight, XCircle } from 'lucide-react';
  * questionnaire ou sur son écran de destination, ces blocs ne convainquent plus
  * personne, ils allongent la page.
  *
- * Deux blocs sont volontairement provisoires et se voient comme tels — les
- * fiches de preuve et la photo du sac-cadeau. Ils portent des marques
- * explicites (bordure pointillée, étiquette « à confirmer ») pour qu'on ne les
- * mette jamais en ligne par distraction.
+ * Les fiches de preuve sont volontairement provisoires et se voient comme
+ * telles : elles portent des marques explicites (étiquette « à confirmer »)
+ * pour qu'on ne les mette jamais en ligne par distraction.
  */
 
 const ANCRE_FORMULAIRE = '#po-formulaire';
@@ -44,17 +43,32 @@ const FICHES_PREUVE = [
 ];
 
 /**
- * Le portrait d'abord — c'est le seul élément que la personne ne peut obtenir
- * qu'en venant le 11 septembre. Les cinq guides suivent, sous leurs vrais
- * titres — ceux imprimés sur les couvertures montrées en photo.
+ * Trois choses distinctes, et la page doit les montrer comme telles. Numéroter
+ * le portrait avec les guides donnait une liste de six lignes identiques : on
+ * lisait « six guides ». Le portrait (numérique, dans l'app) et le sac-cadeau
+ * (physique) sont donc sortis de la liste, et la numérotation ne sert plus qu'à
+ * compter les cinq guides.
  */
-const SAC_CADEAU = [
-  'Ton portrait métabolique, imprimé et annoté',
+const REPARTS = [
+  {
+    icone: Smartphone,
+    titre: 'Ton portrait métabolique',
+    texte: 'Directement dans ton application NEO, à consulter quand tu veux.',
+  },
+  {
+    icone: ShoppingBag,
+    titre: 'Ton sac-cadeau',
+    texte: 'Le sac NEO, à emporter avec toi en repartant de la clinique.',
+  },
+];
+
+/** Les cinq guides, sous les titres imprimés sur les couvertures. */
+const GUIDES = [
   'Le voyage d’une bouchée',
   'Sors du mode survie',
   '20 recettes de déjeuners faites par Léo',
   'Comment optimiser la routine du matin et celle du soir',
-  'Comprends bien ton alimentation',
+  'Ce que les calories ne te disent pas',
 ];
 
 const EXCLUSIONS = [
@@ -233,8 +247,8 @@ export default function SalesSections() {
                 Ce que tu repars avec
               </h2>
               <p className="mb-6 max-w-[460px] text-[15px] leading-relaxed text-neo-800 text-pretty md:mb-8 md:text-[17px]">
-                Ton portrait métabolique imprimé, et un sac avec les cinq guides qu’on remet à nos
-                clientes.
+                Ton portrait métabolique dans l’application, ton sac-cadeau, et les cinq guides
+                qu’on remet à nos clientes.
               </p>
 
               {/* Sur mobile la photo passe avant la liste : c'est elle qui donne
@@ -248,17 +262,43 @@ export default function SalesSections() {
                 className="mb-5 h-auto w-full rounded-3xl object-contain md:hidden"
               />
 
-              <ul className="flex flex-col gap-2.5 md:gap-3">
-                {SAC_CADEAU.map((item, index) => (
+              {/* Les deux éléments qui ne sont pas des guides : icône plutôt que
+                  numéro, pour qu'on voie au premier coup d'œil qu'ils sortent de
+                  la liste numérotée qui suit. */}
+              <ul className="mb-6 flex flex-col gap-2.5 md:mb-8 md:gap-3">
+                {REPARTS.map(({ icone: Icone, titre, texte }) => (
                   <li
-                    key={item}
+                    key={titre}
+                    className="flex items-start gap-3.5 rounded-2xl bg-white px-4 py-3.5 md:gap-4 md:px-5 md:py-4"
+                  >
+                    <Icone size={20} className="mt-0.5 shrink-0 text-neo" strokeWidth={2} />
+                    <span>
+                      <span className="block text-sm font-bold leading-snug text-gray-900 md:text-[15.5px]">
+                        {titre}
+                      </span>
+                      <span className="mt-0.5 block text-[13px] leading-snug text-gray-600 md:text-sm">
+                        {texte}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <h3 className="mb-3 text-[15px] font-bold text-neo-900 md:mb-4 md:text-base">
+                Et les cinq guides
+              </h3>
+
+              <ul className="flex flex-col gap-2.5 md:gap-3">
+                {GUIDES.map((guide, index) => (
+                  <li
+                    key={guide}
                     className="flex items-center gap-3.5 rounded-2xl bg-white px-4 py-3.5 md:gap-4 md:px-5 md:py-4"
                   >
                     <span className="font-mono text-xs font-medium text-neo md:text-[13px]">
                       {String(index + 1).padStart(2, '0')}
                     </span>
                     <span className="text-sm font-semibold leading-snug text-gray-900 md:text-[15.5px]">
-                      {item}
+                      {guide}
                     </span>
                   </li>
                 ))}

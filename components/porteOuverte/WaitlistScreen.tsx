@@ -7,7 +7,7 @@ const GUIDES = [
   'Sors du mode survie',
   '20 recettes de déjeuners faites par Léo',
   'Comment optimiser la routine du matin et celle du soir',
-  'Comprends bien ton alimentation',
+  'Ce que les calories ne te disent pas',
 ];
 
 /**
