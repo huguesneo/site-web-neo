@@ -42,7 +42,7 @@ function base(patch: Partial<Reponses> = {}): Reponses {
     anciennete: 'moins-6mois',
     deja_essaye: [],
     priorite: 'informe',
-    budget: 'moins-500',
+    budget: 'rien',
     modalite: 'visio',
     ...patch,
   };
@@ -52,10 +52,9 @@ function base(patch: Partial<Reponses> = {}): Reponses {
 console.log('\nRoutage — budget');
 {
   const attendu: [Reponses['budget'], string][] = [
-    ['2500-plus', 'chaud'],
-    ['1500-2500', 'chaud'],
-    ['500-1500', 'tiede'],
-    ['moins-500', 'froid'],
+    ['1500-plus', 'chaud'],
+    ['500-1500', 'chaud'],
+    ['moins-500', 'tiede'],
     ['rien', 'froid'],
   ];
   for (const [budget, statut] of attendu) {
@@ -67,16 +66,16 @@ console.log('\nRoutage — budget');
 // ──────────────────────── Les filtres l'emportent sur tout ───────────────────
 console.log('\nRoutage — disqualification');
 {
-  const r = calculerStatut(base({ deja_client: 'cliente-actuelle', budget: '2500-plus' }));
+  const r = calculerStatut(base({ deja_client: 'cliente-actuelle', budget: '1500-plus' }));
   check('cliente actuelle bat le budget le plus élevé', r.statut === 'dq', r);
   check('motif = cliente_actuelle', r.motif === 'cliente-actuelle', r);
 }
 {
-  const r = calculerStatut(base({ deja_client: 'ancienne-cliente', budget: '2500-plus' }));
+  const r = calculerStatut(base({ deja_client: 'ancienne-cliente', budget: '1500-plus' }));
   check('ancienne cliente → dq', r.statut === 'dq' && r.motif === 'ancienne-cliente', r);
 }
 {
-  const r = calculerStatut(base({ deja_porte_ouverte: 'oui', budget: '2500-plus' }));
+  const r = calculerStatut(base({ deja_porte_ouverte: 'oui', budget: '1500-plus' }));
   check('déjà venue à une porte ouverte → dq', r.statut === 'dq' && r.motif === 'deja-porte-ouverte', r);
 }
 {
@@ -184,7 +183,7 @@ console.log('\nSlugs envoyés à Make');
       ['weight-watchers', 'keto', 'jeune', 'nutritionniste', 'glp1', 'coach', 'rien'],
     ],
     ['priorité', Q_PRIORITE.options, ['priorite-1', 'important', 'informe']],
-    ['budget', Q_BUDGET.options, ['2500-plus', '1500-2500', '500-1500', 'moins-500', 'rien']],
+    ['budget', Q_BUDGET.options, ['1500-plus', '500-1500', 'moins-500', 'rien']],
     ['modalité', Q_MODALITE.options, ['clinique', 'visio']],
   ];
 

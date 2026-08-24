@@ -82,7 +82,7 @@ export type DejaEssaye =
   | 'coach'
   | 'rien';
 export type Priorite = 'priorite-1' | 'important' | 'informe';
-export type Budget = '2500-plus' | '1500-2500' | '500-1500' | 'moins-500' | 'rien';
+export type Budget = '1500-plus' | '500-1500' | 'moins-500' | 'rien';
 
 export const Q_DEJA_CLIENT = {
   question: 'Es-tu déjà passée par NEO Performance ?',
@@ -171,8 +171,7 @@ export const Q_BUDGET = {
   question:
     'Si on te démontre que notre approche est la bonne pour toi, quel montant serais-tu prête à investir dans ta santé au cours des 4 prochains mois ?',
   options: [
-    { valeur: '2500-plus', label: '2 500 $ et plus' },
-    { valeur: '1500-2500', label: '1 500 $ à 2 500 $' },
+    { valeur: '1500-plus', label: '1 500 $ et plus' },
     { valeur: '500-1500', label: '500 $ à 1 500 $' },
     { valeur: 'moins-500', label: 'Moins de 500 $' },
     { valeur: 'rien', label: 'Rien pour le moment — je viens chercher de l’information' },
@@ -252,10 +251,10 @@ export function calculerStatut(reponses: Reponses): { statut: Statut; motif: DqM
   }
 
   switch (reponses.budget) {
-    case '2500-plus':
-    case '1500-2500':
-      return { statut: 'chaud', motif: null };
+    case '1500-plus':
     case '500-1500':
+      return { statut: 'chaud', motif: null };
+    case 'moins-500':
       return { statut: 'tiede', motif: null };
     default:
       return { statut: 'froid', motif: null };

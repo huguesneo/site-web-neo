@@ -56,7 +56,8 @@ export default function WaitlistScreen({ raison }: { raison: 'froid' | 'complet'
           Et en attendant, les 5 guides sont à toi.
         </h2>
         <p className="mt-3 text-base text-gray-600 leading-relaxed">
-          Pas en échange de quelque chose. Ils sont dans le prochain courriel, dans 2 minutes.
+          Pas en échange de quelque chose. Tu vas recevoir tes cinq guides gratuits par courriel
+          dans les prochains jours.
         </p>
 
         <ul className="mt-5 flex flex-col gap-2.5">
