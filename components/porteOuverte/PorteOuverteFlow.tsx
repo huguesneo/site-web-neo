@@ -280,6 +280,20 @@ export default function PorteOuverteFlow() {
     })();
   };
 
+  /**
+   * Retour depuis l'écran du calendrier vers la dernière question.
+   *
+   * On revient sur la modalité, parce que c'est l'erreur qu'on découvre devant
+   * le calendrier — mais les flèches du questionnaire permettent de remonter
+   * plus haut, et les réponses sont conservées. Re-valider renvoie le webhook
+   * d'étape 2 avec le même `po_lead_id` : Make met à jour le lead au lieu d'en
+   * créer un deuxième.
+   */
+  const retourAuQuestionnaire = () => {
+    setIndex(ETAPES.length - 1);
+    setPhase('questions');
+  };
+
   /** Enregistre une réponse et avance — ou court-circuite sur une disqualification. */
   const repondre = (patch: Partial<Reponses>) => {
     setReponses((r) => ({ ...r, ...patch }));
@@ -528,6 +542,7 @@ export default function PorteOuverteFlow() {
             coordonnees={coordonnees}
             modalitePreferee={reponses.modalite ?? 'clinique'}
             disponibilites={disponibilites}
+            onRetour={retourAuQuestionnaire}
           />
         );
       case 'attente':
@@ -546,12 +561,14 @@ export default function PorteOuverteFlow() {
             relief. `relative z-10` obligatoire, sinon le hero, qui est
             positionné, se peint par-dessus et lui mange le haut. */}
         <div
-          className={`relative z-10 mx-auto px-4 ${phase === 'booking' ? 'max-w-3xl' : 'max-w-2xl'}`}
+          className={`relative z-10 mx-auto px-4 ${phase === 'booking' ? 'max-w-6xl' : 'max-w-2xl'}`}
         >
           {/* L'ancre sert au bouton du rappel final, qui ramène ici. */}
           <div
             id="po-formulaire"
-            className="-mt-16 scroll-mt-24 rounded-3xl bg-white p-6 shadow-2xl shadow-gray-900/10 md:-mt-20 md:p-10"
+            className={`-mt-16 scroll-mt-24 rounded-3xl bg-white p-6 shadow-2xl shadow-gray-900/10 md:-mt-20 ${
+              phase === 'booking' ? 'md:p-8' : 'md:p-10'
+            }`}
           >
             {contenu()}
           </div>
