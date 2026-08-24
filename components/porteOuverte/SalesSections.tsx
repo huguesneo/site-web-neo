@@ -226,40 +226,42 @@ export default function SalesSections() {
             {FICHES_PREUVE.map((fiche) => (
               <div
                 key={fiche.marqueur}
-                className="flex flex-col rounded-3xl border border-neo-100 bg-neo-50/40 p-5 md:p-8"
+                className="flex flex-col rounded-3xl border border-neo-100 bg-neo-50/40 p-5 md:p-6 lg:p-8"
               >
                 <div className="mb-4 flex items-center justify-between gap-3 md:mb-6">
                   <span className="text-xs font-bold uppercase tracking-[0.08em] text-neo-900 md:text-[13px]">
                     {fiche.marqueur}
                   </span>
-                  <span className="shrink-0 rounded-full border border-neo-100 bg-white px-2 py-[3px] font-mono text-[10px] uppercase tracking-[0.06em] text-neo md:px-[9px] md:py-1 md:text-[10.5px]">
+                  <span className="shrink-0 rounded-full border border-neo-100 bg-white px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.06em] text-neo md:px-[9px] md:py-1 md:text-[10.5px]">
                     {fiche.duree}
                   </span>
                 </div>
 
-                <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3 md:mb-4 md:gap-3.5">
-                  <div>
-                    <div className="mb-[5px] font-mono text-[10.5px] uppercase text-gray-400 md:mb-1.5 md:text-[11px]">
+                {/* min-w-0 sur les deux colonnes : sans ça, un chiffre large
+                    (« 166,0 lbs ») force la grille au-delà de la carte. */}
+                <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-end gap-2 md:mb-4 md:gap-3">
+                  <div className="min-w-0">
+                    <div className="mb-1 text-[9.5px] font-semibold uppercase tracking-[0.06em] text-gray-400 md:mb-1.5 md:text-[10px]">
                       {fiche.depart.date}
                     </div>
-                    <div className="font-mono text-[30px] font-medium leading-none text-gray-400 md:text-[34px]">
+                    <div className="whitespace-nowrap text-[22px] font-extrabold tabular-nums leading-none tracking-tight text-gray-400 lg:text-[26px]">
                       {fiche.depart.valeur}
-                      <span className="ml-1 text-[13px] md:text-sm">{fiche.unite}</span>
+                      <span className="ml-0.5 text-[11px] font-bold md:text-xs">{fiche.unite}</span>
                     </div>
                   </div>
-                  <ArrowRight size={20} className="mb-[5px] text-neo md:mb-1.5 md:size-[22px]" />
-                  <div>
-                    <div className="mb-[5px] font-mono text-[10.5px] uppercase text-neo md:mb-1.5 md:text-[11px]">
+                  <ArrowRight size={18} className="mb-[3px] shrink-0 text-neo lg:size-5" />
+                  <div className="min-w-0">
+                    <div className="mb-1 text-[9.5px] font-semibold uppercase tracking-[0.06em] text-neo md:mb-1.5 md:text-[10px]">
                       {fiche.arrivee.date}
                     </div>
-                    <div className="font-mono text-[30px] font-medium leading-none text-neo md:text-[34px]">
+                    <div className="whitespace-nowrap text-[22px] font-extrabold tabular-nums leading-none tracking-tight text-neo lg:text-[26px]">
                       {fiche.arrivee.valeur}
-                      <span className="ml-1 text-[13px] md:text-sm">{fiche.unite}</span>
+                      <span className="ml-0.5 text-[11px] font-bold md:text-xs">{fiche.unite}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mb-3 font-mono text-[12.5px] font-medium text-neo md:mb-4 md:text-[13px]">
+                <div className="mb-3 text-[12.5px] font-bold tabular-nums text-neo md:mb-4 md:text-[13px]">
                   {fiche.delta}
                 </div>
 
@@ -342,7 +344,7 @@ export default function SalesSections() {
                     key={guide}
                     className="flex items-center gap-3.5 rounded-2xl bg-white px-4 py-3.5 md:gap-4 md:px-5 md:py-4"
                   >
-                    <span className="font-mono text-xs font-medium text-neo md:text-[13px]">
+                    <span className="text-xs font-bold tabular-nums text-neo md:text-[13px]">
                       {String(index + 1).padStart(2, '0')}
                     </span>
                     <span className="text-sm font-semibold leading-snug text-gray-900 md:text-[15.5px]">
