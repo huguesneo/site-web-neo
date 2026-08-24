@@ -18,7 +18,7 @@ const JOUR_MS = 24 * 60 * 60 * 1000;
 /**
  * Les places bougent lentement et la page les demande à chaque visiteur. Un
  * cache de deux minutes évite de marteler GHL sans jamais servir une réponse
- * vraiment périmée — plus court que sur /bilanleo, parce qu'ici les 48 places
+ * vraiment périmée — plus court que sur /bilanleo, parce qu’ici les 40 places
  * peuvent partir en quelques heures un jour de diffusion d'infolettre.
  */
 const DUREE_CACHE_MS = 2 * 60 * 1000;

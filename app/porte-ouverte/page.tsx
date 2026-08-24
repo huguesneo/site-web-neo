@@ -3,7 +3,7 @@ import PorteOuverteFlow from '@/components/porteOuverte/PorteOuverteFlow';
 
 const TITRE = 'Journée porte ouverte du 11 septembre | NEO Performance';
 const DESCRIPTION =
-  'Le 11 septembre, 6 naturopathes ouvrent la clinique à 48 personnes. Évaluation métabolique de 60 minutes, analyse InBody et portrait métabolique en main. Gratuit.';
+  'Le 11 septembre, 5 naturopathes ouvrent la clinique à 40 personnes. Évaluation métabolique de 60 minutes, analyse InBody et portrait métabolique en main. Gratuit.';
 
 export const metadata: Metadata = {
   title: 'Journée porte ouverte du 11 septembre',

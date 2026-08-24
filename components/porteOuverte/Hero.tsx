@@ -39,7 +39,7 @@ export default function Hero({ compact = false }: { compact?: boolean }) {
         ) : (
           <>
             <h1 className="mx-auto mb-4 max-w-[940px] text-[31px] font-extrabold leading-[1.1] tracking-tight text-pretty md:mb-6 md:text-[58px] md:leading-[1.06]">
-              Le 11 septembre, on ouvre la clinique à 48 personnes qui ont déjà tout essayé
+              Le 11 septembre, on ouvre la clinique à 40 personnes qui ont déjà tout essayé
             </h1>
             <p className="mx-auto mb-6 max-w-[700px] text-base leading-relaxed text-gray-300 text-pretty md:mb-8 md:text-xl">
               Une évaluation métabolique complète de 60 minutes. Ton analyse InBody. Ton portrait
@@ -49,7 +49,7 @@ export default function Hero({ compact = false }: { compact?: boolean }) {
             <ul className="flex flex-col items-center justify-center gap-2.5 text-[13.5px] text-gray-300 md:flex-row md:gap-8 md:text-[15px]">
               <li className="flex items-center gap-2">
                 <Users size={16} className="text-neo md:size-[18px]" />
-                48 places, 6 naturopathes
+                40 places, 5 naturopathes
               </li>
               <li aria-hidden className="hidden size-[5px] rounded-full bg-white/25 md:block" />
               <li className="flex items-center gap-2">

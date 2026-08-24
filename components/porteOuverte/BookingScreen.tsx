@@ -123,7 +123,7 @@ export default function BookingScreen({
         <p className="text-base text-neo-900 leading-relaxed">
           <strong className="font-bold">Un dépôt de 20 $ confirme ta place.</strong> On te le
           remet en argent le jour même, en arrivant. C’est juste notre façon de s’assurer que les
-          48 places vont à des gens qui vont vraiment se présenter — on a 6 professionnels qui
+          40 places vont à des gens qui vont vraiment se présenter — on a 5 professionnels qui
           bloquent leur journée complète pour ça.
         </p>
       </div>

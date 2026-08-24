@@ -22,7 +22,7 @@ const MESSAGES: Record<DqMotif, { titre: string; corps: string[] }> = {
   'deja-porte-ouverte': {
     titre: 'Tu es déjà venue à une porte ouverte.',
     corps: [
-      'Les 48 places du 11 septembre vont à des personnes qui n’ont jamais mis les pieds chez nous — c’est la raison d’être de la journée.',
+      'Les 40 places du 11 septembre vont à des personnes qui n’ont jamais mis les pieds chez nous — c’est la raison d’être de la journée.',
       'On garde tes coordonnées : dès qu’on ouvre quelque chose pour les gens qui nous connaissent déjà, tu es dans les premières averties.',
     ],
   },

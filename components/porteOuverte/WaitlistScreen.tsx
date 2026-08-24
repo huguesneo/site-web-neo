@@ -5,13 +5,13 @@ import { Hourglass } from 'lucide-react';
 const GUIDES = [
   'Le voyage d’une bouchée',
   'Sors du mode survie',
-  '20 recettes de déjeuner faites par LÉO',
+  '20 recettes de déjeuners faites par Léo',
   'Comment optimiser la routine du matin et celle du soir',
   'Comprends bien ton alimentation',
 ];
 
 /**
- * Destination C — et le repli quand les 48 places sont parties.
+ * Destination C — et le repli quand les 40 places sont parties.
  *
  * Deux raisons d'arriver ici, deux textes. Le froid n'est pas puni, il est
  * nourri : sur soixante froids, une dizaine remontent en chaud dans les six
@@ -24,12 +24,12 @@ export default function WaitlistScreen({ raison }: { raison: 'froid' | 'complet'
   const titre =
     raison === 'froid'
       ? 'T’es sur la liste d’attente — et t’as quand même quelque chose aujourd’hui'
-      : 'Les 48 places sont parties — t’es sur la liste d’attente';
+      : 'Les 40 places sont parties — t’es sur la liste d’attente';
 
   const corps =
     raison === 'froid'
-      ? 'Les 48 places du 11 septembre partent en priorité aux personnes prêtes à embarquer dans une démarche dès cet automne. C’est plate à dire de même, mais c’est plus honnête que de te faire venir pour rien.'
-      : 'Les six naturopathes sont complets pour le 11 septembre. On t’a inscrite avec les coordonnées que tu viens de nous donner, et tu passes avant tout le monde dès qu’une place se libère.';
+      ? 'Les 40 places du 11 septembre partent en priorité aux personnes prêtes à embarquer dans une démarche dès cet automne. C’est plate à dire de même, mais c’est plus honnête que de te faire venir pour rien.'
+      : 'Les cinq naturopathes sont complets pour le 11 septembre. On t’a inscrite avec les coordonnées que tu viens de nous donner, et tu passes avant tout le monde dès qu’une place se libère.';
 
   return (
     <div className="py-6">

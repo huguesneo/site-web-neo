@@ -52,7 +52,7 @@ const SAC_CADEAU = [
   'Ton portrait métabolique, imprimé et annoté',
   'Le voyage d’une bouchée',
   'Sors du mode survie',
-  '20 recettes de déjeuner faites par LÉO',
+  '20 recettes de déjeuners faites par Léo',
   'Comment optimiser la routine du matin et celle du soir',
   'Comprends bien ton alimentation',
 ];
@@ -73,7 +73,7 @@ const FAQ = [
   {
     question: 'Pourquoi un dépôt de 20 $ si tout est gratuit ?',
     reponse:
-      'Parce qu’il y a 48 places et une seule journée. Le dépôt fait la différence entre une place réservée et une place qui reste vide. Tu le récupères en argent à ton arrivée, sans rien avoir à demander.',
+      'Parce qu’il y a 40 places et une seule journée. Le dépôt fait la différence entre une place réservée et une place qui reste vide. Tu le récupères en argent à ton arrivée, sans rien avoir à demander.',
   },
   {
     question: 'Je prends de l’Ozempic. Est-ce que je peux venir ?',
@@ -288,7 +288,7 @@ export default function SalesSections() {
                 Pour qui ce n’est pas
               </h2>
               <p className="text-[15px] leading-relaxed text-gray-400 text-pretty md:text-[17px]">
-                On préfère te le dire ici plutôt que le 11 septembre. Il y a 48 places, et elles ne
+                On préfère te le dire ici plutôt que le 11 septembre. Il y a 40 places, et elles ne
                 sont pas pour tout le monde.
               </p>
             </div>
@@ -321,8 +321,8 @@ export default function SalesSections() {
               </h2>
               <p className="text-[15px] leading-relaxed text-gray-600 md:text-[17px]">
                 Une question qui n’est pas ici ?{' '}
-                <a href="tel:+14504864006" className="text-neo hover:text-neo-600">
-                  450 486-4006
+                <a href="tel:+14504064006" className="text-neo hover:text-neo-600">
+                  450 406-4006
                 </a>
                 , ou{' '}
                 <a href="mailto:info@neoperformance.ca" className="text-neo hover:text-neo-600">
@@ -360,7 +360,7 @@ export default function SalesSections() {
             11 septembre 2026
           </span>
           <h2 className="mb-3.5 text-[28px] font-extrabold leading-[1.15] tracking-tight text-neo-900 text-pretty md:mb-5 md:text-[46px] md:leading-[1.1]">
-            48 places, 6 naturopathes, et une heure pour comprendre ce qui bloque
+            40 places, 5 naturopathes, et une heure pour comprendre ce qui bloque
           </h2>
           <p className="mx-auto mb-6 max-w-[620px] text-[15.5px] leading-relaxed text-neo-800 text-pretty md:mb-8 md:text-lg">
             Si tu as déjà perdu du poids plusieurs fois et tout repris, c’est exactement pour toi
