@@ -1,10 +1,30 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Check, Copy } from 'lucide-react';
 
 type Plan = 'mensuel' | 'annuel';
 
-const PLANS: Record<Plan, { label: string; price: string; unit: string; formTitle: string; formId: string; formName: string; height: number }> = {
+/*
+  Promo annuelle : 199,99 $ au lieu de 279,99 $ avec le code LEO.
+  Elle se coupe d'elle-même le vendredi 28 août 2026 à 23 h 59, heure de l'Est
+  (-04:00 = EDT). Passé ce moment, la bannière, le prix barré, le compte à
+  rebours et le rappel du code promo disparaissent sans intervention manuelle,
+  et le prix annuel redevient 279,99 $ partout sur la page.
+*/
+const PROMO_END = new Date('2026-08-28T23:59:59-04:00');
+const PROMO_CODE = 'LEO';
+
+type PlanConfig = {
+  label: string;
+  price: string;
+  unit: string;
+  formTitle: string;
+  formId: string;
+  formName: string;
+  height: number;
+};
+
+const PLANS: Record<Plan, PlanConfig> = {
   mensuel: {
     label: 'Mensuel',
     price: '29,99 $',
@@ -25,9 +45,86 @@ const PLANS: Record<Plan, { label: string; price: string; unit: string; formTitl
   },
 };
 
+const PROMO_ANNUAL_PRICE = '199,99 $';
+
+function formatCountdown(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  if (days > 0) return `${days} j ${hours} h ${minutes} min`;
+  return `${hours} h ${minutes} min ${seconds} s`;
+}
+
+/*
+  Le rendu serveur part toujours de « promo inactive » (remaining = null) :
+  l'horloge du serveur et celle du navigateur ne coïncident pas forcément, et
+  un calcul fait au rendu provoquerait un écart d'hydratation. La promo
+  s'affiche donc au premier effet, côté client seulement.
+*/
+function usePromoCountdown() {
+  const [remaining, setRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    const tick = () => setRemaining(PROMO_END.getTime() - Date.now());
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return {
+    promoActive: remaining !== null && remaining > 0,
+    countdown: formatCountdown(remaining ?? 0),
+  };
+}
+
+const PromoCodeCallout: React.FC = () => {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(PROMO_CODE);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Presse-papiers refusé (http, permissions) : le code reste lisible et
+      // sélectionnable à l'écran, donc on ne bloque rien.
+    }
+  };
+
+  return (
+    <div className="mb-5 rounded-2xl border-2 border-dashed border-neo bg-neo/[.07] p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-[13px] font-extrabold tracking-wider uppercase text-neo-700 mb-1">
+            N&apos;oublie pas ton code promo
+          </p>
+          <p className="text-sm text-gray-700 leading-relaxed max-w-[460px]">
+            Inscris le code ci-contre dans le champ <strong className="font-bold">« Code promo »</strong> du formulaire pour payer {PROMO_ANNUAL_PRICE} au lieu de {PLANS.annuel.price}.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={copy}
+          className="inline-flex items-center gap-2.5 bg-white border-2 border-neo rounded-xl px-5 py-3 shadow-sm hover:bg-neo/5 transition-colors"
+          aria-label={`Copier le code promo ${PROMO_CODE}`}
+        >
+          <span className="text-2xl font-extrabold tracking-[0.18em] text-gray-900">{PROMO_CODE}</span>
+          {copied
+            ? <Check className="w-[18px] h-[18px] text-neo" strokeWidth={2.6} />
+            : <Copy className="w-[18px] h-[18px] text-gray-400" strokeWidth={2.2} />}
+        </button>
+      </div>
+      {copied && <p className="text-xs font-semibold text-neo-700 mt-2.5">Code copié !</p>}
+    </div>
+  );
+};
+
 const AbonnementLeo: React.FC = () => {
   const [plan, setPlan] = useState<Plan>('mensuel');
   const [consent, setConsent] = useState(false);
+  const { promoActive, countdown } = usePromoCountdown();
 
   useEffect(() => {
     const script = document.createElement('script');
@@ -39,6 +136,10 @@ const AbonnementLeo: React.FC = () => {
 
   const current = PLANS[plan];
   const locked = !consent;
+  const annualPromo = promoActive && plan === 'annuel';
+  const formTitle = annualPromo
+    ? `Abonnement annuel — ${PROMO_ANNUAL_PRICE} / an avec le code ${PROMO_CODE}`
+    : current.formTitle;
 
   return (
     <>
@@ -54,6 +155,24 @@ const AbonnementLeo: React.FC = () => {
           <p className="text-gray-600 text-lg leading-relaxed">
             Ton naturopathe IA, disponible 24/7 dans l&apos;application NEO. Choisis ta formule, active ton abonnement, et Léo se rallume immédiatement.
           </p>
+
+          {promoActive && (
+            <div className="mt-8 text-left sm:text-center bg-gray-900 text-white rounded-[20px] px-6 py-6 shadow-[0_24px_45px_-22px_rgba(0,0,0,0.55)]">
+              <span className="inline-flex items-center bg-neo text-white text-[11px] font-extrabold tracking-[0.18em] uppercase px-3 py-1.5 rounded-full mb-3.5">
+                Offre limitée
+              </span>
+              <p className="text-[19px] sm:text-[22px] font-extrabold leading-snug">
+                Abonnement annuel à <span className="text-neo">{PROMO_ANNUAL_PRICE}</span>{' '}
+                <span className="text-gray-400 font-bold line-through">{PLANS.annuel.price}</span>
+              </p>
+              <p className="text-sm text-gray-300 leading-relaxed mt-2.5">
+                Avec le code promo <strong className="text-white font-extrabold tracking-[0.14em]">{PROMO_CODE}</strong> à inscrire dans le formulaire de paiement.
+              </p>
+              <p className="text-[13px] font-semibold text-gray-400 mt-3.5">
+                Se termine vendredi 23 h 59 · il reste <span className="text-white tabular-nums">{countdown}</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -99,8 +218,12 @@ const AbonnementLeo: React.FC = () => {
                 : 'border-2 border-gray-200 shadow-sm'
             }`}
           >
-            <span className="absolute -top-3 left-7 bg-gray-900 text-white text-[11px] font-extrabold tracking-wider uppercase px-3 py-1.5 rounded-full">
-              2 mois gratuits
+            <span
+              className={`absolute -top-3 left-7 text-white text-[11px] font-extrabold tracking-wider uppercase px-3 py-1.5 rounded-full ${
+                promoActive ? 'bg-neo' : 'bg-gray-900'
+              }`}
+            >
+              {promoActive ? 'Promo · 80 $ de rabais' : '2 mois gratuits'}
             </span>
             <div className="flex items-baseline justify-between gap-3 mb-1">
               <p className="text-xs font-bold tracking-wider uppercase text-gray-500">Annuel</p>
@@ -110,16 +233,36 @@ const AbonnementLeo: React.FC = () => {
                 }`}
               />
             </div>
-            <div className="flex items-end gap-1.5 my-2">
-              <span className="text-[34px] sm:text-[44px] font-extrabold tracking-tight">279,99 $</span>
+            <div className="flex items-end gap-2 my-2 flex-wrap">
+              {promoActive && (
+                <span className="text-[22px] sm:text-[26px] font-bold text-gray-400 line-through pb-1.5">
+                  {PLANS.annuel.price}
+                </span>
+              )}
+              <span className="text-[34px] sm:text-[44px] font-extrabold tracking-tight">
+                {promoActive ? PROMO_ANNUAL_PRICE : PLANS.annuel.price}
+              </span>
               <span className="text-[15px] font-semibold text-gray-500 pb-2">/ an</span>
             </div>
             <p className="text-sm text-gray-600 mb-5">
-              Renouvelé automatiquement chaque année. Équivaut à 23,33 $ par mois.
+              {promoActive
+                ? 'Renouvelé automatiquement chaque année. Équivaut à 16,67 $ par mois.'
+                : 'Renouvelé automatiquement chaque année. Équivaut à 23,33 $ par mois.'}
             </p>
             <ul className="space-y-2.5 text-sm text-gray-700">
               <li className="flex gap-2.5"><span className="text-neo font-extrabold">✓</span>Accès complet à Léo dans l&apos;app</li>
-              <li className="flex gap-2.5"><span className="text-neo font-extrabold">✓</span>Tu économises 79,89 $ par année</li>
+              <li className="flex gap-2.5">
+                <span className="text-neo font-extrabold">✓</span>
+                {promoActive ? 'Tu économises 159,89 $ vs le mensuel' : 'Tu économises 79,89 $ par année'}
+              </li>
+              {promoActive && (
+                <li className="flex gap-2.5">
+                  <span className="text-neo font-extrabold">✓</span>
+                  <span>
+                    Code promo <strong className="font-extrabold tracking-[0.12em]">{PROMO_CODE}</strong> à inscrire dans le formulaire
+                  </span>
+                </li>
+              )}
             </ul>
           </button>
         </div>
@@ -143,12 +286,14 @@ const AbonnementLeo: React.FC = () => {
         {/* Form */}
         <div className="mt-7 pb-16">
           <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-            <h2 className="text-[22px] font-extrabold text-gray-900">{current.formTitle}</h2>
+            <h2 className="text-[22px] font-extrabold text-gray-900">{formTitle}</h2>
             <p className="text-[13px] text-gray-500 flex items-center gap-2">
               <ShieldCheck className="w-[15px] h-[15px] text-neo" strokeWidth={2.2} />
               Paiement sécurisé
             </p>
           </div>
+
+          {annualPromo && <PromoCodeCallout />}
 
           <div className="relative bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden">
             <div className={locked ? 'pointer-events-none blur-[3px] opacity-50 transition-all' : 'transition-all'}>
@@ -207,6 +352,12 @@ const AbonnementLeo: React.FC = () => {
               </div>
             )}
           </div>
+
+          {annualPromo && (
+            <p className="text-sm font-semibold text-gray-700 mt-4 leading-relaxed">
+              Rappel : sans le code <strong className="font-extrabold tracking-[0.12em]">{PROMO_CODE}</strong>, le formulaire facture le tarif régulier de {PLANS.annuel.price}.
+            </p>
+          )}
 
           <p className="text-xs text-gray-400 mt-4 leading-relaxed">
             Léo est un outil d&apos;accompagnement et ne remplace pas un avis médical ni le suivi de ton naturopathe. Taxes applicables incluses au moment du paiement.
