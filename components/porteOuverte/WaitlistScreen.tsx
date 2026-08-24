@@ -3,11 +3,11 @@
 import { Hourglass } from 'lucide-react';
 
 const GUIDES = [
-  'Le guide anti-stress',
-  'Optimiser ta digestion',
-  '20 déjeuners métaboliques signés Léo',
-  'Routine matin / routine soir',
-  'Calories in, calories out : ce qui est vrai et ce qui est faux',
+  'Le voyage d’une bouchée',
+  'Sors du mode survie',
+  '20 recettes de déjeuner faites par LÉO',
+  'Comment optimiser la routine du matin et celle du soir',
+  'Comprends bien ton alimentation',
 ];
 
 /**
@@ -69,8 +69,8 @@ export default function WaitlistScreen({ raison }: { raison: 'froid' | 'complet'
         </ul>
 
         <p className="mt-5 text-base text-gray-500 leading-relaxed">
-          Valeur de 110 $. Lis le guide anti-stress en premier — c’est celui qui débloque le plus
-          de monde.
+          Valeur de 110 $. Lis « Sors du mode survie » en premier — c’est celui qui débloque le
+          plus de monde.
         </p>
       </div>
     </div>

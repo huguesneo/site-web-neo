@@ -43,13 +43,18 @@ const FICHES_PREUVE = [
   { marqueur: 'Marqueur C', dossier: 'Dossier C · femme, 4X ans' },
 ];
 
+/**
+ * Le portrait d'abord — c'est le seul élément que la personne ne peut obtenir
+ * qu'en venant le 11 septembre. Les cinq guides suivent, sous leurs vrais
+ * titres — ceux imprimés sur les couvertures montrées en photo.
+ */
 const SAC_CADEAU = [
   'Ton portrait métabolique, imprimé et annoté',
-  'Guide — Lire son analyse InBody',
-  'Guide — Cortisol et stress chronique',
-  'Guide — Digestion : les signes à ne pas banaliser',
-  'Guide — Sommeil et récupération après 35 ans',
-  'Guide — Ta routine de base, semaine par semaine',
+  'Le voyage d’une bouchée',
+  'Sors du mode survie',
+  '20 recettes de déjeuner faites par LÉO',
+  'Comment optimiser la routine du matin et celle du soir',
+  'Comprends bien ton alimentation',
 ];
 
 const EXCLUSIONS = [
@@ -234,14 +239,14 @@ export default function SalesSections() {
 
               {/* Sur mobile la photo passe avant la liste : c'est elle qui donne
                   envie de lire ce qui suit. */}
-              <div className="mb-5 flex h-[230px] flex-col items-center justify-center gap-2.5 rounded-3xl border border-neo/20 bg-[repeating-linear-gradient(135deg,#ffffff_0_12px,#F2FBFB_12px_24px)] shadow-2xl shadow-neo-900/25 md:hidden">
-                <span className="font-mono text-xs uppercase tracking-[0.08em] text-neo-800">
-                  photo à fournir
-                </span>
-                <span className="max-w-[230px] text-center font-mono text-[11px] leading-relaxed text-neo-600">
-                  le sac NEO ouvert, portrait métabolique et guides posés à plat
-                </span>
-              </div>
+              <img
+                src="https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/6a8c5117960c6415b2efe1fe.png"
+                alt="Les cinq guides NEO remis dans le sac-cadeau"
+                width={1448}
+                height={1086}
+                loading="lazy"
+                className="mb-5 h-auto w-full rounded-3xl object-contain md:hidden"
+              />
 
               <ul className="flex flex-col gap-2.5 md:gap-3">
                 {SAC_CADEAU.map((item, index) => (
@@ -259,19 +264,16 @@ export default function SalesSections() {
                 ))}
               </ul>
 
-              <p className="mt-4 font-mono text-[11px] text-neo-800 md:mt-5.5 md:text-xs">
-                Titres des guides à valider avec l’équipe clinique.
-              </p>
             </div>
 
-            <div className="hidden h-[520px] flex-col items-center justify-center gap-3.5 rounded-3xl border border-neo/20 bg-[repeating-linear-gradient(135deg,#ffffff_0_14px,#F2FBFB_14px_28px)] shadow-2xl shadow-neo-900/30 md:flex">
-              <span className="font-mono text-[13px] uppercase tracking-[0.08em] text-neo-800">
-                photo à fournir
-              </span>
-              <span className="max-w-[260px] text-center font-mono text-xs leading-relaxed text-neo-600">
-                le sac NEO ouvert, portrait métabolique et guides posés à plat, lumière naturelle
-              </span>
-            </div>
+            <img
+              src="https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/6a8c5117960c6415b2efe1fe.png"
+              alt="Les cinq guides NEO remis dans le sac-cadeau"
+              width={1448}
+              height={1086}
+              loading="lazy"
+              className="hidden h-auto max-h-[520px] w-full rounded-3xl object-contain md:block"
+            />
           </div>
         </div>
       </section>
