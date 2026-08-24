@@ -71,8 +71,8 @@ export default function ReservationManuelle() {
               id={CALENDRIERS[modalite].iframeId}
               title="Calendrier de réservation de la porte ouverte"
               allow="payment"
-              scrolling="no"
-              className="w-full border-none overflow-hidden min-h-[750px]"
+              scrolling="yes"
+              className="w-full border-none min-h-[1000px]"
             />
           </div>
         </div>
