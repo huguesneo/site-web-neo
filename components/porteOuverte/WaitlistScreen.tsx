@@ -3,7 +3,7 @@
 import { Hourglass } from 'lucide-react';
 
 const GUIDES = [
-  'Le voyage d’une bouchée',
+  'Le parcours des aliments',
   'Sors du mode survie',
   '20 recettes de déjeuners faites par Léo',
   'Comment optimiser la routine du matin et celle du soir',
