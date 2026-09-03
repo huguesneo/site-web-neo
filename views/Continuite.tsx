@@ -53,7 +53,7 @@ const PALIERS: Record<Palier, PalierData> = {
     inclusions: [
       'Accès illimité à Léo dans l’application',
       'Chat avec ta naturopathe, réponse en 48 h ouvrables',
-      'Une rencontre complète de 60 minutes aux 4 mois, soit 3 par année',
+      'Une rencontre complète de 30 minutes aux 4 mois, soit 3 par année',
       'Rencontre supplémentaire à 149 $ au lieu de 198 $',
       'Prix membre de 10 % sur les suppléments',
       'Reçu de naturopathie admissible aux assurances',
@@ -69,7 +69,7 @@ const PALIERS: Record<Palier, PalierData> = {
     rabaisSupplements: 15,
     inclusions: [
       'Tout ce que comprend NEO Continuité',
-      'Une rencontre complète de 60 minutes aux 2 mois, soit 6 par année',
+      'Une rencontre complète de 30 minutes aux 2 mois, soit 6 par année',
       'Un ajustement de plan alimentaire de 15 minutes en visioconférence aux 2 mois',
       'Rencontre supplémentaire à 110 $ au lieu de 198 $',
       'Prix membre de 15 % sur les suppléments',
@@ -116,7 +116,7 @@ const ECONOMIE_ANNUELLE_MAX = Math.max(
 const LIGNES: { libelle: string; continuite: string; plus: string; leo: string }[] = [
   { libelle: 'Accès à Léo dans l’application', continuite: 'Illimité', plus: 'Illimité', leo: 'Illimité' },
   { libelle: 'Chat avec ta naturopathe', continuite: 'Réponse en 48 h ouvrables', plus: 'Réponse en 48 h ouvrables', leo: 'Non inclus' },
-  { libelle: 'Rencontre complète de 60 minutes', continuite: 'Aux 4 mois, 3 par année', plus: 'Aux 2 mois, 6 par année', leo: 'Non inclus' },
+  { libelle: 'Rencontre complète de 30 minutes', continuite: 'Aux 4 mois, 3 par année', plus: 'Aux 2 mois, 6 par année', leo: 'Non inclus' },
   { libelle: 'Ajustement de plan alimentaire de 15 minutes en visioconférence', continuite: 'Non inclus', plus: 'Aux 2 mois, 6 par année', leo: 'Non inclus' },
   { libelle: 'Rencontre supplémentaire', continuite: '149 $ au lieu de 198 $', plus: '110 $ au lieu de 198 $', leo: 'Tarif régulier de 198 $' },
   { libelle: 'Prix membre sur les suppléments', continuite: '10 %', plus: '15 %', leo: 'Non inclus' },
