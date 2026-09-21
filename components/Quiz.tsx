@@ -275,7 +275,7 @@ const Quiz: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await fetch('https://hook.us1.make.com/6k7ic1ap46l2ye5vdhox2r5whn4qxd53', {
+      await fetch('https://hook.us1.make.com/tmb0kuzymqcsbdj8s7x6yp11wfe7twv3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
