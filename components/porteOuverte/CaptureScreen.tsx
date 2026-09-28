@@ -7,6 +7,7 @@ import { CONSENTEMENT_VERSION, texteConsentement } from '@/lib/porteOuverte';
 
 export interface Coordonnees {
   prenom: string;
+  nom: string;
   courriel: string;
   telephone: string;
   consentement: boolean;
@@ -14,6 +15,7 @@ export interface Coordonnees {
 
 export const COORDONNEES_VIDES: Coordonnees = {
   prenom: '',
+  nom: '',
   courriel: '',
   telephone: '',
   consentement: false,
@@ -24,14 +26,15 @@ const COURRIEL_VALIDE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /** Ne garde que les chiffres : « (438) 402-2883 » → « 4384022883 ». */
 export function normaliserTelephone(brut: string): string {
   const chiffres = brut.replace(/\D/g, '');
-  // Un 1 en tête (indicatif nord-américain) n'est pas conservé : Make attend
-  // les 10 chiffres du numéro.
+  // Un 1 en tête (indicatif nord-américain) n'est pas conservé : la route
+  // serveur attend les 10 chiffres du numéro et ajoute elle-même le +1.
   return chiffres.length === 11 && chiffres.startsWith('1') ? chiffres.slice(1) : chiffres;
 }
 
 export function erreursCoordonnees(c: Coordonnees): Partial<Record<keyof Coordonnees, string>> {
   const erreurs: Partial<Record<keyof Coordonnees, string>> = {};
   if (!c.prenom.trim()) erreurs.prenom = 'Ton prénom est requis.';
+  if (!c.nom.trim()) erreurs.nom = 'Ton nom de famille est requis.';
   if (!COURRIEL_VALIDE.test(c.courriel.trim())) {
     erreurs.courriel = 'Entre une adresse courriel valide.';
   }
@@ -45,13 +48,13 @@ export function erreursCoordonnees(c: Coordonnees): Partial<Record<keyof Coordon
 }
 
 /**
- * Étape 1 — trois champs et la case LCAP. Quinze secondes.
+ * Étape 1 — quatre champs et la case LCAP. Quinze secondes.
  *
- * Le consentement est ici, et non à la fin du questionnaire comme dans le plan
- * d'origine, pour une raison simple : c'est cette étape qui déclenche la
+ * Le consentement est ici, et non à la fin du questionnaire, pour une raison
+ * simple : c'est cette étape qui pose le tag d'inscription et déclenche la
  * séquence de récupération des abandons. Sans la case ici, on écrirait à des
- * gens qui ne l'ont jamais cochée — et les personnes disqualifiées, qui sortent
- * après la deuxième question, ne l'atteindraient jamais.
+ * gens qui ne l'ont jamais cochée — et les clientes actives, qui sortent dès
+ * la première question, ne l'atteindraient jamais.
  */
 export default function CaptureScreen({
   valeur,
@@ -65,7 +68,7 @@ export default function CaptureScreen({
   const [touches, setTouches] = useState<Partial<Record<keyof Coordonnees, boolean>>>({});
 
   const champ = (
-    cle: 'prenom' | 'courriel' | 'telephone',
+    cle: 'prenom' | 'nom' | 'courriel' | 'telephone',
     label: string,
     type: string,
     autoComplete: string,
@@ -106,11 +109,12 @@ export default function CaptureScreen({
         Voyons si le 23 octobre est fait pour toi
       </h1>
       <p className="mb-5 text-sm leading-relaxed text-gray-600 md:mb-7 md:text-[15px]">
-        Trois champs, puis quelques questions. Compte deux minutes en tout.
+        Quatre champs, puis quelques questions. Compte deux minutes en tout.
       </p>
 
       <div className="flex flex-col gap-3.5 md:gap-4.5">
         {champ('prenom', 'Prénom', 'text', 'given-name', 'text')}
+        {champ('nom', 'Nom de famille', 'text', 'family-name', 'text')}
         {champ('courriel', 'Courriel', 'email', 'email', 'email')}
         {champ('telephone', 'Cellulaire', 'tel', 'tel', 'tel')}
       </div>

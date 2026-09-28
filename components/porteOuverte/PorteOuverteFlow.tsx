@@ -5,25 +5,16 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Button from '@/components/Button';
 import {
-  BAREME_VERSION,
   CONSENTEMENT_VERSION,
-  DEJA_ESSAYE_EXCLUSIF,
   DISPONIBILITES_PAR_DEFAUT,
-  Q_ANCIENNETE,
-  Q_BUDGET,
-  Q_DEJA_CLIENT,
-  Q_DEJA_ESSAYE,
-  Q_DEJA_PORTE_OUVERTE,
-  Q_LBS_CIBLE,
+  Q_CLIENTE,
+  Q_DIFFICULTE,
   Q_MODALITE,
   Q_OBJECTIF,
-  Q_PRIORITE,
+  Q_PRET,
   REPONSES_VIDES,
-  calculerScoreBonus,
-  calculerStatut,
-  type DejaEssaye,
+  calculerSortie,
   type Disponibilites,
-  type DqMotif,
   type Reponses,
 } from '@/lib/porteOuverte';
 import CaptureScreen, {
@@ -34,90 +25,30 @@ import CaptureScreen, {
 } from './CaptureScreen';
 import ChoiceScreen from './ChoiceScreen';
 import BookingScreen from './BookingScreen';
-import WaitlistScreen from './WaitlistScreen';
-import DisqualifiedScreen from './DisqualifiedScreen';
+import ClienteActiveScreen from './ClienteActiveScreen';
+import InformationScreen from './InformationScreen';
+import CompletScreen from './CompletScreen';
 import Hero from './Hero';
 import SalesSections from './SalesSections';
 
-type Phase = 'capture' | 'questions' | 'verification' | 'booking' | 'attente' | 'dq';
+type Phase = 'capture' | 'questions' | 'verification' | 'booking' | 'complet' | 'cliente' | 'information';
 
-/** Les neuf questions de l'étape 2, dans l'ordre. */
-const ETAPES = [
-  'deja_client',
-  'deja_porte_ouverte',
-  'objectif',
-  'lbs_cible',
-  'anciennete',
-  'deja_essaye',
-  'priorite',
-  'budget',
-  'modalite',
-] as const;
+/** Les cinq questions, dans l'ordre. */
+const ETAPES = ['cliente', 'objectif', 'difficulte', 'pret', 'modalite'] as const;
 
 type EtapeId = (typeof ETAPES)[number];
 
 /** Au-delà, on arrête d'attendre GHL et on ouvre les deux calendriers. */
 const ATTENTE_MAX_MS = 4000;
 
-const CLE_LEAD_ID = 'po_lead_id';
-
 /**
- * Identifiant du lead, généré ici et non déduit du courriel.
- *
- * C'est lui qui fait tenir la récupération des abandons : quelqu'un qui se
- * trompe de courriel à l'étape 1 et le corrige à l'étape 2 doit produire une
- * mise à jour dans Make, pas un deuxième contact resté taggé « incomplet » pour
- * l'éternité. Conservé en sessionStorage pour survivre à un rafraîchissement.
- */
-function leadId(): string {
-  try {
-    const existant = window.sessionStorage.getItem(CLE_LEAD_ID);
-    if (existant) return existant;
-  } catch {
-    // sessionStorage refusé (navigation privée stricte) : on repart d'un
-    // identifiant neuf, ce qui reste mieux que de bloquer l'inscription.
-  }
-
-  const id =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `po-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-  try {
-    window.sessionStorage.setItem(CLE_LEAD_ID, id);
-  } catch {
-    /* voir ci-dessus */
-  }
-  return id;
-}
-
-/** Paramètres UTM de l'URL d'arrivée, pour attribuer la source dans Make. */
-function lireUtm(): Record<string, string> {
-  const params = new URLSearchParams(window.location.search);
-  const utm: Record<string, string> = {};
-  for (const cle of ['source', 'medium', 'campaign', 'content', 'term']) {
-    const valeur = params.get(`utm_${cle}`);
-    if (valeur) utm[cle] = valeur;
-  }
-  return utm;
-}
-
-/** Preuve de consentement estampillée par le serveur à l'étape 1. */
-interface PreuveConsentement {
-  consent_text: string;
-  consent_at: string;
-  consent_ip: string;
-}
-
-/**
- * Envoie au relais serveur, qui transmet à Make.
+ * Envoie une action à /api/porte-ouverte, qui écrit dans GHL.
  *
  * Volontairement tolérant : un seul réessai après 3 secondes, puis on
- * journalise et on laisse tomber. Chaque rejeu crée une exécution Make, donc
- * jamais de boucle — et un webhook en panne ne doit jamais empêcher quelqu'un
- * de réserver sa place.
+ * journalise et on laisse tomber. Une panne GHL ne doit jamais empêcher
+ * quelqu'un de réserver sa place.
  */
-function envoyerWebhook(charge: unknown): Promise<PreuveConsentement | null> {
+function envoyer(charge: Record<string, unknown>): Promise<{ contact_id?: string } | null> {
   const appel = () =>
     fetch('/api/porte-ouverte', {
       method: 'POST',
@@ -126,18 +57,17 @@ function envoyerWebhook(charge: unknown): Promise<PreuveConsentement | null> {
       keepalive: true,
     }).then(async (r) => {
       if (!r.ok) throw new Error(`statut ${r.status}`);
-      const donnees = (await r.json()) as { consentement?: PreuveConsentement };
-      return donnees.consentement ?? null;
+      return (await r.json()) as { contact_id?: string };
     });
 
   return appel().catch((erreur) => {
-    console.error('[porte-ouverte] envoi du webhook échoué, réessai dans 3 s', erreur);
-    return new Promise<PreuveConsentement | null>((resoudre) => {
+    console.error(`[porte-ouverte] ${String(charge.action)} échoué, réessai dans 3 s`, erreur);
+    return new Promise((resoudre) => {
       window.setTimeout(() => {
         appel()
           .then(resoudre)
           .catch((e) => {
-            console.error('[porte-ouverte] réessai du webhook échoué', e);
+            console.error(`[porte-ouverte] réessai ${String(charge.action)} échoué`, e);
             resoudre(null);
           });
       }, 3000);
@@ -151,34 +81,27 @@ export default function PorteOuverteFlow() {
   const [reponses, setReponses] = useState<Reponses>(REPONSES_VIDES);
   const [index, setIndex] = useState(0);
   const [disponibilites, setDisponibilites] = useState<Disponibilites>(DISPONIBILITES_PAR_DEFAUT);
-  const [raisonAttente, setRaisonAttente] = useState<'froid' | 'complet'>('froid');
-  const [dqMotif, setDqMotif] = useState<DqMotif>('cliente-actuelle');
   const reduitLeMouvement = useReducedMotion();
 
-  const identifiant = useRef<string>('');
-  const utm = useRef<Record<string, string>>({});
-  const consentement = useRef<PreuveConsentement | null>(null);
+  /** Id du contact GHL renvoyé à la capture, réutilisé aux étapes suivantes. */
+  const contactId = useRef<Promise<string | undefined>>(Promise.resolve(undefined));
 
   // La vérification des places part dès que le questionnaire commence, pas à la
-  // fin : elle a ainsi les 90 secondes des questions pour répondre, et l'attente
+  // fin : elle a ainsi le temps des questions pour répondre, et l'attente
   // devient invisible.
   const verification = useRef<Promise<Disponibilites> | null>(null);
-  const dernieresDisponibilites = useRef<Disponibilites | null>(null);
 
-  const etape = ETAPES[index];
+  const etape: EtapeId = ETAPES[index];
   const erreursContact = erreursCoordonnees(coordonnees);
-
-  useEffect(() => {
-    utm.current = lireUtm();
-  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [index, phase]);
 
-  /** Coordonnées telles qu'envoyées à Make — normalisées une seule fois, ici. */
-  const contactPourMake = () => ({
+  /** Coordonnées telles qu'envoyées à GHL — normalisées une seule fois, ici. */
+  const contact = () => ({
     prenom: coordonnees.prenom.trim(),
+    nom: coordonnees.nom.trim(),
     courriel: coordonnees.courriel.trim(),
     cellulaire: normaliserTelephone(coordonnees.telephone),
   });
@@ -186,189 +109,97 @@ export default function PorteOuverteFlow() {
   const commencerQuestions = () => {
     if (Object.keys(erreursContact).length > 0) return;
 
-    identifiant.current = leadId();
-
-    void envoyerWebhook({
-      etape: 1,
-      po_lead_id: identifiant.current,
-      ...contactPourMake(),
+    // On n'attend pas GHL : le contact part, la personne continue.
+    contactId.current = envoyer({
+      action: 'capture',
+      ...contact(),
       consentement: { accepte: coordonnees.consentement, texte_version: CONSENTEMENT_VERSION },
-      page_url: window.location.href,
-      utm: utm.current,
-    }).then((preuve) => {
-      // Réémise telle quelle à l'étape 2, pour que les deux scénarios Make
-      // reçoivent la preuve du moment où la case a réellement été cochée.
-      if (preuve) consentement.current = preuve;
-    });
+    }).then((r) => r?.contact_id);
 
-    // On n'attend pas la réponse du webhook : le lead est parti, la personne
-    // continue. Le verdict sur les places démarre en parallèle.
     verification.current = fetch('/api/porte-ouverte/disponibilites')
       .then((r) => (r.ok ? (r.json() as Promise<Disponibilites>) : DISPONIBILITES_PAR_DEFAUT))
       .catch((erreur) => {
         console.error('[porte-ouverte] places injoignables', erreur);
         return DISPONIBILITES_PAR_DEFAUT;
-      })
-      .then((d) => {
-        dernieresDisponibilites.current = d;
-        return d;
       });
 
     setPhase('questions');
   };
 
-  /** Fin du parcours : on calcule, on envoie, puis on route. */
+  /** Action qui a besoin du contact : attend l'id de la capture, sans bloquer. */
+  const envoyerAvecContact = async (charge: Record<string, unknown>) =>
+    envoyer({ ...charge, ...contact(), contact_id: await contactId.current });
+
+  /** Fin du parcours : on écrit les réponses dans GHL, puis on route. */
   const terminer = (reponsesFinales: Reponses) => {
-    const { statut, motif } = calculerStatut(reponsesFinales);
-    const score = calculerScoreBonus(reponsesFinales);
+    const sortie = calculerSortie(reponsesFinales);
+    if (!sortie) return;
 
-    const envoyer = (dispo: Disponibilites) =>
-      void envoyerWebhook({
-        etape: 2,
-        po_lead_id: identifiant.current,
-        ...contactPourMake(),
-        reponses: reponsesFinales,
-        po_statut: statut,
-        po_dq_motif: motif,
-        po_score_bonus: score,
-        po_bareme_version: BAREME_VERSION,
-        places_restantes: dispo.clinique || dispo.visio,
-        consentement_etape1: consentement.current,
-        page_url: window.location.href,
-        utm: utm.current,
-      });
+    void envoyerAvecContact({ action: 'questionnaire', reponses: reponsesFinales });
 
-    // Une disqualification ne dépend pas des places : rien à attendre.
-    if (statut === 'dq' && motif) {
-      envoyer(dernieresDisponibilites.current ?? DISPONIBILITES_PAR_DEFAUT);
-      setDqMotif(motif);
-      setPhase('dq');
+    if (sortie === 'cliente-active') {
+      setPhase('cliente');
       return;
     }
-
-    // Un froid non plus — il va en liste d'attente quoi qu'il arrive.
-    if (statut === 'froid') {
-      envoyer(dernieresDisponibilites.current ?? DISPONIBILITES_PAR_DEFAUT);
-      setRaisonAttente('froid');
-      setPhase('attente');
+    if (sortie === 'information') {
+      setPhase('information');
       return;
     }
 
     setPhase('verification');
-
     void (async () => {
       const dispo = await Promise.race([
         verification.current ?? Promise.resolve(DISPONIBILITES_PAR_DEFAUT),
         new Promise<Disponibilites>((resoudre) =>
-          setTimeout(
-            () => resoudre(dernieresDisponibilites.current ?? DISPONIBILITES_PAR_DEFAUT),
-            ATTENTE_MAX_MS,
-          ),
+          setTimeout(() => resoudre(DISPONIBILITES_PAR_DEFAUT), ATTENTE_MAX_MS),
         ),
       ]);
-
-      dernieresDisponibilites.current = dispo;
       setDisponibilites(dispo);
-      envoyer(dispo);
-
-      if (dispo.clinique || dispo.visio) {
-        setPhase('booking');
-      } else {
-        setRaisonAttente('complet');
-        setPhase('attente');
-      }
+      setPhase(dispo.clinique || dispo.visio ? 'booking' : 'complet');
     })();
   };
 
+  const avertirPlace = async () =>
+    (await envoyerAvecContact({ action: 'avertir' })) !== null;
+
   /**
-   * Retour depuis l'écran du calendrier vers la dernière question.
-   *
-   * On revient sur la modalité, parce que c'est l'erreur qu'on découvre devant
-   * le calendrier — mais les flèches du questionnaire permettent de remonter
-   * plus haut, et les réponses sont conservées. Re-valider renvoie le webhook
-   * d'étape 2 avec le même `po_lead_id` : Make met à jour le lead au lieu d'en
-   * créer un deuxième.
+   * Retour depuis l'écran du calendrier vers la dernière question. Re-valider
+   * réécrit les champs du même contact : rien n'est dupliqué dans GHL.
    */
   const retourAuQuestionnaire = () => {
     setIndex(ETAPES.length - 1);
     setPhase('questions');
   };
 
-  /** Enregistre une réponse et avance — ou court-circuite sur une disqualification. */
   const repondre = (patch: Partial<Reponses>) => {
     setReponses((r) => ({ ...r, ...patch }));
   };
 
-  const basculerDejaEssaye = (valeur: DejaEssaye) => {
-    setReponses((r) => {
-      // « Rien de structuré » contredit tout le reste, dans les deux sens.
-      if (valeur === DEJA_ESSAYE_EXCLUSIF) {
-        return {
-          ...r,
-          deja_essaye: r.deja_essaye.includes(valeur) ? [] : [DEJA_ESSAYE_EXCLUSIF],
-        };
-      }
-      const sansExclusif = r.deja_essaye.filter((v) => v !== DEJA_ESSAYE_EXCLUSIF);
-      return {
-        ...r,
-        deja_essaye: sansExclusif.includes(valeur)
-          ? sansExclusif.filter((v) => v !== valeur)
-          : [...sansExclusif, valeur],
-      };
-    });
-  };
-
-  const valide = (() => {
-    switch (etape) {
-      case 'deja_essaye':
-        return reponses.deja_essaye.length > 0;
-      default:
-        return reponses[etape] !== null;
-    }
-  })();
+  const valide = reponses[etape] !== null;
 
   const suivant = () => {
     if (!valide) return;
 
-    // Les deux filtres sortent du parcours immédiatement : personne ne devrait
-    // répondre à sept questions de plus pour apprendre que la journée n'est pas
-    // pour elle. Le webhook part quand même — les ex-clientes sont une liste de
-    // réactivation, et les trois motifs reçoivent un message différent.
-    if (etape === 'deja_client' && reponses.deja_client !== 'non') {
-      terminer(reponses);
-      return;
-    }
-    if (etape === 'deja_porte_ouverte' && reponses.deja_porte_ouverte === 'oui') {
+    // Les deux sorties sans calendrier sortent dès que la réponse décisive est
+    // donnée : personne ne répond à une question de plus pour rien.
+    const sortie = calculerSortie(reponses);
+    if (sortie === 'cliente-active' || sortie === 'information' || index === ETAPES.length - 1) {
       terminer(reponses);
       return;
     }
 
-    if (index < ETAPES.length - 1) {
-      setIndex((i) => i + 1);
-      return;
-    }
-
-    terminer(reponses);
+    setIndex((i) => i + 1);
   };
 
   const question = () => {
     switch (etape) {
-      case 'deja_client':
+      case 'cliente':
         return (
           <ChoiceScreen
-            question={Q_DEJA_CLIENT.question}
-            options={Q_DEJA_CLIENT.options}
-            valeurs={reponses.deja_client ? [reponses.deja_client] : []}
-            onSelection={(v) => repondre({ deja_client: v })}
-          />
-        );
-      case 'deja_porte_ouverte':
-        return (
-          <ChoiceScreen
-            question={Q_DEJA_PORTE_OUVERTE.question}
-            options={Q_DEJA_PORTE_OUVERTE.options}
-            valeurs={reponses.deja_porte_ouverte ? [reponses.deja_porte_ouverte] : []}
-            onSelection={(v) => repondre({ deja_porte_ouverte: v })}
+            question={Q_CLIENTE.question}
+            options={Q_CLIENTE.options}
+            valeurs={reponses.cliente ? [reponses.cliente] : []}
+            onSelection={(v) => repondre({ cliente: v })}
           />
         );
       case 'objectif':
@@ -381,57 +212,30 @@ export default function PorteOuverteFlow() {
             onSelection={(v) => repondre({ objectif: v })}
           />
         );
-      case 'lbs_cible':
+      case 'difficulte':
         return (
           <ChoiceScreen
-            question={Q_LBS_CIBLE.question}
-            options={Q_LBS_CIBLE.options}
-            valeurs={reponses.lbs_cible ? [reponses.lbs_cible] : []}
-            onSelection={(v) => repondre({ lbs_cible: v })}
+            question={Q_DIFFICULTE.question}
+            options={Q_DIFFICULTE.options}
+            valeurs={reponses.difficulte ? [reponses.difficulte] : []}
+            onSelection={(v) => repondre({ difficulte: v })}
           />
         );
-      case 'anciennete':
+      case 'pret':
         return (
           <ChoiceScreen
-            question={Q_ANCIENNETE.question}
-            options={Q_ANCIENNETE.options}
-            valeurs={reponses.anciennete ? [reponses.anciennete] : []}
-            onSelection={(v) => repondre({ anciennete: v })}
-          />
-        );
-      case 'deja_essaye':
-        return (
-          <ChoiceScreen
-            question={Q_DEJA_ESSAYE.question}
-            aide={Q_DEJA_ESSAYE.aide}
-            options={Q_DEJA_ESSAYE.options}
-            valeurs={reponses.deja_essaye}
-            onSelection={basculerDejaEssaye}
-            multiple
-          />
-        );
-      case 'priorite':
-        return (
-          <ChoiceScreen
-            question={Q_PRIORITE.question}
-            options={Q_PRIORITE.options}
-            valeurs={reponses.priorite ? [reponses.priorite] : []}
-            onSelection={(v) => repondre({ priorite: v })}
-          />
-        );
-      case 'budget':
-        return (
-          <ChoiceScreen
-            question={Q_BUDGET.question}
-            options={Q_BUDGET.options}
-            valeurs={reponses.budget ? [reponses.budget] : []}
-            onSelection={(v) => repondre({ budget: v })}
+            intro={Q_PRET.intro}
+            question={Q_PRET.question}
+            options={Q_PRET.options}
+            valeurs={reponses.pret ? [reponses.pret] : []}
+            onSelection={(v) => repondre({ pret: v })}
           />
         );
       case 'modalite':
         return (
           <ChoiceScreen
             question={Q_MODALITE.question}
+            aide={Q_MODALITE.aide}
             options={Q_MODALITE.options}
             valeurs={reponses.modalite ? [reponses.modalite] : []}
             onSelection={(v) => repondre({ modalite: v })}
@@ -506,7 +310,7 @@ export default function PorteOuverteFlow() {
                 Voir si je suis admissible
               </Button>
               <p className="mt-3.5 text-center text-[13px] leading-normal text-gray-500">
-                Réservé aux personnes qui ne sont pas déjà clientes de NEO Performance.
+                Réservé aux personnes qui n’ont pas été clientes de NEO Performance dans la dernière année.
               </p>
             </div>
 
@@ -518,9 +322,9 @@ export default function PorteOuverteFlow() {
                 20 $
               </span>
               <p className="text-[13px] leading-relaxed text-gray-500">
-                Un dépôt de 20 $ confirme ta place le 23 octobre. Il t’est remis en argent le
-                jour même, à ton arrivée. C’est ce qui fait que les 40 places vont à des personnes
-                qui se présentent.
+                Un dépôt de 20 $ confirme ta place le 23 octobre. Ton dépôt de 20 $ sera remboursé
+                le jour même à ton arrivée. C’est ce qui fait que les 40 places vont à des
+                personnes qui se présentent.
               </p>
             </div>
           </div>
@@ -545,10 +349,12 @@ export default function PorteOuverteFlow() {
             onRetour={retourAuQuestionnaire}
           />
         );
-      case 'attente':
-        return <WaitlistScreen raison={raisonAttente} />;
-      case 'dq':
-        return <DisqualifiedScreen motif={dqMotif} />;
+      case 'complet':
+        return <CompletScreen onAvertir={avertirPlace} />;
+      case 'cliente':
+        return <ClienteActiveScreen />;
+      case 'information':
+        return <InformationScreen />;
     }
   };
 

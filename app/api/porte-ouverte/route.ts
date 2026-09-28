@@ -1,29 +1,154 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CONSENTEMENT_VERSION, texteConsentement } from '@/lib/porteOuverte';
+import {
+  CONSENTEMENT_VERSION,
+  REPONSES_VIDES,
+  TAGS_PORTE_OUVERTE,
+  calculerSortie,
+  champsPorteOuverte,
+  texteConsentement,
+  type Reponses,
+} from '@/lib/porteOuverte';
 
 export const runtime = 'nodejs';
 
 /**
- * Relais vers les webhooks Make de la porte ouverte du 23 octobre 2026.
+ * Écriture directe dans GHL pour la porte ouverte du 23 octobre 2026.
  *
- * Deux scénarios Make, donc deux URL : la capture et la qualification sont
- * modifiables séparément sans risquer de casser l'autre.
+ * Trois actions :
+ * - `capture` : crée ou met à jour le contact, pose le tag d'inscription et
+ *   écrit la preuve de consentement ;
+ * - `questionnaire` : écrit les champs `po_*` et le tag de sortie ;
+ * - `avertir` : calendrier plein, pose le tag « avertis-moi ».
  *
- * Passer par le serveur plutôt que d'appeler Make depuis le navigateur évite
- * tout blocage CORS, garde les URL hors du code livré au client, et — surtout —
- * permet d'estampiller la preuve de consentement avec des données que seul le
- * serveur peut établir : l'horodatage et l'adresse IP.
+ * Tout le reste (courriels, textos, opportunité) part des workflows GHL
+ * déclenchés par ces tags. Aucune liste n'est gérée ici.
  *
- * Les deux URL sont surchargeables par variable d'environnement, sans
- * redéploiement.
+ * Passer par le serveur garde la clé GHL hors du navigateur et permet
+ * d'estampiller le consentement avec l'horodatage et l'adresse IP, que seul
+ * le serveur peut établir.
  */
-const WEBHOOKS = {
-  1: 'https://hook.us1.make.com/x286e6lb08fs850sqjiqwumfkzdecilf', // capture
-  2: 'https://hook.us1.make.com/r93vkc85n1xoaevu82iyfu9bwys3b7cv', // qualification
+
+const GHL_BASE = 'https://services.leadconnectorhq.com';
+const GHL_VERSION = '2021-07-28';
+const TIMEOUT_MS = 10_000;
+
+/**
+ * Clés des trois champs de preuve de consentement, et des champs PO. Les
+ * identifiants GHL sont résolus à l'exécution depuis ces clés : un champ
+ * recréé dans GHL ne demande aucun redéploiement.
+ */
+const CHAMPS_CONSENTEMENT = {
+  texte: 'po_consent_text',
+  date: 'po_consent_at',
+  ip: 'po_consent_ip',
 } as const;
 
-/** Make répond avant de parler à GHL : au-delà de 10 s, c'est qu'il est tombé. */
-const TIMEOUT_MS = 10_000;
+const COURRIEL_VALIDE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/* ─────────────────────────────── Client GHL ─────────────────────────────── */
+
+class ErreurGhl extends Error {}
+
+function configuration() {
+  const cle = process.env.GHL_API_KEY;
+  const locationId = process.env.GHL_LOCATION_ID;
+  if (!cle || !locationId) throw new ErreurGhl('GHL_API_KEY ou GHL_LOCATION_ID manquante');
+  return { cle, locationId };
+}
+
+async function ghl<T>(chemin: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  const { cle } = configuration();
+  const reponse = await fetch(`${GHL_BASE}${chemin}`, {
+    method: init.method ?? 'GET',
+    headers: {
+      Authorization: `Bearer ${cle}`,
+      Version: GHL_VERSION,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  if (!reponse.ok) {
+    const detail = await reponse.text().catch(() => '');
+    throw new ErreurGhl(`${init.method ?? 'GET'} ${chemin} : ${reponse.status} ${detail.slice(0, 300)}`);
+  }
+  return (await reponse.json()) as T;
+}
+
+/** Clé de champ (sans « contact. ») → identifiant GHL. Cache de 10 minutes. */
+let cacheChamps: { valeur: Map<string, string>; expire: number } | null = null;
+
+async function identifiantsChamps(): Promise<Map<string, string>> {
+  if (cacheChamps && cacheChamps.expire > Date.now()) return cacheChamps.valeur;
+
+  const { locationId } = configuration();
+  const donnees = await ghl<{ customFields?: { id: string; fieldKey: string }[] }>(
+    `/locations/${locationId}/customFields?model=contact`,
+  );
+  const valeur = new Map(
+    (donnees.customFields ?? []).map((c) => [c.fieldKey.replace(/^contact\./, ''), c.id]),
+  );
+  cacheChamps = { valeur, expire: Date.now() + 10 * 60 * 1000 };
+  return valeur;
+}
+
+/**
+ * Convertit { clé: valeur } en customFields GHL. Un champ absent de GHL est
+ * journalisé et ignoré : il ne doit jamais faire perdre une inscription.
+ */
+async function champsPersonnalises(valeurs: Record<string, string>) {
+  const ids = await identifiantsChamps();
+  const champs: { id: string; field_value: string }[] = [];
+  for (const [cle, valeur] of Object.entries(valeurs)) {
+    const id = ids.get(cle);
+    if (id) champs.push({ id, field_value: valeur });
+    else console.error(`[porte-ouverte] champ GHL introuvable : contact.${cle}`);
+  }
+  return champs;
+}
+
+interface Contact {
+  prenom: string;
+  nom: string;
+  courriel: string;
+  cellulaire: string;
+}
+
+/** Crée ou met à jour le contact (par courriel / téléphone) et renvoie son id. */
+async function upsertContact(contact: Contact, customFields: { id: string; field_value: string }[] = []) {
+  const { locationId } = configuration();
+  const donnees = await ghl<{ contact?: { id?: string } }>('/contacts/upsert', {
+    method: 'POST',
+    body: {
+      locationId,
+      firstName: contact.prenom,
+      lastName: contact.nom,
+      email: contact.courriel,
+      phone: `+1${contact.cellulaire}`,
+      source: 'Porte ouverte 23 octobre',
+      ...(customFields.length > 0 ? { customFields } : {}),
+    },
+  });
+  const id = donnees.contact?.id;
+  if (!id) throw new ErreurGhl('upsert sans identifiant de contact');
+  return id;
+}
+
+/**
+ * Ajoute des tags sans toucher aux autres. L'upsert, lui, remplacerait la
+ * liste complète des tags du contact : on ne lui en passe donc jamais.
+ */
+function ajouterTags(contactId: string, tags: string[]) {
+  return ghl(`/contacts/${contactId}/tags`, { method: 'POST', body: { tags } });
+}
+
+function mettreAJourChamps(contactId: string, customFields: { id: string; field_value: string }[]) {
+  if (customFields.length === 0) return Promise.resolve();
+  return ghl(`/contacts/${contactId}`, { method: 'PUT', body: { customFields } });
+}
+
+/* ──────────────────────────────── Entrées ──────────────────────────────── */
 
 /**
  * Première valeur de x-forwarded-for : c'est l'IP du visiteur, les suivantes
@@ -35,103 +160,97 @@ function adresseIp(req: NextRequest): string {
   return req.headers.get('x-real-ip') ?? '';
 }
 
-/** Chaîne défensive : Make ne mappe pas une clé absente, jamais de `undefined`. */
 function texte(valeur: unknown): string {
-  return typeof valeur === 'string' ? valeur : '';
+  return typeof valeur === 'string' ? valeur.trim() : '';
 }
 
-interface Consentement {
-  consent_text: string;
-  consent_at: string;
-  consent_ip: string;
+function lireContact(charge: Record<string, any>): Contact | null {
+  const contact = {
+    prenom: texte(charge.prenom),
+    nom: texte(charge.nom),
+    courriel: texte(charge.courriel).toLowerCase(),
+    cellulaire: texte(charge.cellulaire).replace(/\D/g, ''),
+  };
+  if (!contact.prenom || !contact.nom || !COURRIEL_VALIDE.test(contact.courriel) || contact.cellulaire.length !== 10) {
+    return null;
+  }
+  return contact;
 }
+
+/** Ne garde que les réponses connues : le navigateur n'écrit rien d'autre dans GHL. */
+function lireReponses(brut: unknown): Reponses {
+  const r = (brut ?? {}) as Record<string, unknown>;
+  const pris = <K extends keyof Reponses>(cle: K) =>
+    (typeof r[cle] === 'string' ? r[cle] : null) as Reponses[K];
+  return {
+    ...REPONSES_VIDES,
+    cliente: pris('cliente'),
+    objectif: pris('objectif'),
+    difficulte: pris('difficulte'),
+    pret: pris('pret'),
+    modalite: pris('modalite'),
+  };
+}
+
+/** L'id renvoyé à la capture, ou un nouvel upsert si la capture a échoué. */
+async function contactId(charge: Record<string, any>, contact: Contact) {
+  const id = texte(charge.contact_id);
+  return /^[A-Za-z0-9]{10,40}$/.test(id) ? id : upsertContact(contact);
+}
+
+/* ───────────────────────────────── Route ───────────────────────────────── */
 
 export async function POST(req: NextRequest) {
-  const charge = (await req.json()) as Record<string, any>;
+  const charge = (await req.json().catch(() => ({}))) as Record<string, any>;
 
-  const etape = charge.etape === 2 ? 2 : 1;
-  const submitted_at = new Date().toISOString();
-  const ip = adresseIp(req);
+  const contact = lireContact(charge);
+  if (!contact) return NextResponse.json({ error: 'Coordonnées invalides' }, { status: 400 });
 
-  // Le client n'envoie que `accepte` et un numéro de version ; le texte affiché
-  // est ressorti ici depuis la constante canonique. Une version inconnue
-  // retombe sur la courante plutôt que de rejeter : perdre une inscription pour
-  // protéger une donnée serait le mauvais échange.
-  const version = Number(charge.consentement?.texte_version) || CONSENTEMENT_VERSION;
-  const consentementNeuf: Consentement = {
-    consent_text: texteConsentement(version),
-    consent_at: submitted_at,
-    consent_ip: ip,
-  };
-
-  // À l'étape 2, la preuve est celle recueillie à l'étape 1 — c'est là que la
-  // case a été cochée. Le client la réémet telle que le serveur la lui a
-  // rendue ; l'enregistrement qui fait foi reste celui de l'étape 1.
-  const consentement: Consentement =
-    etape === 2 && charge.consentement_etape1
-      ? {
-          consent_text: texte(charge.consentement_etape1.consent_text) || consentementNeuf.consent_text,
-          consent_at: texte(charge.consentement_etape1.consent_at) || submitted_at,
-          consent_ip: texte(charge.consentement_etape1.consent_ip),
-        }
-      : consentementNeuf;
-
-  const utm = charge.utm ?? {};
-  const communs = {
-    po_lead_id: texte(charge.po_lead_id),
-    prenom: texte(charge.prenom),
-    courriel: texte(charge.courriel),
-    cellulaire: texte(charge.cellulaire),
-    utm_source: texte(utm.source),
-    utm_medium: texte(utm.medium),
-    utm_campaign: texte(utm.campaign),
-    utm_content: texte(utm.content),
-    utm_term: texte(utm.term),
-    page_url: texte(charge.page_url),
-    submitted_at,
-  };
-
-  const corps =
-    etape === 1
-      ? { ...communs, ...consentement }
-      : {
-          ...communs,
-          po_statut: texte(charge.po_statut),
-          po_dq_motif: charge.po_dq_motif ?? null,
-          po_score_bonus: Number(charge.po_score_bonus) || 0,
-          po_bareme_version: Number(charge.po_bareme_version) || 0,
-          reponses: charge.reponses ?? {},
-          places_restantes: charge.places_restantes === true,
-          ...consentement,
-        };
-
-  // Les webhooks Make sont des URL publiques qui créent des contacts et des
-  // opportunités dans le CRM : sans clé, quiconque les trouve peut polluer le
-  // pipeline. La clé vit en variable d'environnement, jamais dans le dépôt.
-  const entetes: Record<string, string> = { 'Content-Type': 'application/json' };
-  const cle = process.env.PORTE_OUVERTE_MAKE_APIKEY;
-  if (cle) entetes['x-make-apikey'] = cle;
-
-  let reponse: Response;
   try {
-    reponse = await fetch(process.env[`PORTE_OUVERTE_WEBHOOK_${etape}`] ?? WEBHOOKS[etape], {
-      method: 'POST',
-      headers: entetes,
-      body: JSON.stringify(corps),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    switch (charge.action) {
+      case 'capture': {
+        if (charge.consentement?.accepte !== true) {
+          return NextResponse.json({ error: 'Consentement requis' }, { status: 400 });
+        }
+        // Le client n'envoie que `accepte` et un numéro de version ; le texte
+        // affiché est ressorti ici depuis la constante canonique.
+        const version = Number(charge.consentement?.texte_version) || CONSENTEMENT_VERSION;
+        const champs = await champsPersonnalises({
+          [CHAMPS_CONSENTEMENT.texte]: texteConsentement(version),
+          [CHAMPS_CONSENTEMENT.date]: new Date().toISOString(),
+          [CHAMPS_CONSENTEMENT.ip]: adresseIp(req),
+        });
+        const id = await upsertContact(contact, champs);
+        await ajouterTags(id, [TAGS_PORTE_OUVERTE.inscrite]);
+        return NextResponse.json({ ok: true, contact_id: id });
+      }
+
+      case 'questionnaire': {
+        const reponses = lireReponses(charge.reponses);
+        const sortie = calculerSortie(reponses);
+        if (!sortie) return NextResponse.json({ error: 'Questionnaire incomplet' }, { status: 400 });
+
+        const id = await contactId(charge, contact);
+        await mettreAJourChamps(id, await champsPersonnalises(champsPorteOuverte(reponses, sortie)));
+
+        const tags: string[] = [TAGS_PORTE_OUVERTE.sorties[sortie]];
+        if (sortie === 'information') tags.push(TAGS_PORTE_OUVERTE.guideGratuit);
+        await ajouterTags(id, tags);
+        return NextResponse.json({ ok: true, contact_id: id, sortie });
+      }
+
+      case 'avertir': {
+        const id = await contactId(charge, contact);
+        await ajouterTags(id, [TAGS_PORTE_OUVERTE.avertirPlace]);
+        return NextResponse.json({ ok: true, contact_id: id });
+      }
+
+      default:
+        return NextResponse.json({ error: 'Action inconnue' }, { status: 400 });
+    }
   } catch (erreur) {
-    console.error(`[porte-ouverte] Make injoignable (étape ${etape})`, erreur);
-    return NextResponse.json({ error: 'Make injoignable' }, { status: 502 });
-  }
-
-  if (!reponse.ok) {
     // Le client journalise et réessaie une fois ; il ne bloque jamais la personne.
-    return NextResponse.json({ error: `Make a répondu ${reponse.status}` }, { status: 502 });
+    console.error(`[porte-ouverte] écriture GHL échouée (${String(charge.action)})`, erreur);
+    return NextResponse.json({ error: 'GHL injoignable' }, { status: 502 });
   }
-
-  // La preuve de consentement est renvoyée au client pour qu'il la réémette
-  // à l'étape 2 : les deux scénarios Make reçoivent ainsi la même, celle du
-  // moment où la case a réellement été cochée.
-  return NextResponse.json({ ok: true, consentement });
 }

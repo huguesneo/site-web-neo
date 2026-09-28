@@ -30,6 +30,7 @@ const CALENDRIERS: Record<Modalite, { base: string; iframeId: string }> = {
 function urlCalendrier(modalite: Modalite, c: Coordonnees): string {
   const params = new URLSearchParams({
     first_name: c.prenom.trim(),
+    last_name: c.nom.trim(),
     email: c.courriel.trim(),
     phone: normaliserTelephone(c.telephone),
   });
@@ -37,11 +38,10 @@ function urlCalendrier(modalite: Modalite, c: Coordonnees): string {
 }
 
 /**
- * Destinations A et B — chaudes et tièdes.
- *
- * Un seul écran pour les deux : le contrôle des places passe par l'ouverture
- * des plages dans GHL, pas par deux calendriers séparés. Le statut ne pilote
- * que les séquences courriel et l'ordre des rappels, en aval dans Make.
+ * Sortie « calendrier » — tout le monde sauf les clientes actives et les
+ * « rien pour le moment ». Le contrôle des places passe par l'ouverture des
+ * plages dans GHL. Après la réservation, GHL redirige vers
+ * /porte-ouverte/confirmation (réglage des deux calendriers).
  *
  * La modalité vient de la dernière question du questionnaire et ouvre
  * directement le bon calendrier. Il n'y a plus de boutons à re-cliquer ici :
@@ -127,8 +127,8 @@ export default function BookingScreen({
           non annoncée sur une page qui dit « gratuit » fait abandonner. */}
       <div className="mt-8 rounded-2xl border-2 border-neo-100 bg-neo-50/60 px-6 py-5">
         <p className="text-base text-neo-900 leading-relaxed">
-          <strong className="font-bold">Un dépôt de 20 $ confirme ta place.</strong> On te le
-          remet en argent le jour même, en arrivant. C’est juste notre façon de s’assurer que les
+          <strong className="font-bold">Un dépôt de 20 $ confirme ta place.</strong> Ton dépôt de
+          20 $ sera remboursé le jour même à ton arrivée. C’est juste notre façon de s’assurer que les
           40 places vont à des gens qui vont vraiment se présenter — on a 5 professionnels qui
           bloquent leur journée complète pour ça.
         </p>
