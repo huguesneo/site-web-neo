@@ -3,11 +3,9 @@
 import { Clock, MapPin, Users } from 'lucide-react';
 import VideoSlot from './VideoSlot';
 
-/**
- * Vidéo de la page d'inscription. À déposer dans /public/videos/ puis
- * renseigner ici ; tant que c'est vide, un cadre réservé tient la place.
- */
-const VIDEO_OPTIN = '';
+/** Vidéo de la page d'inscription, hébergée dans la médiathèque GHL. */
+const VIDEO_OPTIN =
+  'https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/6aba97734100b77e52325029.mp4';
 
 /**
  * Bande foncée d'ouverture, d'après la maquette Claude Design.
