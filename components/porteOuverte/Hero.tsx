@@ -1,6 +1,13 @@
 'use client';
 
 import { Clock, MapPin, Users } from 'lucide-react';
+import VideoSlot from './VideoSlot';
+
+/**
+ * Vidéo de la page d'inscription. À déposer dans /public/videos/ puis
+ * renseigner ici ; tant que c'est vide, un cadre réservé tient la place.
+ */
+const VIDEO_OPTIN = '';
 
 /**
  * Bande foncée d'ouverture, d'après la maquette Claude Design.
@@ -45,6 +52,11 @@ export default function Hero({ compact = false }: { compact?: boolean }) {
               Une évaluation métabolique complète de 60 minutes. Ton analyse InBody. Ton portrait
               métabolique en main. Gratuit.
             </p>
+
+            <VideoSlot
+              src={VIDEO_OPTIN}
+              className="mx-auto mb-6 max-w-[720px] shadow-2xl shadow-black/40 ring-1 ring-white/10 md:mb-8"
+            />
 
             <ul className="flex flex-col items-center justify-center gap-2.5 text-[13.5px] text-gray-300 md:flex-row md:gap-8 md:text-[15px]">
               <li className="flex items-center gap-2">

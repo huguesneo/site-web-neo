@@ -1,7 +1,8 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { CalendarPlus, CheckCircle2, Play } from 'lucide-react';
+import { CalendarPlus, CheckCircle2 } from 'lucide-react';
+import VideoSlot from './VideoSlot';
 
 /**
  * Vidéo de 60 secondes. À déposer dans /public/videos/ puis renseigner ici ;
@@ -97,22 +98,7 @@ export default function Confirmation() {
             <p className="text-base font-semibold">Regarde cette vidéo de 60 secondes avant le 23 octobre</p>
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-2xl bg-gray-900">
-            {VIDEO_CONFIRMATION ? (
-              <video
-                src={VIDEO_CONFIRMATION}
-                controls
-                playsInline
-                preload="metadata"
-                className="block aspect-video w-full"
-              />
-            ) : (
-              <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 text-gray-400">
-                <Play size={40} />
-                <span className="text-sm">Vidéo à venir</span>
-              </div>
-            )}
-          </div>
+          <VideoSlot src={VIDEO_CONFIRMATION} className="mt-6" />
 
           <div className="mt-8 flex flex-col gap-3">
             <a
