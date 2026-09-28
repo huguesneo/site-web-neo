@@ -82,11 +82,9 @@ const FICHES_PREUVE = [
 ];
 
 /**
- * Trois choses distinctes, et la page doit les montrer comme telles. Numéroter
- * le portrait avec les guides donnait une liste de six lignes identiques : on
- * lisait « six guides ». Le portrait (numérique, dans l'app) et le sac-cadeau
- * (physique) sont donc sortis de la liste, et la numérotation ne sert plus qu'à
- * compter les cinq guides.
+ * Ce que la personne garde après la rencontre. Le portrait (numérique, dans
+ * l'app) et le sac-cadeau (physique) sont deux choses distinctes : une icône
+ * chacun, pour qu'on ne les lise pas comme une liste de documents.
  */
 const REPARTS = [
   {
@@ -99,15 +97,6 @@ const REPARTS = [
     titre: 'Ton sac-cadeau',
     texte: `Le sac NEO, d’une valeur de ${VALEUR_SAC_CADEAU}, à emporter avec toi en repartant de la clinique.`,
   },
-];
-
-/** Les cinq guides, sous les titres imprimés sur les couvertures. */
-const GUIDES = [
-  'Le parcours des aliments',
-  'Sors du mode survie',
-  '20 recettes de déjeuners faites par Léo',
-  'Comment optimiser la routine du matin et celle du soir',
-  'Ce que les calories ne te disent pas',
 ];
 
 const EXCLUSIONS = [
@@ -291,80 +280,35 @@ export default function SalesSections() {
       {/* ───────────────────────── Le sac-cadeau ───────────────────────── */}
       <section className="bg-neo-50 py-16 md:py-28">
         <div className="mx-auto max-w-[1200px] px-5 md:px-12">
-          <div className="grid items-center gap-8 md:grid-cols-2 md:gap-16">
+          <div className="grid items-center gap-7 md:grid-cols-2 md:gap-16">
             <div>
               <Surtitre>Le sac-cadeau</Surtitre>
               <h2 className="mb-3 text-[27px] font-extrabold leading-[1.15] tracking-tight text-neo-900 md:mb-4.5 md:text-[44px] md:leading-[1.08]">
                 Ce que tu repars avec
               </h2>
-              <p className="mb-6 max-w-[460px] text-[15px] leading-relaxed text-neo-800 text-pretty md:mb-8 md:text-[17px]">
-                Ton portrait métabolique dans l’application, ton sac-cadeau, et les cinq guides
-                qu’on remet à nos clientes.
+              <p className="max-w-[460px] text-[15px] leading-relaxed text-neo-800 text-pretty md:text-[17px]">
+                Ton portrait métabolique dans l’application, et ton sac-cadeau.
               </p>
-
-              {/* Sur mobile la photo passe avant la liste : c'est elle qui donne
-                  envie de lire ce qui suit. */}
-              <img
-                src="https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/6a8c5117960c6415b2efe1fe.png"
-                alt="Les cinq guides NEO remis dans le sac-cadeau"
-                width={1448}
-                height={1086}
-                loading="lazy"
-                className="mb-5 h-auto w-full rounded-3xl object-contain md:hidden"
-              />
-
-              {/* Les deux éléments qui ne sont pas des guides : icône plutôt que
-                  numéro, pour qu'on voie au premier coup d'œil qu'ils sortent de
-                  la liste numérotée qui suit. */}
-              <ul className="mb-6 flex flex-col gap-2.5 md:mb-8 md:gap-3">
-                {REPARTS.map(({ icone: Icone, titre, texte }) => (
-                  <li
-                    key={titre}
-                    className="flex items-start gap-3.5 rounded-2xl bg-white px-4 py-3.5 md:gap-4 md:px-5 md:py-4"
-                  >
-                    <Icone size={20} className="mt-0.5 shrink-0 text-neo" strokeWidth={2} />
-                    <span>
-                      <span className="block text-sm font-bold leading-snug text-gray-900 md:text-[15.5px]">
-                        {titre}
-                      </span>
-                      <span className="mt-0.5 block text-[13px] leading-snug text-gray-600 md:text-sm">
-                        {texte}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <h3 className="mb-3 text-[15px] font-bold text-neo-900 md:mb-4 md:text-base">
-                Et les cinq guides
-              </h3>
-
-              <ul className="flex flex-col gap-2.5 md:gap-3">
-                {GUIDES.map((guide, index) => (
-                  <li
-                    key={guide}
-                    className="flex items-center gap-3.5 rounded-2xl bg-white px-4 py-3.5 md:gap-4 md:px-5 md:py-4"
-                  >
-                    <span className="text-xs font-bold tabular-nums text-neo md:text-[13px]">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <span className="text-sm font-semibold leading-snug text-gray-900 md:text-[15.5px]">
-                      {guide}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
             </div>
 
-            <img
-              src="https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/6a8c5117960c6415b2efe1fe.png"
-              alt="Les cinq guides NEO remis dans le sac-cadeau"
-              width={1448}
-              height={1086}
-              loading="lazy"
-              className="hidden h-auto max-h-[520px] w-full rounded-3xl object-contain md:block"
-            />
+            <ul className="flex flex-col gap-2.5 md:gap-3">
+              {REPARTS.map(({ icone: Icone, titre, texte }) => (
+                <li
+                  key={titre}
+                  className="flex items-start gap-3.5 rounded-2xl bg-white px-4 py-3.5 md:gap-4 md:px-5 md:py-4"
+                >
+                  <Icone size={20} className="mt-0.5 shrink-0 text-neo" strokeWidth={2} />
+                  <span>
+                    <span className="block text-sm font-bold leading-snug text-gray-900 md:text-[15.5px]">
+                      {titre}
+                    </span>
+                    <span className="mt-0.5 block text-[13px] leading-snug text-gray-600 md:text-sm">
+                      {texte}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
