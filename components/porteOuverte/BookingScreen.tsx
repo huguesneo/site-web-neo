@@ -127,8 +127,8 @@ export default function BookingScreen({
           non annoncée sur une page qui dit « gratuit » fait abandonner. */}
       <div className="mt-8 rounded-2xl border-2 border-neo-100 bg-neo-50/60 px-6 py-5">
         <p className="text-base text-neo-900 leading-relaxed">
-          <strong className="font-bold">Un dépôt de 20 $ confirme ta place.</strong> On te le
-          remet en argent le jour même, en arrivant. C’est juste notre façon de s’assurer que les
+          <strong className="font-bold">Un dépôt de 20 $ confirme ta place.</strong> Ton dépôt de
+          20 $ sera remboursé le jour même à ton arrivée. C’est juste notre façon de s’assurer que les
           40 places vont à des gens qui vont vraiment se présenter — on a 5 professionnels qui
           bloquent leur journée complète pour ça.
         </p>

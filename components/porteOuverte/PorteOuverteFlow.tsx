@@ -322,9 +322,9 @@ export default function PorteOuverteFlow() {
                 20 $
               </span>
               <p className="text-[13px] leading-relaxed text-gray-500">
-                Un dépôt de 20 $ confirme ta place le 23 octobre. Il t’est remis en argent le
-                jour même, à ton arrivée. C’est ce qui fait que les 40 places vont à des personnes
-                qui se présentent.
+                Un dépôt de 20 $ confirme ta place le 23 octobre. Ton dépôt de 20 $ sera remboursé
+                le jour même à ton arrivée. C’est ce qui fait que les 40 places vont à des
+                personnes qui se présentent.
               </p>
             </div>
           </div>

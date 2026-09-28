@@ -121,12 +121,12 @@ const FAQ = [
   {
     question: 'C’est vraiment gratuit ?',
     reponse:
-      'Oui. L’évaluation de 60 minutes, l’InBody et le portrait métabolique ne te coûtent rien. Le seul montant qui bouge, c’est le dépôt de 20 $ qui confirme ta place — et il t’est remis en argent le jour même.',
+      'Oui. L’évaluation de 60 minutes, l’InBody et le portrait métabolique ne te coûtent rien. Le seul montant qui bouge, c’est le dépôt de 20 $ qui confirme ta place. Ton dépôt de 20 $ sera remboursé le jour même à ton arrivée.',
   },
   {
     question: 'Pourquoi un dépôt de 20 $ si tout est gratuit ?',
     reponse:
-      'Parce qu’il y a 40 places et une seule journée. Le dépôt fait la différence entre une place réservée et une place qui reste vide. Tu le récupères en argent à ton arrivée, sans rien avoir à demander.',
+      'Parce qu’il y a 40 places et une seule journée. Le dépôt fait la différence entre une place réservée et une place qui reste vide. Ton dépôt de 20 $ sera remboursé le jour même à ton arrivée, sans rien avoir à demander.',
   },
   {
     question: 'Je prends de l’Ozempic. Est-ce que je peux venir ?',
@@ -466,7 +466,7 @@ export default function SalesSections() {
           </a>
           <p className="mx-auto mt-3.5 max-w-[460px] text-[12.5px] leading-relaxed text-neo-800 md:text-[13.5px]">
             Réservé aux personnes qui n’ont pas été clientes de NEO Performance dans la dernière année. Dépôt de 20 $
-            pour confirmer la place, remis en argent le jour même.
+            pour confirmer la place, remboursé le jour même à ton arrivée.
           </p>
         </div>
       </section>

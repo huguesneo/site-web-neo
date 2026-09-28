@@ -121,7 +121,7 @@ export default function Confirmation() {
             Tu vas recevoir un courriel de confirmation avec l’heure exacte de ta rencontre
             {visio
               ? ' et ton lien Google Meet.'
-              : '. Ton dépôt de 20 $ t’est remis en argent le jour même, à ton arrivée.'}
+              : '. Ton dépôt de 20 $ sera remboursé le jour même à ton arrivée.'}
           </p>
         </div>
       </div>
