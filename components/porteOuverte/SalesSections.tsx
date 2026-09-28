@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight, ShoppingBag, Smartphone, XCircle } from 'lucide-react';
+import { VALEUR_SAC_CADEAU } from '@/lib/porteOuverte';
 
 /**
  * Les blocs de vente sous la carte d'inscription, d'après la maquette Claude
@@ -96,7 +97,7 @@ const REPARTS = [
   {
     icone: ShoppingBag,
     titre: 'Ton sac-cadeau',
-    texte: 'Le sac NEO, à emporter avec toi en repartant de la clinique.',
+    texte: `Le sac NEO, d’une valeur de ${VALEUR_SAC_CADEAU}, à emporter avec toi en repartant de la clinique.`,
   },
 ];
 
@@ -112,7 +113,7 @@ const GUIDES = [
 const EXCLUSIONS = [
   'Si tu cherches une diète de 1 200 calories.',
   'Si tu veux perdre 20 lb en 3 semaines.',
-  'Si tu es déjà cliente NEO.',
+  'Si tu es cliente NEO en ce moment.',
   'Si tu n’as pas 60 minutes à bloquer le 23 octobre.',
 ];
 
@@ -145,7 +146,7 @@ const FAQ = [
   {
     question: 'Je suis déjà cliente de NEO. Je peux réserver une place ?',
     reponse:
-      'Non. La journée est réservée aux personnes qui n’ont jamais été accompagnées chez NEO. Si tu es cliente, tu as déjà ton portrait et ta naturopathe — écris-nous plutôt pour ton prochain suivi.',
+      'Si tu es accompagnée en ce moment, non : tu as déjà ton portrait et ta naturopathe — écris-lui plutôt dans l’application. Si tu as été cliente dans le passé, ou si tu es venue à la porte ouverte de février, tu es la bienvenue.',
   },
 ];
 
@@ -464,7 +465,7 @@ export default function SalesSections() {
             Voir si je suis admissible
           </a>
           <p className="mx-auto mt-3.5 max-w-[460px] text-[12.5px] leading-relaxed text-neo-800 md:text-[13.5px]">
-            Réservé aux personnes qui ne sont pas déjà clientes de NEO Performance. Dépôt de 20 $
+            Réservé aux personnes qui ne sont pas clientes de NEO Performance en ce moment. Dépôt de 20 $
             pour confirmer la place, remis en argent le jour même.
           </p>
         </div>

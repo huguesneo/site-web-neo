@@ -37,11 +37,10 @@ function urlCalendrier(modalite: Modalite, c: Coordonnees): string {
 }
 
 /**
- * Destinations A et B — chaudes et tièdes.
- *
- * Un seul écran pour les deux : le contrôle des places passe par l'ouverture
- * des plages dans GHL, pas par deux calendriers séparés. Le statut ne pilote
- * que les séquences courriel et l'ordre des rappels, en aval dans Make.
+ * Sortie « calendrier » — tout le monde sauf les clientes actives et les
+ * « rien pour le moment ». Le contrôle des places passe par l'ouverture des
+ * plages dans GHL. Après la réservation, GHL redirige vers
+ * /porte-ouverte/confirmation (réglage des deux calendriers).
  *
  * La modalité vient de la dernière question du questionnaire et ouvre
  * directement le bon calendrier. Il n'y a plus de boutons à re-cliquer ici :

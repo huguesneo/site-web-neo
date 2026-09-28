@@ -24,8 +24,8 @@ const COURRIEL_VALIDE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /** Ne garde que les chiffres : « (438) 402-2883 » → « 4384022883 ». */
 export function normaliserTelephone(brut: string): string {
   const chiffres = brut.replace(/\D/g, '');
-  // Un 1 en tête (indicatif nord-américain) n'est pas conservé : Make attend
-  // les 10 chiffres du numéro.
+  // Un 1 en tête (indicatif nord-américain) n'est pas conservé : la route
+  // serveur attend les 10 chiffres du numéro et ajoute elle-même le +1.
   return chiffres.length === 11 && chiffres.startsWith('1') ? chiffres.slice(1) : chiffres;
 }
 
@@ -47,11 +47,11 @@ export function erreursCoordonnees(c: Coordonnees): Partial<Record<keyof Coordon
 /**
  * Étape 1 — trois champs et la case LCAP. Quinze secondes.
  *
- * Le consentement est ici, et non à la fin du questionnaire comme dans le plan
- * d'origine, pour une raison simple : c'est cette étape qui déclenche la
+ * Le consentement est ici, et non à la fin du questionnaire, pour une raison
+ * simple : c'est cette étape qui pose le tag d'inscription et déclenche la
  * séquence de récupération des abandons. Sans la case ici, on écrirait à des
- * gens qui ne l'ont jamais cochée — et les personnes disqualifiées, qui sortent
- * après la deuxième question, ne l'atteindraient jamais.
+ * gens qui ne l'ont jamais cochée — et les clientes actives, qui sortent dès
+ * la première question, ne l'atteindraient jamais.
  */
 export default function CaptureScreen({
   valeur,

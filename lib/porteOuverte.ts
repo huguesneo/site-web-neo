@@ -2,12 +2,14 @@
  * Cœur du parcours d'inscription à la journée porte ouverte du 23 octobre 2026.
  *
  * Données pures et calculs sans effet de bord. La navigation vit dans
- * PorteOuverteFlow, la présentation dans les écrans, et les routes serveur
- * réutilisent d'ici le texte de consentement et les identifiants de calendriers.
+ * PorteOuverteFlow, la présentation dans les écrans, et la route serveur
+ * réutilise d'ici le texte de consentement, les tags et les libellés écrits
+ * dans GHL.
  *
- * Distinction à respecter : `valeur` est ce qui part vers Make, `label` est ce
- * qui s'affiche. Les valeurs sont un contrat avec le scénario Make et ne
- * doivent jamais changer ; les libellés peuvent être reformulés librement.
+ * Distinction à respecter : `valeur` est l'identifiant interne du parcours,
+ * `label` est ce qui s'affiche. Les champs GHL à options (po_budget,
+ * po_modalite) reçoivent un libellé de leur propre liste d'options — voir
+ * `ghl` sur chaque option, qui doit rester identique à l'option dans GHL.
  */
 
 /* ────────────────────────────── Calendriers ────────────────────────────── */
@@ -25,8 +27,8 @@ export interface Disponibilites {
   visio: boolean;
   /**
    * Faux quand l'interrogation de GHL a échoué. On ouvre alors les deux
-   * calendriers : une panne d'API ne doit jamais envoyer quelqu'un en liste
-   * d'attente alors qu'il reste des places.
+   * calendriers : une panne d'API ne doit jamais afficher « complet » alors
+   * qu'il reste des places.
    */
   verifie: boolean;
 }
@@ -66,39 +68,24 @@ export interface Option<V extends string> {
   label: string;
   /** Précision affichée sous le libellé, quand l'option mérite un mot de plus. */
   detail?: string;
+  /** Option correspondante du champ à choix dans GHL, au caractère près. */
+  ghl?: string;
 }
 
-export type DejaClient = 'non' | 'cliente-actuelle' | 'ancienne-cliente';
-export type DejaPo = 'non' | 'oui';
+export type Cliente = 'oui' | 'non';
 export type Objectif = 'perte-gras' | 'energie' | 'digestion' | 'hormones' | 'autre';
-export type LbsCible = 'moins-15' | '15-30' | '30-50' | 'plus-50' | 'aucun';
-export type Anciennete = 'moins-6mois' | '6mois-2ans' | '2-5ans' | 'plus-5ans';
-export type DejaEssaye =
-  | 'weight-watchers'
-  | 'keto'
-  | 'jeune'
-  | 'nutritionniste'
-  | 'glp1'
-  | 'coach'
-  | 'rien';
-export type Priorite = 'priorite-1' | 'important' | 'informe';
-export type Budget = '1500-plus' | '500-1500' | 'moins-500' | 'rien';
+export type Budget = '2500-plus' | '1500-2500' | '500-1500' | 'moins-500' | 'rien';
 
-export const Q_DEJA_CLIENT = {
-  question: 'Es-tu déjà passée par NEO Performance ?',
+export const Q_CLIENTE = {
+  question: 'Es-tu cliente de NEO Performance en ce moment ?',
   options: [
-    { valeur: 'non', label: 'Non, jamais' },
-    { valeur: 'cliente-actuelle', label: 'Oui, je suis cliente en ce moment' },
-    { valeur: 'ancienne-cliente', label: 'Oui, j’ai déjà fait le programme dans le passé' },
-  ] as Option<DejaClient>[],
-};
-
-export const Q_DEJA_PORTE_OUVERTE = {
-  question: 'As-tu déjà participé à une journée porte ouverte NEO ?',
-  options: [
-    { valeur: 'non', label: 'Non' },
-    { valeur: 'oui', label: 'Oui' },
-  ] as Option<DejaPo>[],
+    { valeur: 'oui', label: 'Oui, je suis cliente en ce moment' },
+    {
+      valeur: 'non',
+      label: 'Non',
+      detail: 'Même si tu as déjà été cliente, ou si tu es venue à la porte ouverte de février.',
+    },
+  ] as Option<Cliente>[],
 };
 
 export const Q_OBJECTIF = {
@@ -117,66 +104,24 @@ export const Q_OBJECTIF = {
   ] as Option<Objectif>[],
 };
 
-export const Q_LBS_CIBLE = {
-  question: 'Combien de livres aimerais-tu perdre ?',
-  options: [
-    { valeur: 'moins-15', label: 'Moins de 15 lb' },
-    { valeur: '15-30', label: '15 à 30 lb' },
-    { valeur: '30-50', label: '30 à 50 lb' },
-    { valeur: 'plus-50', label: 'Plus de 50 lb' },
-    { valeur: 'aucun', label: 'Je ne cherche pas à perdre de poids' },
-  ] as Option<LbsCible>[],
-};
-
-export const Q_ANCIENNETE = {
-  question: 'Depuis combien de temps tu cherches une solution ?',
-  options: [
-    { valeur: 'moins-6mois', label: 'Moins de 6 mois' },
-    { valeur: '6mois-2ans', label: '6 mois à 2 ans' },
-    { valeur: '2-5ans', label: '2 à 5 ans' },
-    { valeur: 'plus-5ans', label: 'Plus de 5 ans' },
-  ] as Option<Anciennete>[],
-};
-
-export const Q_DEJA_ESSAYE = {
-  question: 'Qu’est-ce que t’as déjà essayé ?',
-  aide: 'Coche tout ce qui s’applique.',
-  options: [
-    { valeur: 'weight-watchers', label: 'Weight Watchers ou un programme de points' },
-    { valeur: 'keto', label: 'Keto / low-carb' },
-    { valeur: 'jeune', label: 'Jeûne intermittent' },
-    { valeur: 'nutritionniste', label: 'Une nutritionniste ou une diététiste' },
-    { valeur: 'glp1', label: 'Un médicament type Ozempic / Wegovy' },
-    { valeur: 'coach', label: 'Un coach ou un entraîneur' },
-    { valeur: 'rien', label: 'Rien de structuré jusqu’ici' },
-  ] as Option<DejaEssaye>[],
-};
-
-/**
- * « Rien de structuré » contredit toutes les autres cases : la cocher vide la
- * sélection, et cocher autre chose la décoche.
- */
-export const DEJA_ESSAYE_EXCLUSIF: DejaEssaye = 'rien';
-
-export const Q_PRIORITE = {
-  question: 'Où ça se situe dans tes priorités des 3 prochains mois ?',
-  options: [
-    { valeur: 'priorite-1', label: 'C’est ma priorité numéro un' },
-    { valeur: 'important', label: 'C’est important, mais j’ai d’autres choses en avant' },
-    { valeur: 'informe', label: 'Je m’informe pour l’instant' },
-  ] as Option<Priorite>[],
-};
-
 export const Q_BUDGET = {
   question:
     'Si on te démontre que notre approche est la bonne pour toi, quel montant serais-tu prête à investir dans ta santé au cours des 4 prochains mois ?',
   options: [
-    { valeur: '1500-plus', label: '1 500 $ et plus' },
-    { valeur: '500-1500', label: '500 $ à 1 500 $' },
-    { valeur: 'moins-500', label: 'Moins de 500 $' },
-    { valeur: 'rien', label: 'Rien pour le moment — je viens chercher de l’information' },
+    { valeur: '2500-plus', label: '2 500 $ et plus', ghl: '2 500 $ et plus' },
+    { valeur: '1500-2500', label: '1 500 $ à 2 500 $', ghl: '1 500 $ à 2 500 $' },
+    { valeur: '500-1500', label: '500 $ à 1 500 $', ghl: '500 $ à 1 500 $' },
+    { valeur: 'moins-500', label: 'Moins de 500 $', ghl: 'Moins de 500 $' },
+    {
+      valeur: 'rien',
+      label: 'Rien pour le moment — je viens chercher de l’information',
+      ghl: 'Rien pour le moment — je viens chercher de l\'information',
+    },
   ] as Option<Budget>[],
 };
+
+/** Valeur du sac-cadeau — un seul montant, affiché partout où on en parle. */
+export const VALEUR_SAC_CADEAU = '110 $';
 
 export const Q_MODALITE = {
   question: 'Tu préfères venir à la clinique de Brossard ou faire ta rencontre en visio ?',
@@ -184,12 +129,14 @@ export const Q_MODALITE = {
     {
       valeur: 'clinique',
       label: 'À la clinique de Brossard',
-      detail: 'Sac-cadeau d’une valeur de 110 $ + analyse InBody sur place',
+      detail: `Sac-cadeau d’une valeur de ${VALEUR_SAC_CADEAU} + analyse InBody sur place`,
+      ghl: 'À la clinique de Brossard',
     },
     {
       valeur: 'visio',
       label: 'En visio',
-      detail: 'Sac-cadeau envoyé par la poste + guides numériques',
+      detail: `Sac-cadeau d’une valeur de ${VALEUR_SAC_CADEAU} envoyé par la poste`,
+      ghl: 'En visio',
     },
   ] as Option<Modalite>[],
 };
@@ -197,97 +144,94 @@ export const Q_MODALITE = {
 /* ──────────────────────────────── Réponses ─────────────────────────────── */
 
 export interface Reponses {
-  deja_client: DejaClient | null;
-  deja_porte_ouverte: DejaPo | null;
+  cliente: Cliente | null;
   objectif: Objectif | null;
-  lbs_cible: LbsCible | null;
-  anciennete: Anciennete | null;
-  deja_essaye: DejaEssaye[];
-  priorite: Priorite | null;
   budget: Budget | null;
   modalite: Modalite | null;
 }
 
 export const REPONSES_VIDES: Reponses = {
-  deja_client: null,
-  deja_porte_ouverte: null,
+  cliente: null,
   objectif: null,
-  lbs_cible: null,
-  anciennete: null,
-  deja_essaye: [],
-  priorite: null,
   budget: null,
   modalite: null,
 };
 
-/* ──────────────────────────────── Scoring ──────────────────────────────── */
-
-export type Statut = 'chaud' | 'tiede' | 'froid' | 'dq';
-export type DqMotif = 'cliente-actuelle' | 'ancienne-cliente' | 'deja-porte-ouverte';
+/* ──────────────────────────────── Sorties ──────────────────────────────── */
 
 /**
- * Version du barème de points bonus, envoyée avec chaque score.
- *
- * C'est elle qui rend un recalcul rétroactif honnête : si le barème est ajusté
- * en cours de campagne, on sait quelle cohorte a été scorée avec quelle grille,
- * et les réponses brutes présentes dans le webhook permettent de tout refaire.
+ * Trois sorties, pas de score :
+ * - cliente active → elle parle à sa naturopathe, pas de calendrier ;
+ * - budget « rien pour le moment » → groupe Facebook et guide gratuit ;
+ * - tout le reste (anciennes clientes et participantes de février comprises)
+ *   → calendrier.
  */
-export const BAREME_VERSION = 1;
+export type Sortie = 'cliente-active' | 'information' | 'calendrier';
 
 /**
- * Routage. Volontairement simple : les deux filtres l'emportent sur tout, et
- * ensuite un seul champ décide. Rien à déboguer le jour où 40 inscriptions
- * entrent en deux heures.
+ * Sortie dès que les réponses la déterminent, `null` tant qu'il manque une
+ * réponse décisive. La cliente active sort dès la première question, le
+ * « rien pour le moment » dès le budget, sans passer par la modalité.
  */
-export function calculerStatut(reponses: Reponses): { statut: Statut; motif: DqMotif | null } {
-  if (reponses.deja_client === 'cliente-actuelle') {
-    return { statut: 'dq', motif: 'cliente-actuelle' };
-  }
-  if (reponses.deja_client === 'ancienne-cliente') {
-    return { statut: 'dq', motif: 'ancienne-cliente' };
-  }
-  if (reponses.deja_porte_ouverte === 'oui') {
-    return { statut: 'dq', motif: 'deja-porte-ouverte' };
-  }
-
-  switch (reponses.budget) {
-    case '1500-plus':
-    case '500-1500':
-      return { statut: 'chaud', motif: null };
-    case 'moins-500':
-      return { statut: 'tiede', motif: null };
-    default:
-      return { statut: 'froid', motif: null };
-  }
+export function calculerSortie(reponses: Reponses): Sortie | null {
+  if (reponses.cliente === 'oui') return 'cliente-active';
+  if (reponses.cliente === null || reponses.budget === null) return null;
+  if (reponses.budget === 'rien') return 'information';
+  if (reponses.modalite === null) return null;
+  return 'calendrier';
 }
 
+/* ───────────────────────────────── Tags GHL ────────────────────────────── */
+
 /**
- * Points bonus — bris d'égalité, jamais qualification.
- *
- * Sert à ordonner les rappels quand deux personnes veulent le même créneau, ou
- * quand des places se libèrent à J-10. Maximum 65.
+ * Les tags sont le seul contrat avec les workflows GHL : ce sont eux qui
+ * déclenchent courriels, textos et création d'opportunité.
  */
-export function calculerScoreBonus(reponses: Reponses): number {
-  let score = 0;
+export const TAGS_PORTE_OUVERTE = {
+  /** Posé à la capture, avant toute question. */
+  inscrite: 'po-2310-inscrite',
+  sorties: {
+    'cliente-active': 'po-2310-cliente-active',
+    information: 'po-2310-information',
+    calendrier: 'po-2310-calendrier',
+  } satisfies Record<Sortie, string>,
+  /** Calendrier plein : la personne demande qu'on l'avertisse. */
+  avertirPlace: 'po-2310-avertir-place',
+  /** Tag existant qui déclenche l'envoi du guide « Sors du mode survie ». */
+  guideGratuit: 'stc-guide-stress',
+} as const;
 
-  if (reponses.priorite === 'priorite-1') score += 25;
-  else if (reponses.priorite === 'important') score += 10;
+/** Liens de la sortie « information ». */
+export const GROUPE_FACEBOOK = 'https://www.facebook.com/groups/perdredupoidsmethodeneo';
 
-  if (reponses.anciennete === 'plus-5ans' || reponses.anciennete === '2-5ans') score += 15;
+/** Page de confirmation vers laquelle les deux calendriers GHL redirigent. */
+export const URL_CONFIRMATION = 'https://www.neoperformance.ca/porte-ouverte/confirmation';
 
-  if (
-    reponses.lbs_cible === '15-30' ||
-    reponses.lbs_cible === '30-50' ||
-    reponses.lbs_cible === 'plus-50'
-  ) {
-    score += 10;
-  }
+/* ───────────────────────────── Champs PO dans GHL ──────────────────────── */
 
-  // « Rien de structuré » n'est pas une méthode essayée.
-  const methodes = reponses.deja_essaye.filter((m) => m !== DEJA_ESSAYE_EXCLUSIF);
-  if (methodes.length >= 2) score += 10;
+/**
+ * Valeurs écrites dans les champs personnalisés `po_*` du contact.
+ *
+ * `po_statut` et `po_dq_motif` sont des listes d'options déjà en place dans
+ * GHL : on y range la sortie sans en créer de nouvelles options.
+ */
+export function champsPorteOuverte(reponses: Reponses, sortie: Sortie): Record<string, string> {
+  const libelle = <V extends string>(options: Option<V>[], valeur: V | null, cle: 'ghl' | 'label') =>
+    options.find((o) => o.valeur === valeur)?.[cle] ?? '';
 
-  if (reponses.modalite === 'clinique') score += 5;
+  const statut =
+    sortie === 'cliente-active'
+      ? 'dq'
+      : sortie === 'information'
+        ? 'froid'
+        : reponses.budget === 'moins-500'
+          ? 'tiede'
+          : 'chaud';
 
-  return score;
+  const champs: Record<string, string> = { po_statut: statut };
+  if (sortie === 'cliente-active') champs.po_dq_motif = 'cliente-actuelle';
+  if (reponses.objectif) champs.po_objectif = libelle(Q_OBJECTIF.options, reponses.objectif, 'label');
+  if (reponses.budget) champs.po_budget = libelle(Q_BUDGET.options, reponses.budget, 'ghl');
+  if (reponses.modalite) champs.po_modalite = libelle(Q_MODALITE.options, reponses.modalite, 'ghl');
+  return champs;
 }
