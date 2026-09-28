@@ -4,11 +4,9 @@ import { useSearchParams } from 'next/navigation';
 import { CalendarPlus, CheckCircle2 } from 'lucide-react';
 import VideoSlot from './VideoSlot';
 
-/**
- * Vidéo de 60 secondes. À déposer dans /public/videos/ puis renseigner ici ;
- * tant que c'est vide, un cadre réservé tient la place.
- */
-const VIDEO_CONFIRMATION = '';
+/** Vidéo de 60 secondes après la réservation, hébergée dans la médiathèque GHL. */
+const VIDEO_CONFIRMATION =
+  'https://assets.cdn.filesafe.space/YG2spvWJqnD75L3V95UJ/media/6aba9804631574b13646f25b.mp4';
 
 const ADRESSE = '7005 Bd Taschereau, Suite 350, Brossard, QC J4Z 1A7';
 const TITRE_EVENEMENT = 'Porte ouverte NEO Performance — évaluation métabolique';
