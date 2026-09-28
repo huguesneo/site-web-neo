@@ -29,7 +29,7 @@ export default function Hero({ compact = false }: { compact?: boolean }) {
           Journée porte ouverte
           <br className="md:hidden" />
           <span className="hidden md:inline"> · </span>
-          11 septembre 2026
+          23 octobre 2026
         </span>
 
         {compact ? (
@@ -39,7 +39,7 @@ export default function Hero({ compact = false }: { compact?: boolean }) {
         ) : (
           <>
             <h1 className="mx-auto mb-4 max-w-[940px] text-[31px] font-extrabold leading-[1.1] tracking-tight text-pretty md:mb-6 md:text-[58px] md:leading-[1.06]">
-              Le 11 septembre, on ouvre la clinique à 40 personnes qui ont déjà tout essayé
+              Le 23 octobre, on ouvre la clinique à 40 personnes qui ont déjà tout essayé
             </h1>
             <p className="mx-auto mb-6 max-w-[700px] text-base leading-relaxed text-gray-300 text-pretty md:mb-8 md:text-xl">
               Une évaluation métabolique complète de 60 minutes. Ton analyse InBody. Ton portrait

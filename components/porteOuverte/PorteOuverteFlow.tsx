@@ -518,7 +518,7 @@ export default function PorteOuverteFlow() {
                 20 $
               </span>
               <p className="text-[13px] leading-relaxed text-gray-500">
-                Un dépôt de 20 $ confirme ta place le 11 septembre. Il t’est remis en argent le
+                Un dépôt de 20 $ confirme ta place le 23 octobre. Il t’est remis en argent le
                 jour même, à ton arrivée. C’est ce qui fait que les 40 places vont à des personnes
                 qui se présentent.
               </p>
@@ -532,7 +532,7 @@ export default function PorteOuverteFlow() {
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Loader2 size={32} className="animate-spin text-neo" />
             <p className="mt-5 text-base text-gray-600">
-              On regarde les places qu’il reste le 11 septembre…
+              On regarde les places qu’il reste le 23 octobre…
             </p>
           </div>
         );

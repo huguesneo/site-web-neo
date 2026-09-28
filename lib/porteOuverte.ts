@@ -1,5 +1,5 @@
 /**
- * Cœur du parcours d'inscription à la journée porte ouverte du 11 septembre 2026.
+ * Cœur du parcours d'inscription à la journée porte ouverte du 23 octobre 2026.
  *
  * Données pures et calculs sans effet de bord. La navigation vit dans
  * PorteOuverteFlow, la présentation dans les écrans, et les routes serveur

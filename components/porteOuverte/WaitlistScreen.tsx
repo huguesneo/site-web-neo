@@ -28,8 +28,8 @@ export default function WaitlistScreen({ raison }: { raison: 'froid' | 'complet'
 
   const corps =
     raison === 'froid'
-      ? 'Les 40 places du 11 septembre partent en priorité aux personnes prêtes à embarquer dans une démarche dès cet automne. C’est plate à dire de même, mais c’est plus honnête que de te faire venir pour rien.'
-      : 'Les cinq naturopathes sont complets pour le 11 septembre. On t’a inscrite avec les coordonnées que tu viens de nous donner, et tu passes avant tout le monde dès qu’une place se libère.';
+      ? 'Les 40 places du 23 octobre partent en priorité aux personnes prêtes à embarquer dans une démarche dès cet automne. C’est plate à dire de même, mais c’est plus honnête que de te faire venir pour rien.'
+      : 'Les cinq naturopathes sont complets pour le 23 octobre. On t’a inscrite avec les coordonnées que tu viens de nous donner, et tu passes avant tout le monde dès qu’une place se libère.';
 
   return (
     <div className="py-6">
