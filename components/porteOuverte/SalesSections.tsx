@@ -113,7 +113,7 @@ const EXCLUSIONS = [
   'Si tu cherches une diète de 1 200 calories.',
   'Si tu veux perdre 20 lb en 3 semaines.',
   'Si tu es déjà cliente NEO.',
-  'Si tu n’as pas 60 minutes à bloquer le 11 septembre.',
+  'Si tu n’as pas 60 minutes à bloquer le 23 octobre.',
 ];
 
 const FAQ = [
@@ -378,7 +378,7 @@ export default function SalesSections() {
                 Pour qui ce n’est pas
               </h2>
               <p className="text-[15px] leading-relaxed text-gray-400 text-pretty md:text-[17px]">
-                On préfère te le dire ici plutôt que le 11 septembre. Il y a 40 places, et elles ne
+                On préfère te le dire ici plutôt que le 23 octobre. Il y a 40 places, et elles ne
                 sont pas pour tout le monde.
               </p>
             </div>
@@ -447,7 +447,7 @@ export default function SalesSections() {
             Une seule journée
             <br className="md:hidden" />
             <span className="hidden md:inline"> · </span>
-            11 septembre 2026
+            23 octobre 2026
           </span>
           <h2 className="mb-3.5 text-[28px] font-extrabold leading-[1.15] tracking-tight text-neo-900 text-pretty md:mb-5 md:text-[46px] md:leading-[1.1]">
             40 places, 5 naturopathes, et une heure pour comprendre ce qui bloque

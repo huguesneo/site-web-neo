@@ -4,7 +4,7 @@ import { CONSENTEMENT_VERSION, texteConsentement } from '@/lib/porteOuverte';
 export const runtime = 'nodejs';
 
 /**
- * Relais vers les webhooks Make de la porte ouverte du 11 septembre 2026.
+ * Relais vers les webhooks Make de la porte ouverte du 23 octobre 2026.
  *
  * Deux scénarios Make, donc deux URL : la capture et la qualification sont
  * modifiables séparément sans risquer de casser l'autre.

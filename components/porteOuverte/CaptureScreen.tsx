@@ -39,7 +39,7 @@ export function erreursCoordonnees(c: Coordonnees): Partial<Record<keyof Coordon
     erreurs.telephone = 'Entre un numéro à 10 chiffres.';
   }
   if (!c.consentement) {
-    erreurs.consentement = 'On a besoin de ton accord pour t’écrire au sujet du 11 septembre.';
+    erreurs.consentement = 'On a besoin de ton accord pour t’écrire au sujet du 23 octobre.';
   }
   return erreurs;
 }
@@ -103,7 +103,7 @@ export default function CaptureScreen({
   return (
     <div>
       <h1 className="mb-1.5 text-[21px] font-extrabold leading-tight tracking-tight text-gray-900 text-pretty md:mb-2 md:text-[28px]">
-        Voyons si le 11 septembre est fait pour toi
+        Voyons si le 23 octobre est fait pour toi
       </h1>
       <p className="mb-5 text-sm leading-relaxed text-gray-600 md:mb-7 md:text-[15px]">
         Trois champs, puis quelques questions. Compte deux minutes en tout.

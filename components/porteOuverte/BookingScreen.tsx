@@ -104,7 +104,7 @@ export default function BookingScreen({
       </button>
 
       <h1 className="text-2xl md:text-4xl font-bold text-gray-900 leading-snug text-center">
-        Ta place du 11 septembre t’attend.
+        Ta place du 23 octobre t’attend.
       </h1>
       <p className="mt-4 text-lg text-gray-600 text-center max-w-xl mx-auto">
         {modalite === 'clinique'

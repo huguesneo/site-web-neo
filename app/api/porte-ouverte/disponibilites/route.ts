@@ -12,7 +12,7 @@ const GHL_BASE = 'https://services.leadconnectorhq.com';
 
 /** GHL refuse les fenêtres de plus de 31 jours, d'où le découpage en tranches. */
 const JOURS_PAR_APPEL = 30;
-const TRANCHES = 3; // ≈ 90 jours d'horizon — couvre largement le 11 septembre
+const TRANCHES = 3; // ≈ 90 jours d'horizon — couvre largement le 23 octobre
 const JOUR_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -45,7 +45,7 @@ async function aDesPlaces(calendarId: string, cle: string): Promise<boolean> {
       throw new Error(`GHL free-slots ${calendarId} : ${reponse.status}`);
     }
 
-    // La réponse est un objet dont les clés sont des dates (« 2026-09-11 »),
+    // La réponse est un objet dont les clés sont des dates (« 2026-10-23 »),
     // chacune portant un tableau `slots`. `traceId` est la seule clé à ignorer.
     const donnees = (await reponse.json()) as Record<string, unknown>;
     const trouve = Object.entries(donnees).some(([cleJour, valeur]) => {

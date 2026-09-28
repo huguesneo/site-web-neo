@@ -22,7 +22,7 @@ const MESSAGES: Record<DqMotif, { titre: string; corps: string[] }> = {
   'deja-porte-ouverte': {
     titre: 'Tu es déjà venue à une porte ouverte.',
     corps: [
-      'Les 40 places du 11 septembre vont à des personnes qui n’ont jamais mis les pieds chez nous — c’est la raison d’être de la journée.',
+      'Les 40 places du 23 octobre vont à des personnes qui n’ont jamais mis les pieds chez nous — c’est la raison d’être de la journée.',
       'On garde tes coordonnées : dès qu’on ouvre quelque chose pour les gens qui nous connaissent déjà, tu es dans les premières averties.',
     ],
   },
@@ -60,7 +60,7 @@ export default function DisqualifiedScreen({ motif }: { motif: DqMotif }) {
       </div>
 
       <ShareBlock
-        titre="Tu connais quelqu’un qui devrait venir le 11 septembre ?"
+        titre="Tu connais quelqu’un qui devrait venir le 23 octobre ?"
         corps="Envoie-lui ce lien. C’est le meilleur cadeau que tu peux faire à quelqu’un qui a tout essayé."
       />
     </div>

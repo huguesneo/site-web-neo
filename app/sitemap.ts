@@ -94,6 +94,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     },
     {
+      url: `${baseUrl}/porte-ouverte`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/politique-de-confidentialite`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
