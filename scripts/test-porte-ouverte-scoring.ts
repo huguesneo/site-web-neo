@@ -4,7 +4,7 @@
  */
 import {
   CONSENTEMENT_VERSION,
-  Q_BUDGET,
+  Q_DIFFICULTE,
   Q_MODALITE,
   REPONSES_VIDES,
   Reponses,
@@ -30,7 +30,8 @@ function base(patch: Partial<Reponses> = {}): Reponses {
     ...REPONSES_VIDES,
     cliente: 'non',
     objectif: 'perte-gras',
-    budget: '500-1500',
+    difficulte: 'temps',
+    pret: 'totalement',
     modalite: 'visio',
     ...patch,
   };
@@ -38,25 +39,25 @@ function base(patch: Partial<Reponses> = {}): Reponses {
 
 // ──────────────────────────────── Sorties ────────────────────────────────
 console.log('\nSorties');
-check('cliente active → cliente-active', calculerSortie(base({ cliente: 'oui' })) === 'cliente-active');
+check('cliente → cliente-active', calculerSortie(base({ cliente: 'oui' })) === 'cliente-active');
 check(
-  'cliente active dès Q1, sans le reste',
+  'cliente dès Q1, sans le reste',
   calculerSortie({ ...REPONSES_VIDES, cliente: 'oui' }) === 'cliente-active',
 );
 check(
-  'cliente active bat le budget « rien »',
-  calculerSortie(base({ cliente: 'oui', budget: 'rien' })) === 'cliente-active',
+  'cliente bat « pas pour l’instant »',
+  calculerSortie(base({ cliente: 'oui', pret: 'pas-maintenant' })) === 'cliente-active',
 );
-check('budget rien → information', calculerSortie(base({ budget: 'rien' })) === 'information');
+check('pas prête → information', calculerSortie(base({ pret: 'pas-maintenant' })) === 'information');
 check(
-  'budget rien sort sans la modalité',
-  calculerSortie(base({ budget: 'rien', modalite: null })) === 'information',
+  'pas prête sort sans la modalité',
+  calculerSortie(base({ pret: 'pas-maintenant', modalite: null })) === 'information',
 );
-for (const b of ['2500-plus', '1500-2500', '500-1500', 'moins-500'] as const) {
-  check(`budget ${b} → calendrier`, calculerSortie(base({ budget: b })) === 'calendrier');
+for (const p of ['totalement', 'accompagnee'] as const) {
+  check(`prête (${p}) → calendrier`, calculerSortie(base({ pret: p })) === 'calendrier');
 }
 check('pas de sortie sans modalité', calculerSortie(base({ modalite: null })) === null);
-check('pas de sortie sans budget', calculerSortie(base({ budget: null })) === null);
+check('pas de sortie sans réponse « prête »', calculerSortie(base({ pret: null })) === null);
 check('pas de sortie à vide', calculerSortie(REPONSES_VIDES) === null);
 
 // ───────────────────────────── Champs GHL ────────────────────────────────
@@ -66,30 +67,24 @@ console.log('\nChamps PO');
   check('cliente → po_statut dq + motif', c.po_statut === 'dq' && c.po_dq_motif === 'cliente-actuelle', c);
 }
 {
-  const c = champsPorteOuverte(base({ budget: 'rien', modalite: null }), 'information');
+  const c = champsPorteOuverte(base({ pret: 'pas-maintenant', modalite: null }), 'information');
   check('information → po_statut froid', c.po_statut === 'froid', c);
-  check('libellé GHL exact du budget rien', c.po_budget === 'Rien pour le moment — je viens chercher de l\'information', c);
+  check('réponse écrite en toutes lettres', c.po_pret_changement === 'Non, pas pour l’instant', c);
   check('pas de modalité écrite', !('po_modalite' in c), c);
 }
 {
-  const c = champsPorteOuverte(base({ budget: 'moins-500', modalite: 'clinique' }), 'calendrier');
-  check('moins de 500 → tiede', c.po_statut === 'tiede', c);
+  const c = champsPorteOuverte(base({ pret: 'accompagnee', modalite: 'clinique' }), 'calendrier');
+  check('prête mais accompagnée → tiede', c.po_statut === 'tiede', c);
   check('modalité GHL', c.po_modalite === 'À la clinique de Brossard', c);
+  check('difficulté écrite', c.po_difficulte === 'Le manque de temps', c);
 }
-check('500+ → chaud', champsPorteOuverte(base(), 'calendrier').po_statut === 'chaud');
-
-// Les options des champs GHL à choix : un libellé qui dérive casse ici.
+check('totalement prête → chaud', champsPorteOuverte(base(), 'calendrier').po_statut === 'chaud');
 check(
-  'options po_budget = liste GHL',
-  JSON.stringify(Q_BUDGET.options.map((o) => o.ghl)) ===
-    JSON.stringify([
-      '2 500 $ et plus',
-      '1 500 $ à 2 500 $',
-      '500 $ à 1 500 $',
-      'Moins de 500 $',
-      'Rien pour le moment — je viens chercher de l\'information',
-    ]),
+  '« Tous ces choix » en dernier',
+  Q_DIFFICULTE.options[Q_DIFFICULTE.options.length - 1].label === 'Tous ces choix',
 );
+
+// L'option du champ GHL à choix : un libellé qui dérive casse ici.
 check(
   'options po_modalite = liste GHL',
   JSON.stringify(Q_MODALITE.options.map((o) => o.ghl)) ===

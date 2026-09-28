@@ -7,10 +7,11 @@ import Button from '@/components/Button';
 import {
   CONSENTEMENT_VERSION,
   DISPONIBILITES_PAR_DEFAUT,
-  Q_BUDGET,
   Q_CLIENTE,
+  Q_DIFFICULTE,
   Q_MODALITE,
   Q_OBJECTIF,
+  Q_PRET,
   REPONSES_VIDES,
   calculerSortie,
   type Disponibilites,
@@ -32,8 +33,8 @@ import SalesSections from './SalesSections';
 
 type Phase = 'capture' | 'questions' | 'verification' | 'booking' | 'complet' | 'cliente' | 'information';
 
-/** Les quatre questions, dans l'ordre. */
-const ETAPES = ['cliente', 'objectif', 'budget', 'modalite'] as const;
+/** Les cinq questions, dans l'ordre. */
+const ETAPES = ['cliente', 'objectif', 'difficulte', 'pret', 'modalite'] as const;
 
 type EtapeId = (typeof ETAPES)[number];
 
@@ -100,6 +101,7 @@ export default function PorteOuverteFlow() {
   /** Coordonnées telles qu'envoyées à GHL — normalisées une seule fois, ici. */
   const contact = () => ({
     prenom: coordonnees.prenom.trim(),
+    nom: coordonnees.nom.trim(),
     courriel: coordonnees.courriel.trim(),
     cellulaire: normaliserTelephone(coordonnees.telephone),
   });
@@ -210,19 +212,30 @@ export default function PorteOuverteFlow() {
             onSelection={(v) => repondre({ objectif: v })}
           />
         );
-      case 'budget':
+      case 'difficulte':
         return (
           <ChoiceScreen
-            question={Q_BUDGET.question}
-            options={Q_BUDGET.options}
-            valeurs={reponses.budget ? [reponses.budget] : []}
-            onSelection={(v) => repondre({ budget: v })}
+            question={Q_DIFFICULTE.question}
+            options={Q_DIFFICULTE.options}
+            valeurs={reponses.difficulte ? [reponses.difficulte] : []}
+            onSelection={(v) => repondre({ difficulte: v })}
+          />
+        );
+      case 'pret':
+        return (
+          <ChoiceScreen
+            intro={Q_PRET.intro}
+            question={Q_PRET.question}
+            options={Q_PRET.options}
+            valeurs={reponses.pret ? [reponses.pret] : []}
+            onSelection={(v) => repondre({ pret: v })}
           />
         );
       case 'modalite':
         return (
           <ChoiceScreen
             question={Q_MODALITE.question}
+            aide={Q_MODALITE.aide}
             options={Q_MODALITE.options}
             valeurs={reponses.modalite ? [reponses.modalite] : []}
             onSelection={(v) => repondre({ modalite: v })}
@@ -297,7 +310,7 @@ export default function PorteOuverteFlow() {
                 Voir si je suis admissible
               </Button>
               <p className="mt-3.5 text-center text-[13px] leading-normal text-gray-500">
-                Réservé aux personnes qui ne sont pas clientes de NEO Performance en ce moment.
+                Réservé aux personnes qui n’ont pas été clientes de NEO Performance dans la dernière année.
               </p>
             </div>
 

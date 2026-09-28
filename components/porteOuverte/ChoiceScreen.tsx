@@ -15,6 +15,7 @@ import type { Option } from '@/lib/porteOuverte';
  * plusieurs, et elle le dit avant qu'elle ait à essayer.
  */
 export default function ChoiceScreen<V extends string>({
+  intro,
   question,
   aide,
   options,
@@ -22,6 +23,8 @@ export default function ChoiceScreen<V extends string>({
   onSelection,
   multiple = false,
 }: {
+  /** Mise en contexte affichée au-dessus de la question. */
+  intro?: string;
   question: string;
   aide?: string;
   options: Option<V>[];
@@ -31,6 +34,7 @@ export default function ChoiceScreen<V extends string>({
 }) {
   return (
     <div>
+      {intro && <p className="mb-3 text-base text-gray-600 leading-relaxed">{intro}</p>}
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-snug">{question}</h1>
       {aide && <p className="mt-3 text-base text-gray-500 leading-snug">{aide}</p>}
 

@@ -110,6 +110,7 @@ async function champsPersonnalises(valeurs: Record<string, string>) {
 
 interface Contact {
   prenom: string;
+  nom: string;
   courriel: string;
   cellulaire: string;
 }
@@ -122,6 +123,7 @@ async function upsertContact(contact: Contact, customFields: { id: string; field
     body: {
       locationId,
       firstName: contact.prenom,
+      lastName: contact.nom,
       email: contact.courriel,
       phone: `+1${contact.cellulaire}`,
       source: 'Porte ouverte 23 octobre',
@@ -165,10 +167,11 @@ function texte(valeur: unknown): string {
 function lireContact(charge: Record<string, any>): Contact | null {
   const contact = {
     prenom: texte(charge.prenom),
+    nom: texte(charge.nom),
     courriel: texte(charge.courriel).toLowerCase(),
     cellulaire: texte(charge.cellulaire).replace(/\D/g, ''),
   };
-  if (!contact.prenom || !COURRIEL_VALIDE.test(contact.courriel) || contact.cellulaire.length !== 10) {
+  if (!contact.prenom || !contact.nom || !COURRIEL_VALIDE.test(contact.courriel) || contact.cellulaire.length !== 10) {
     return null;
   }
   return contact;
@@ -183,7 +186,8 @@ function lireReponses(brut: unknown): Reponses {
     ...REPONSES_VIDES,
     cliente: pris('cliente'),
     objectif: pris('objectif'),
-    budget: pris('budget'),
+    difficulte: pris('difficulte'),
+    pret: pris('pret'),
     modalite: pris('modalite'),
   };
 }

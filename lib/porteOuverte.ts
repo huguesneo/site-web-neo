@@ -7,9 +7,9 @@
  * dans GHL.
  *
  * Distinction à respecter : `valeur` est l'identifiant interne du parcours,
- * `label` est ce qui s'affiche. Les champs GHL à options (po_budget,
- * po_modalite) reçoivent un libellé de leur propre liste d'options — voir
- * `ghl` sur chaque option, qui doit rester identique à l'option dans GHL.
+ * `label` est ce qui s'affiche. Le champ GHL à options (po_modalite) reçoit
+ * un libellé de sa propre liste d'options — voir `ghl` sur chaque option, qui
+ * doit rester identique à l'option dans GHL.
  */
 
 /* ────────────────────────────── Calendriers ────────────────────────────── */
@@ -74,23 +74,20 @@ export interface Option<V extends string> {
 
 export type Cliente = 'oui' | 'non';
 export type Objectif = 'perte-gras' | 'energie' | 'digestion' | 'hormones' | 'autre';
-export type Budget = '2500-plus' | '1500-2500' | '500-1500' | 'moins-500' | 'rien';
+export type Difficulte = 'temps' | 'constance' | 'alimentation' | 'energie' | 'stress' | 'tout';
+export type Pret = 'totalement' | 'accompagnee' | 'pas-maintenant';
 
 export const Q_CLIENTE = {
-  question: 'Es-tu cliente de NEO Performance en ce moment ?',
+  question: 'Es-tu cliente, ou as-tu été cliente de NEO Performance dans la dernière année ?',
   options: [
-    { valeur: 'oui', label: 'Oui, je suis cliente en ce moment' },
-    {
-      valeur: 'non',
-      label: 'Non',
-      detail: 'Même si tu as déjà été cliente, ou si tu es venue à la porte ouverte de février.',
-    },
+    { valeur: 'oui', label: 'Oui' },
+    { valeur: 'non', label: 'Non' },
   ] as Option<Cliente>[],
 };
 
 export const Q_OBJECTIF = {
-  question: 'Qu’est-ce qui t’amène ?',
-  aide: 'Une seule réponse — celle qui pèse le plus en ce moment.',
+  question: 'Quel est ton objectif ?',
+  aide: 'Choisis une seule réponse, celle qui est la plus importante en ce moment.',
   options: [
     { valeur: 'perte-gras', label: 'Perdre du gras et le garder cette fois' },
     { valeur: 'energie', label: 'Retrouver mon énergie' },
@@ -104,20 +101,27 @@ export const Q_OBJECTIF = {
   ] as Option<Objectif>[],
 };
 
-export const Q_BUDGET = {
-  question:
-    'Si on te démontre que notre approche est la bonne pour toi, quel montant serais-tu prête à investir dans ta santé au cours des 4 prochains mois ?',
+export const Q_DIFFICULTE = {
+  question: 'Quelle est ta plus grande difficulté en ce moment ?',
   options: [
-    { valeur: '2500-plus', label: '2 500 $ et plus', ghl: '2 500 $ et plus' },
-    { valeur: '1500-2500', label: '1 500 $ à 2 500 $', ghl: '1 500 $ à 2 500 $' },
-    { valeur: '500-1500', label: '500 $ à 1 500 $', ghl: '500 $ à 1 500 $' },
-    { valeur: 'moins-500', label: 'Moins de 500 $', ghl: 'Moins de 500 $' },
-    {
-      valeur: 'rien',
-      label: 'Rien pour le moment — je viens chercher de l’information',
-      ghl: 'Rien pour le moment — je viens chercher de l\'information',
-    },
-  ] as Option<Budget>[],
+    { valeur: 'temps', label: 'Le manque de temps' },
+    { valeur: 'constance', label: 'Rester constante plus que quelques semaines' },
+    { valeur: 'alimentation', label: 'Savoir quoi manger, vraiment' },
+    { valeur: 'energie', label: 'La fatigue — je n’ai plus d’énergie pour m’en occuper' },
+    { valeur: 'stress', label: 'Le stress qui prend toute la place' },
+    { valeur: 'tout', label: 'Tous ces choix' },
+  ] as Option<Difficulte>[],
+};
+
+export const Q_PRET = {
+  intro:
+    'Lors de la journée porte ouverte, on va t’expliquer exactement ta problématique et ton plan de match.',
+  question: 'Es-tu prête à faire des changements pour enfin atteindre tes objectifs ?',
+  options: [
+    { valeur: 'totalement', label: 'Oui, totalement prête' },
+    { valeur: 'accompagnee', label: 'Oui, mais j’ai besoin d’être bien accompagnée' },
+    { valeur: 'pas-maintenant', label: 'Non, pas pour l’instant' },
+  ] as Option<Pret>[],
 };
 
 /** Valeur du sac-cadeau — un seul montant, affiché partout où on en parle. */
@@ -125,6 +129,7 @@ export const VALEUR_SAC_CADEAU = '110 $';
 
 export const Q_MODALITE = {
   question: 'Tu préfères venir à la clinique de Brossard ou faire ta rencontre en visio ?',
+  aide: 'On te suggère fortement la clinique de Brossard.',
   options: [
     {
       valeur: 'clinique',
@@ -146,14 +151,16 @@ export const Q_MODALITE = {
 export interface Reponses {
   cliente: Cliente | null;
   objectif: Objectif | null;
-  budget: Budget | null;
+  difficulte: Difficulte | null;
+  pret: Pret | null;
   modalite: Modalite | null;
 }
 
 export const REPONSES_VIDES: Reponses = {
   cliente: null,
   objectif: null,
-  budget: null,
+  difficulte: null,
+  pret: null,
   modalite: null,
 };
 
@@ -161,22 +168,24 @@ export const REPONSES_VIDES: Reponses = {
 
 /**
  * Trois sorties, pas de score :
- * - cliente active → elle parle à sa naturopathe, pas de calendrier ;
- * - budget « rien pour le moment » → groupe Facebook et guide gratuit ;
- * - tout le reste (anciennes clientes et participantes de février comprises)
- *   → calendrier.
+ * - cliente, ou cliente dans la dernière année → elle parle à sa
+ *   naturopathe, pas de calendrier ;
+ * - « pas prête pour l'instant » → groupe Facebook et guide gratuit ;
+ * - tout le reste (clientes d'il y a plus d'un an et participantes de
+ *   février comprises) → calendrier.
  */
 export type Sortie = 'cliente-active' | 'information' | 'calendrier';
 
 /**
  * Sortie dès que les réponses la déterminent, `null` tant qu'il manque une
- * réponse décisive. La cliente active sort dès la première question, le
- * « rien pour le moment » dès le budget, sans passer par la modalité.
+ * réponse décisive. La cliente sort dès la première question, le « pas pour
+ * l'instant » dès la question sur les changements, sans passer par la
+ * modalité.
  */
 export function calculerSortie(reponses: Reponses): Sortie | null {
   if (reponses.cliente === 'oui') return 'cliente-active';
-  if (reponses.cliente === null || reponses.budget === null) return null;
-  if (reponses.budget === 'rien') return 'information';
+  if (reponses.cliente === null || reponses.pret === null) return null;
+  if (reponses.pret === 'pas-maintenant') return 'information';
   if (reponses.modalite === null) return null;
   return 'calendrier';
 }
@@ -214,6 +223,7 @@ export const URL_CONFIRMATION = 'https://www.neoperformance.ca/porte-ouverte/con
  *
  * `po_statut` et `po_dq_motif` sont des listes d'options déjà en place dans
  * GHL : on y range la sortie sans en créer de nouvelles options.
+ * `po_difficulte` et `po_pret_changement` sont des champs texte.
  */
 export function champsPorteOuverte(reponses: Reponses, sortie: Sortie): Record<string, string> {
   const libelle = <V extends string>(options: Option<V>[], valeur: V | null, cle: 'ghl' | 'label') =>
@@ -224,14 +234,17 @@ export function champsPorteOuverte(reponses: Reponses, sortie: Sortie): Record<s
       ? 'dq'
       : sortie === 'information'
         ? 'froid'
-        : reponses.budget === 'moins-500'
+        : reponses.pret === 'accompagnee'
           ? 'tiede'
           : 'chaud';
 
   const champs: Record<string, string> = { po_statut: statut };
   if (sortie === 'cliente-active') champs.po_dq_motif = 'cliente-actuelle';
   if (reponses.objectif) champs.po_objectif = libelle(Q_OBJECTIF.options, reponses.objectif, 'label');
-  if (reponses.budget) champs.po_budget = libelle(Q_BUDGET.options, reponses.budget, 'ghl');
+  if (reponses.difficulte) {
+    champs.po_difficulte = libelle(Q_DIFFICULTE.options, reponses.difficulte, 'label');
+  }
+  if (reponses.pret) champs.po_pret_changement = libelle(Q_PRET.options, reponses.pret, 'label');
   if (reponses.modalite) champs.po_modalite = libelle(Q_MODALITE.options, reponses.modalite, 'ghl');
   return champs;
 }

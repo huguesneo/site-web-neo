@@ -4,9 +4,9 @@ import { BookOpen, Users } from 'lucide-react';
 import { GROUPE_FACEBOOK } from '@/lib/porteOuverte';
 
 /**
- * Sortie « rien pour le moment » — pas de calendrier.
+ * Sortie « pas prête pour l'instant » — pas de calendrier.
  *
- * La personne vient chercher de l'information : on lui en donne, sans la
+ * La personne n'est pas prête à faire des changements : on la nourrit sans la
  * faire venir pour rien. Le guide part par courriel (tag posé côté serveur),
  * le groupe Facebook est à un clic.
  */
@@ -15,7 +15,7 @@ export default function InformationScreen() {
     <div className="py-6">
       <div className="text-center">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-snug">
-          Tu viens chercher de l’information ? On a exactement ce qu’il te faut.
+          Pas encore prête ? On a de quoi te faire avancer quand même.
         </h1>
         <p className="mt-4 text-lg text-gray-600 leading-relaxed max-w-xl mx-auto">
           Les 40 places du 23 octobre vont en priorité aux personnes prêtes à embarquer dans une

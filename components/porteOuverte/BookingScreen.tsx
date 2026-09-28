@@ -30,6 +30,7 @@ const CALENDRIERS: Record<Modalite, { base: string; iframeId: string }> = {
 function urlCalendrier(modalite: Modalite, c: Coordonnees): string {
   const params = new URLSearchParams({
     first_name: c.prenom.trim(),
+    last_name: c.nom.trim(),
     email: c.courriel.trim(),
     phone: normaliserTelephone(c.telephone),
   });

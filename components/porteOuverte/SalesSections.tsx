@@ -113,7 +113,7 @@ const GUIDES = [
 const EXCLUSIONS = [
   'Si tu cherches une diète de 1 200 calories.',
   'Si tu veux perdre 20 lb en 3 semaines.',
-  'Si tu es cliente NEO en ce moment.',
+  'Si tu es cliente NEO, ou l’as été dans la dernière année.',
   'Si tu n’as pas 60 minutes à bloquer le 23 octobre.',
 ];
 
@@ -146,7 +146,7 @@ const FAQ = [
   {
     question: 'Je suis déjà cliente de NEO. Je peux réserver une place ?',
     reponse:
-      'Si tu es accompagnée en ce moment, non : tu as déjà ton portrait et ta naturopathe — écris-lui plutôt dans l’application. Si tu as été cliente dans le passé, ou si tu es venue à la porte ouverte de février, tu es la bienvenue.',
+      'Si tu es cliente, ou l’as été dans la dernière année, non : tu as déjà ton portrait et ta naturopathe — écris-lui plutôt dans l’application. Si ça fait plus d’un an, ou si tu es venue à la porte ouverte de février, tu es la bienvenue.',
   },
 ];
 
@@ -465,7 +465,7 @@ export default function SalesSections() {
             Voir si je suis admissible
           </a>
           <p className="mx-auto mt-3.5 max-w-[460px] text-[12.5px] leading-relaxed text-neo-800 md:text-[13.5px]">
-            Réservé aux personnes qui ne sont pas clientes de NEO Performance en ce moment. Dépôt de 20 $
+            Réservé aux personnes qui n’ont pas été clientes de NEO Performance dans la dernière année. Dépôt de 20 $
             pour confirmer la place, remis en argent le jour même.
           </p>
         </div>
