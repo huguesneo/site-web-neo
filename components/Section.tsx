@@ -36,7 +36,7 @@ const Section: React.FC<SectionProps> = ({
         }
       },
       {
-        threshold: 0.1, // Déclenche dès que 10% de la section est visible
+        threshold: 0, // Dès qu'un pixel est visible (un % échoue sur les sections plus hautes que l'écran mobile)
         rootMargin: '0px 0px -50px 0px' // Petite marge pour ne pas déclencher trop tôt en bas
       }
     );

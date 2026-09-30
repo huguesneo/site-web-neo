@@ -29,7 +29,10 @@ function useInViewOnce<T extends HTMLElement>(ref: React.RefObject<T | null>) {
           obs.disconnect();
         }
       },
-      { threshold: 0.15, rootMargin: '0px 0px -60px 0px' }
+      // threshold 0 : un seul pixel visible suffit. Un seuil en % ne peut
+      // jamais être atteint sur un bloc plus haut que l'écran (ex. la grille
+      // d'équipe en une colonne sur mobile), qui resterait alors invisible.
+      { threshold: 0, rootMargin: '0px 0px -40px 0px' }
     );
     obs.observe(el);
     return () => obs.disconnect();
