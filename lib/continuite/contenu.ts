@@ -1,11 +1,14 @@
-import type { Duree, Palier } from './types';
+import type { Duree, Palier, Prix } from './types';
 
-// Textes d'affichage seulement. Aucun prix ici : les montants viennent
-// toujours de GET continuite-offre.
+// Textes d'affichage seulement. Les prix et les « inclus » des forfaits
+// viennent toujours de GET continuite-offre.
 
 export const ORDRE_PALIERS: Palier[] = ['continuite', 'continuite_plus', 'continuite_extra'];
 export const ORDRE_DUREES: Duree[] = ['mensuel', '6_mois', '12_mois'];
 export const PALIER_RECOMMANDE: Palier = 'continuite_plus';
+export const DUREE_PAR_DEFAUT: Duree = '6_mois';
+
+export const MOIS_DUREE: Record<Duree, number> = { mensuel: 1, '6_mois': 6, '12_mois': 12 };
 
 export const NOMS_PALIERS: Record<Palier, string> = {
   continuite: 'NEO Continuité',
@@ -13,92 +16,79 @@ export const NOMS_PALIERS: Record<Palier, string> = {
   continuite_extra: 'Continuité Extra',
 };
 
-export const RESUMES_PALIERS: Record<Palier, string> = {
-  continuite: 'Les outils et la communauté pour garder tes acquis.',
-  continuite_plus: 'Ta naturopathe reste dans ta routine, aux deux mois.',
+// Libellés courts des onglets (mobile).
+export const ONGLETS_PALIERS: Record<Palier, string> = {
+  continuite: 'L’essentiel',
+  continuite_plus: 'Le suivi',
+  continuite_extra: 'Le suivi mensuel',
+};
+
+export const ROLES_PALIERS: Record<Palier, string> = {
+  continuite: 'L’essentiel pour garder tes repères.',
+  continuite_plus: 'Ton ou ta naturopathe reste à tes côtés.',
   continuite_extra: 'Un suivi chaque mois, pour garder le cap de près.',
 };
 
+export const BOUTONS_PALIERS: Record<Palier, string> = {
+  continuite: 'Choisir l’essentiel',
+  continuite_plus: 'Je garde mon suivi',
+  continuite_extra: 'Choisir le suivi mensuel',
+};
+
 export const NOMS_DUREES: Record<Duree, string> = {
-  mensuel: 'Mensuel',
+  mensuel: 'Mois par mois',
   '6_mois': '6 mois',
   '12_mois': '12 mois',
 };
 
-export const DETAILS_DUREES: Record<Duree, string> = {
-  mensuel: 'Sans engagement',
-  '6_mois': 'Engagement 6 mois',
-  '12_mois': 'Engagement 12 mois',
-};
+export const BADGE_RECOMMANDE = 'Recommandé par ton ou ta naturopathe';
 
-// Ligne discrète sous le prix.
-export function ligneEngagement(duree: Duree): string {
-  if (duree === 'mensuel') return 'Sans engagement.';
-  const mois = duree === '6_mois' ? 6 : 12;
-  return `Engagement de ${mois} mois, puis le forfait continue au même prix, mois par mois.`;
+// Rencontre à la carte : section et bouton « Réserver une rencontre » cachés tant
+// que NEXT_PUBLIC_CARTE_ACTIVE n'est pas défini (continuite-checkout-carte pas
+// encore déployé). La colonne du tableau comparatif reste visible.
+export const CARTE_ACTIVE = process.env.NEXT_PUBLIC_CARTE_ACTIVE === '1';
+
+// Rencontre à la carte, sans abonnement. Le montant réellement facturé est
+// fixé par continuite-checkout-carte ; ce prix sert à l'affichage.
+export const PRIX_CARTE_CENTS = 19800;
+export const TEXTE_CARTE =
+  'Une rencontre de 30 minutes avec ton ou ta naturopathe et le chat pendant 4 semaines après ta rencontre. Sans abonnement.';
+
+export const SI_LA_VIE_CHANGE = [
+  'Ton prix est garanti pendant toute ta durée.',
+  'Tu peux passer au mois par mois en payant seulement la différence de prix sur les mois déjà payés.',
+  'À la fin de ta durée, ton forfait continue au même prix, mois par mois.',
+];
+
+export const TEXTE_CONSENTEMENT =
+  'J’accepte les conditions de mon abonnement et je comprends que le montant choisi sera prélevé chaque mois. Je peux passer au mois par mois en payant la différence de prix.';
+
+export const NOTE_CARTE_CADEAU =
+  'Ton crédit suppléments est remis chaque mois en carte-cadeau dans ton compte neoperformance.ca. Il s’utilise dans le mois et ne se cumule pas.';
+
+/*
+  Les textes « inclus » viennent de la description des produits Stripe. On
+  harmonise seulement la façon de nommer la naturopathe.
+*/
+export function texteInclus(ligne: string): string {
+  return ligne.replace(/\b(sa|ta) naturopathe\b/gi, 'ton ou ta naturopathe');
 }
 
-/*
-  Contenu de chaque palier. Sert de repli si l'endpoint renvoie un champ
-  `inclus` vide.
-*/
-export const INCLUS_PAR_DEFAUT: Record<Palier, string[]> = {
-  continuite: [
-    '35 $ de crédit suppléments chaque mois, remis en carte-cadeau dans ton compte neoperformance.ca (utilisable dans le mois, non cumulable)',
-    'Léo, 7 jours sur 7',
-    'Application NEO complète',
-    'Cours en ligne',
-    'Rencontre de groupe mensuelle avec une naturopathe',
-    'Suivi additionnel de 30 minutes : 119 $',
-  ],
-  continuite_plus: [
-    '50 $ de crédit suppléments chaque mois, remis en carte-cadeau dans ton compte neoperformance.ca (utilisable dans le mois, non cumulable)',
-    '1 suivi de 30 minutes aux 2 mois avec ta naturopathe',
-    'Chat avec ta naturopathe',
-    'Léo, 7 jours sur 7',
-    'Application NEO complète et cours en ligne',
-    'Rencontre de groupe mensuelle avec une naturopathe',
-    'Suivi additionnel de 30 minutes : 69 $',
-  ],
-  continuite_extra: [
-    '75 $ de crédit suppléments chaque mois, remis en carte-cadeau dans ton compte neoperformance.ca (utilisable dans le mois, non cumulable)',
-    '10 % de rabais sur les suppléments au-delà du crédit',
-    '1 suivi de 30 minutes par mois avec ta naturopathe',
-    'Chat avec ta naturopathe',
-    'Léo, 7 jours sur 7',
-    'Application NEO complète et cours en ligne',
-    'Rencontre de groupe mensuelle avec une naturopathe',
-    'Suivi additionnel de 30 minutes : 59 $',
-  ],
-};
+// Lignes « inclus » d'un prix, avec le suivi additionnel en dernier.
+export function lignesInclus(prix: Prix): string[] {
+  const lignes = prix.inclus.map(texteInclus);
+  if (prix.suivi_additionnel_cents && !lignes.some((l) => /suivi additionnel/i.test(l))) {
+    lignes.push(`Suivi additionnel de 30 minutes : ${argent(prix.suivi_additionnel_cents)}`);
+  }
+  return lignes;
+}
 
-/*
-  Liste courte pour la vente en face à face (/continuite/naturo) : 5 lignes
-  au maximum, les plus concrètes d'abord.
-*/
-export const INCLUS_COURT: Record<Palier, string[]> = {
-  continuite: [
-    '35 $ en carte-cadeau chaque mois pour tes suppléments',
-    'Une rencontre de groupe chaque mois avec une naturopathe',
-    'Léo, 7 jours sur 7',
-    'L’application NEO complète et les cours en ligne',
-    'Un suivi individuel de 30 minutes au besoin, à 119 $',
-  ],
-  continuite_plus: [
-    'Un suivi de 30 minutes aux 2 mois et le chat avec ta naturopathe',
-    '50 $ en carte-cadeau chaque mois pour tes suppléments',
-    'Léo, 7 jours sur 7',
-    'Une rencontre de groupe chaque mois avec une naturopathe',
-    'L’application NEO complète et les cours en ligne',
-  ],
-  continuite_extra: [
-    'Un suivi de 30 minutes chaque mois et le chat avec ta naturopathe',
-    '75 $ en carte-cadeau chaque mois pour tes suppléments, puis 10 % de rabais',
-    'Léo, 7 jours sur 7',
-    'Une rencontre de groupe chaque mois avec une naturopathe',
-    'L’application NEO complète et les cours en ligne',
-  ],
-};
+// Montant du crédit suppléments, lu dans la ligne « inclus » qui le mentionne.
+export function creditCents(prix: Prix | undefined): number | null {
+  const ligne = prix?.inclus.find((l) => /crédit suppléments/i.test(l));
+  const m = ligne && /(\d+)\s*\$/.exec(ligne);
+  return m ? Number(m[1]) * 100 : null;
+}
 
 /*
   Formatage manuel plutôt qu'Intl : le rendu serveur et le rendu client

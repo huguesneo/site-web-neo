@@ -51,13 +51,22 @@ export type ApercuNaturo = {
   date_premier_paiement?: string | null;
 };
 
+// Rencontre à la carte (sans abonnement). `jeton` seulement depuis la page naturo.
+export type CheckoutCarteRequete = Coordonnees & {
+  turnstile_token?: string;
+  jeton?: string;
+  utm: Utm;
+};
+
 export type CheckoutReponse = { client_secret: string };
 
 export type Session = {
   // complete | ouverte | expiree
   statut: string;
-  palier: Palier;
-  duree: Duree;
+  // « a_la_carte » pour une rencontre sans abonnement ; absent sinon.
+  type?: string | null;
+  palier: Palier | null;
+  duree: Duree | null;
   date_premier_paiement: string | null;
 };
 

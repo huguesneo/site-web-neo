@@ -1,77 +1,73 @@
 'use client';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'motion/react';
-import { CalendarCheck, Check, Link2Off, Loader2, ShieldCheck } from 'lucide-react';
-import { apercuNaturo, checkoutNaturo, ErreurContinuite } from '@/lib/continuite/api';
+import { Check, Copy, Link2Off } from 'lucide-react';
+import { apercuNaturo, ErreurContinuite } from '@/lib/continuite/api';
 import {
-  DETAILS_DUREES,
-  INCLUS_COURT,
-  NOMS_DUREES,
+  DUREE_PAR_DEFAUT,
+  CARTE_ACTIVE,
   NOMS_PALIERS,
   ORDRE_DUREES,
   ORDRE_PALIERS,
   PALIER_RECOMMANDE,
-  argent,
-  dateLongue,
-  ligneEngagement,
 } from '@/lib/continuite/contenu';
-import { economie } from '@/lib/continuite/offre';
 import { lireUtm } from '@/lib/continuite/utm';
-import type { ApercuNaturo, Coordonnees, Duree, Palier } from '@/lib/continuite/types';
+import type { ApercuNaturo, Duree, Palier } from '@/lib/continuite/types';
 import { LOGO_URL } from '@/constants';
-import Conditions from '@/components/continuite/Conditions';
-import ChampsCoordonnees, {
-  focusPremiereErreur,
-  valider,
-  type ErreursChamps,
-} from '@/components/continuite/ChampsCoordonnees';
-import CheckoutIntegre from '@/components/continuite/CheckoutIntegre';
-import { Chargement, MessageErreur } from '@/components/continuite/Etats';
+import SelecteurDuree from '@/components/continuite/SelecteurDuree';
+import CarteForfait from '@/components/continuite/CarteForfait';
+import BlocCarte from '@/components/continuite/BlocCarte';
+import SiLaVieChange from '@/components/continuite/SiLaVieChange';
+import SectionPaiement from '@/components/continuite/SectionPaiement';
+import { BandeauSimulation, Chargement, MessageErreur } from '@/components/continuite/Etats';
 import { useOffre } from '@/components/continuite/useOffre';
 
 /*
-  Vente en face à face : page ouverte depuis l'app NEO par une naturopathe
-  pendant un suivi, puis montrée à la cliente sur tablette ou ordinateur.
-  Plein écran, sans menu ni chatbot (voir SiteChrome).
+  Vente en face à face, d'après la maquette « Tablette » : page ouverte depuis
+  l'app NEO par une naturopathe pendant un suivi, puis montrée à la cliente
+  sur tablette ou ordinateur. Plein écran, sans menu ni chatbot (SiteChrome).
 
-  Le moins de choix possible pour la cliente :
-    1. Un seul forfait est affiché, en grand. La naturo peut en changer
-       par le petit bouton « Changer de forfait » en haut à droite. La durée (6 mois par défaut) met le
-       prix à jour en temps réel.
-    2. « Forfait choisi » ouvre les coordonnées (verrouillées si le lien
-       porte une cliente), les conditions et le consentement.
-    3. Checkout Stripe intégré : la cliente entre sa carte elle-même.
+  - La naturo choisit le forfait mis en avant (« Changer de forfait », en
+    haut à droite). Les deux autres restent repliés sous « Voir les deux
+    autres options ».
+  - Le mode aperçu de continuite-checkout-naturo valide le jeton dès
+    l'ouverture et fournit la cliente éventuelle et, si elle est en
+    programme, la date de la semaine 15.
 
   Lien attendu :
     /continuite/naturo?t=<jeton>&utm_source=app_neo&utm_medium=naturo
       &utm_campaign=continuite&utm_content=<prénom de la naturo>
+  Le jeton est valide 7 jours, pour un seul achat.
 
-  Dès l'ouverture, le mode aperçu de continuite-checkout-naturo valide le
-  jeton et renvoie la cliente éventuelle et la date du premier paiement.
+  « Copier le lien pour la cliente » ajoute palier=… et duree=… à l'URL. À
+  l'ouverture, s'ils existent dans continuite-offre, ils fixent seulement le
+  forfait et la durée mis en avant. Rien d'autre ne les lit : le prix reste
+  validé par l'app au paiement.
 */
-
-type Etape = 'forfait' | 'coordonnees' | 'paiement';
-
-const VIDE: Coordonnees = { prenom: '', nom: '', courriel: '', telephone: '' };
-const REQUIS_GENERIQUE: (keyof Coordonnees)[] = ['prenom', 'nom', 'courriel'];
-// L'aperçu ne fournit pas le téléphone de la cliente : l'app le lit dans son dossier.
-const CHAMPS_CLIENTE: (keyof Coordonnees)[] = ['prenom', 'nom', 'courriel'];
 
 function LienExpire() {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-6">
-      <div className="w-16 h-16 rounded-full bg-neo/10 flex items-center justify-center mb-5">
-        <Link2Off className="w-8 h-8 text-neo-700" aria-hidden="true" />
+      <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-5">
+        <Link2Off className="w-8 h-8 text-[#007F78]" aria-hidden="true" />
       </div>
-      <h1 className="text-3xl font-extrabold text-gray-900">Lien expiré, rouvre-le depuis l&apos;app NEO</h1>
-      <p className="text-lg text-gray-600 mt-3 max-w-md">
-        Pour des raisons de sécurité, ce lien n&apos;est valide que pour une courte durée. Génère un nouveau lien
-        à partir du dossier de la cliente dans l&apos;app NEO.
+      <h1 className="text-3xl font-extrabold">Lien expiré, rouvre-le depuis l’app NEO</h1>
+      <p className="text-lg text-[#4A5455] mt-3 max-w-md">
+        Un lien est valide 7 jours, pour un seul achat. Génère un nouveau lien à partir du dossier de la cliente
+        dans l’app NEO.
       </p>
     </div>
   );
+}
+
+function titre(apercu: ApercuNaturo): string {
+  const cliente = apercu.cliente?.prenom?.trim();
+  const naturo = apercu.naturo_prenom?.trim();
+  if (cliente && naturo) return `${cliente}, voici la suite que ${naturo} te recommande.`;
+  if (cliente) return `${cliente}, voici la suite recommandée pour toi.`;
+  if (naturo) return `Voici la suite que ${naturo} te recommande.`;
+  return 'Voici la suite recommandée après ton programme.';
 }
 
 const estErreurJeton = (e: unknown) =>
@@ -86,17 +82,58 @@ const ContinuiteNaturo: React.FC = () => {
   const [erreurApercu, setErreurApercu] = useState<string | null>(null);
   const [expire, setExpire] = useState(!jeton);
 
-  const [etape, setEtape] = useState<Etape>('forfait');
+  // Forfait recommandé par la naturo, et forfait affiché en grand (peut différer
+  // si la cliente choisit une des deux autres options).
+  const [palierNaturo, setPalierNaturo] = useState<Palier>(PALIER_RECOMMANDE);
   const [palier, setPalier] = useState<Palier>(PALIER_RECOMMANDE);
-  const [duree, setDuree] = useState<Duree>('6_mois');
-  const [coord, setCoord] = useState<Coordonnees>(VIDE);
-  const [erreursChamps, setErreursChamps] = useState<ErreursChamps>({});
-  const [consent, setConsent] = useState(false);
-  const [erreurConsent, setErreurConsent] = useState(false);
-  const [envoi, setEnvoi] = useState(false);
-  const [erreur, setErreur] = useState<string | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [duree, setDuree] = useState<Duree>(DUREE_PAR_DEFAUT);
+  const [autresOuverts, setAutresOuverts] = useState(false);
   const [choixOuvert, setChoixOuvert] = useState(false);
+  const [mode, setMode] = useState<'abonnement' | 'carte'>('abonnement');
+  const [lienCopie, setLienCopie] = useState<'ok' | 'erreur' | null>(null);
+  const preselectionFaite = useRef(false);
+  const sectionPaiement = useRef<HTMLElement>(null);
+
+  // Présélection d'affichage depuis l'URL (palier, duree), une seule fois, si l'offre la contient.
+  useEffect(() => {
+    if (!grille || preselectionFaite.current) return;
+    preselectionFaite.current = true;
+    const p = params.get('palier') as Palier | null;
+    const d = params.get('duree') as Duree | null;
+    if (p && d && ORDRE_PALIERS.includes(p) && ORDRE_DUREES.includes(d) && grille[p]?.[d]) {
+      setPalierNaturo(p);
+      setPalier(p);
+      setDuree(d);
+    }
+  }, [grille, params]);
+
+  // Le message de copie disparaît dès que le choix affiché change.
+  useEffect(() => setLienCopie(null), [palier, duree]);
+
+  const copierLien = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('palier', palier);
+    url.searchParams.set('duree', duree);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setLienCopie('ok');
+    } catch {
+      setLienCopie('erreur');
+    }
+  };
+
+  const verifierLien = useCallback(() => {
+    if (!jeton) return;
+    setErreurApercu(null);
+    apercuNaturo(jeton)
+      .then(setApercu)
+      .catch((e) => {
+        if (estErreurJeton(e)) setExpire(true);
+        else setErreurApercu(e instanceof ErreurContinuite ? e.message : 'Impossible de vérifier ce lien.');
+      });
+  }, [jeton]);
+
+  useEffect(verifierLien, [verifierLien]);
 
   // Le menu « Changer de forfait » se ferme avec Échap ou un clic ailleurs.
   useEffect(() => {
@@ -114,334 +151,173 @@ const ContinuiteNaturo: React.FC = () => {
     };
   }, [choixOuvert]);
 
-  const verifierLien = useCallback(() => {
-    if (!jeton) return;
-    setErreurApercu(null);
-    apercuNaturo(jeton)
-      .then((a) => {
-        setApercu(a);
-        if (a.cliente) setCoord({ ...VIDE, ...a.cliente });
-      })
-      .catch((e) => {
-        if (estErreurJeton(e)) setExpire(true);
-        else setErreurApercu(e instanceof ErreurContinuite ? e.message : 'Impossible de vérifier ce lien.');
-      });
-  }, [jeton]);
+  const allerAuPaiement = () =>
+    requestAnimationFrame(() => sectionPaiement.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 
-  useEffect(verifierLien, [verifierLien]);
+  const jetonExpire = () => {
+    setExpire(true);
+    window.scrollTo({ top: 0 });
+  };
 
-  const cliente = apercu?.cliente ?? null;
   const prix = grille?.[palier]?.[duree];
-  const eco = grille ? economie(grille, palier, duree) : null;
-  const datePremierPaiement = apercu?.date_premier_paiement || null;
-  // Prix mensuel sans engagement, barré à côté du prix avec engagement.
-  const prixSansEngagement =
-    duree !== 'mensuel' && eco ? (grille?.[palier]?.mensuel?.montant_mensuel_cents ?? null) : null;
-
-  const allerA = (e: Etape) => {
-    setEtape(e);
-    setErreur(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const soumettre = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErreur(null);
-    // Avec une cliente portée par le jeton, l'app lit ses coordonnées dans son dossier.
-    const errs = cliente ? {} : valider(coord, REQUIS_GENERIQUE);
-    setErreursChamps(errs);
-    setErreurConsent(!consent);
-    if (Object.keys(errs).length || !consent || !prix) {
-      focusPremiereErreur(errs);
-      return;
-    }
-
-    const remplis = cliente
-      ? {}
-      : (Object.fromEntries(
-          Object.entries(coord)
-            .map(([k, v]) => [k, v.trim()])
-            .filter(([, v]) => v),
-        ) as Partial<Coordonnees>);
-
-    setEnvoi(true);
-    try {
-      const { client_secret } = await checkoutNaturo({
-        jeton,
-        price_id: prix.price_id,
-        ...remplis,
-        utm: lireUtm(params),
-      });
-      setClientSecret(client_secret);
-      allerA('paiement');
-    } catch (err) {
-      // Le jeton peut expirer pendant que la page est ouverte (durée de vie de 2 h).
-      if (estErreurJeton(err)) {
-        setExpire(true);
-        window.scrollTo({ top: 0 });
-        return;
-      }
-      setErreur(err instanceof ErreurContinuite ? err.message : 'Un problème est survenu. Réessaie dans un instant.');
-    } finally {
-      setEnvoi(false);
-    }
-  };
-
-  // Rappel du forfait choisi, en tête des étapes 2 et 3.
-  const recap = prix && (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-neo/[.07] border border-neo/25 px-6 py-5 mb-8">
-      <p className="text-gray-800 text-xl">
-        <strong className="font-extrabold">{NOMS_PALIERS[palier]}</strong>
-        <span className="text-gray-600"> · {DETAILS_DUREES[duree]}</span>
-        <br />
-        <span className="text-lg text-gray-600">{argent(prix.montant_mensuel_cents)} par mois, + taxes</span>
-      </p>
-      <button
-        type="button"
-        onClick={() => {
-          setClientSecret(null);
-          allerA('forfait');
-        }}
-        className="text-lg font-bold text-neo-700 hover:text-neo-600 underline underline-offset-4 px-2 py-3"
-      >
-        Modifier
-      </button>
-    </div>
-  );
+  const autres = ORDRE_PALIERS.filter((p) => p !== palier && grille?.[p]);
 
   let contenu: React.ReactNode;
   if (expire) {
     contenu = <LienExpire />;
-  } else if (erreurApercu) {
+  } else if (erreurApercu || erreurOffre) {
     contenu = (
-      <div className="container mx-auto max-w-xl px-4 py-16">
-        <MessageErreur message={erreurApercu} onReessayer={verifierLien} />
-      </div>
+      <MessageErreur
+        message={(erreurApercu || erreurOffre)!}
+        onReessayer={erreurApercu ? verifierLien : reessayer}
+      />
     );
   } else if (!apercu) {
     contenu = <Chargement texte="Vérification du lien…" />;
-  } else if (erreurOffre) {
-    contenu = (
-      <div className="container mx-auto max-w-xl px-4 py-16">
-        <MessageErreur message={erreurOffre} onReessayer={reessayer} />
-      </div>
-    );
   } else if (!grille) {
     contenu = <Chargement />;
-  } else if (etape === 'forfait') {
-    contenu = (
-      <main className="mx-auto max-w-2xl px-5 sm:px-8 pt-6 pb-8 text-center">
-        <p className="text-lg text-gray-500">
-          {cliente ? `${cliente.prenom}, voici le forfait proposé` : 'Le forfait proposé'}
-          {apercu.naturo_prenom ? ` par ${apercu.naturo_prenom}` : ''}
-        </p>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mt-1">{NOMS_PALIERS[palier]}</h1>
-
-        {/* Durée */}
-        <fieldset className="mt-5">
-          <legend className="sr-only">Durée de l&apos;abonnement</legend>
-          <div className="grid grid-cols-3 gap-3">
-            {ORDRE_DUREES.map((d) => {
-              const actif = d === duree;
-              return (
-                <label
-                  key={d}
-                  className={`cursor-pointer rounded-2xl border-2 px-2 py-4 transition-all focus-within:ring-2 focus-within:ring-neo focus-within:ring-offset-2 ${
-                    actif ? 'border-neo bg-neo/[.07]' : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="duree"
-                    value={d}
-                    checked={actif}
-                    onChange={() => setDuree(d)}
-                    className="sr-only"
-                  />
-                  <span className={`block text-xl font-extrabold ${actif ? 'text-gray-900' : 'text-gray-700'}`}>
-                    {NOMS_DUREES[d]}
-                  </span>
-                  <span className="block text-sm text-gray-500 mt-0.5">{DETAILS_DUREES[d]}</span>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {/* Prix en temps réel */}
-        {prix ? (
-          <>
-            <div className="mt-6 flex items-end justify-center gap-3" aria-live="polite">
-              {prixSansEngagement != null && (
-                <s className="text-3xl sm:text-4xl font-bold text-gray-400 pb-2 decoration-2">
-                  <span className="sr-only">Au lieu de </span>
-                  {argent(prixSansEngagement)}
-                </s>
-              )}
-              <motion.span
-                key={prix.montant_mensuel_cents}
-                initial={{ opacity: 0, y: 12, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                className="text-7xl sm:text-8xl font-extrabold tracking-tight leading-none text-gray-900"
-              >
-                {argent(prix.montant_mensuel_cents)}
-              </motion.span>
-              <span className="text-xl font-semibold text-gray-500 pb-2">par mois, + taxes</span>
-            </div>
-            <p className="mt-3 text-[15px] text-gray-500">{ligneEngagement(duree)}</p>
-            <div className="h-9 mt-2 flex items-center justify-center">
-              {eco && (
-                <motion.span
-                  key={`eco-${palier}-${duree}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="inline-block rounded-full bg-neo text-white text-lg font-bold px-5 py-1.5"
-                >
-                  Tu économises {argent(eco.total)} sur {eco.mois} mois
-                </motion.span>
-              )}
-            </div>
-          </>
-        ) : (
-          <p className="mt-8 text-lg text-gray-500">Ce forfait n&apos;est pas disponible pour cette durée.</p>
-        )}
-
-        {/* Inclus */}
-        <ul className="mt-5 space-y-2.5 text-left text-lg text-gray-800 max-w-xl mx-auto">
-          {INCLUS_COURT[palier].map((item) => (
-            <li key={item} className="flex gap-3">
-              <Check className="w-6 h-6 mt-0.5 shrink-0 text-neo" strokeWidth={3} aria-hidden="true" />
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-
-        {datePremierPaiement && (
-          <div className="mt-6 flex items-start gap-3 rounded-2xl bg-gray-50 border border-gray-200 px-5 py-4 text-left max-w-xl mx-auto">
-            <CalendarCheck className="w-6 h-6 text-neo shrink-0 mt-0.5" aria-hidden="true" />
-            <p className="text-lg text-gray-800">
-              Tu gardes ton accès dès aujourd&apos;hui. Premier paiement le{' '}
-              <strong className="font-bold">{dateLongue(datePremierPaiement)}</strong>.
-            </p>
-          </div>
-        )}
-
-        <button
-          type="button"
-          disabled={!prix}
-          onClick={() => allerA('coordonnees')}
-          className="mt-7 w-full inline-flex items-center justify-center px-8 py-6 text-2xl font-bold rounded-full bg-neo text-white shadow-[0_10px_15px_-3px_rgba(0,187,177,0.25)] hover:bg-neo-600 transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neo"
-        >
-          Forfait choisi
-        </button>
-      </main>
-    );
-  } else if (etape === 'coordonnees') {
-    contenu = (
-      <main className="mx-auto max-w-2xl px-5 sm:px-8 pt-8 pb-12">
-        {recap}
-        <form onSubmit={soumettre} noValidate className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-extrabold text-gray-900">Tes coordonnées</h2>
-            {cliente && <p className="text-gray-500 mt-1">Elles viennent de ton dossier NEO.</p>}
-          </div>
-          <ChampsCoordonnees
-            valeurs={coord}
-            erreurs={erreursChamps}
-            requis={cliente ? [] : REQUIS_GENERIQUE}
-            champs={cliente ? CHAMPS_CLIENTE : undefined}
-            lectureSeule={!!cliente}
-            grand
-            onChange={(cle, v) => setCoord((c) => ({ ...c, [cle]: v }))}
-          />
-
-          <Conditions />
-
-          <div>
-            <label className="flex items-start gap-4 cursor-pointer py-1">
-              <input
-                id="consent"
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => {
-                  setConsent(e.target.checked);
-                  if (e.target.checked) setErreurConsent(false);
-                }}
-                aria-invalid={erreurConsent}
-                aria-describedby={erreurConsent ? 'consent-erreur' : undefined}
-                className="w-8 h-8 min-w-8 mt-0.5 accent-neo cursor-pointer"
-              />
-              <span className="text-lg leading-relaxed text-gray-700">
-                J&apos;ai lu les conditions. Je comprends que mon forfait se renouvelle automatiquement chaque mois
-                et que, avec un engagement, il ne peut pas être annulé avant la fin de l&apos;engagement.
-              </span>
-            </label>
-            {erreurConsent && (
-              <p id="consent-erreur" className="text-base text-red-600 mt-1 ml-12">
-                Coche cette case pour continuer.
-              </p>
-            )}
-          </div>
-
-          <div aria-live="polite">{erreur && <MessageErreur message={erreur} />}</div>
-
-          <button
-            type="submit"
-            disabled={envoi}
-            className="w-full inline-flex items-center justify-center gap-2 px-8 py-6 text-2xl font-bold rounded-full bg-neo text-white hover:bg-neo-600 transition-colors disabled:opacity-60 disabled:cursor-wait focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neo"
-          >
-            {envoi && <Loader2 className="w-6 h-6 animate-spin" aria-hidden="true" />}
-            {envoi ? 'Préparation du paiement…' : 'Passer au paiement'}
-          </button>
-          <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-neo" strokeWidth={2.2} aria-hidden="true" />
-            Paiement sécurisé par Stripe. Ta carte n&apos;est jamais conservée par NEO.
-          </p>
-        </form>
-      </main>
-    );
   } else {
     contenu = (
-      <main className="mx-auto max-w-2xl px-5 sm:px-8 pt-8 pb-12">
-        {recap}
-        {clientSecret && <CheckoutIntegre clientSecret={clientSecret} />}
-      </main>
+      <>
+        <div className="flex flex-col gap-3">
+          <h1 className="m-0 text-[clamp(28px,4.4vw,40px)] leading-[1.15] font-extrabold tracking-[-0.02em]">
+            {titre(apercu)}
+          </h1>
+          <p className="m-0 text-lg leading-relaxed text-[#4A5455]">
+            Tu as fait le plus dur. La suite sert à protéger ce que tu as bâti.
+          </p>
+        </div>
+
+        <SelecteurDuree valeur={duree} onChange={setDuree} grille={grille} palier={palier} fond="menthe" />
+
+        <CarteForfait
+          grille={grille}
+          palier={palier}
+          duree={duree}
+          variante="principale"
+          recommande={palier === palierNaturo}
+          selectionne={mode === 'abonnement'}
+          onChoisir={() => {
+            setMode('abonnement');
+            allerAuPaiement();
+          }}
+        />
+
+        <div className="flex flex-col items-center gap-2 -mt-2">
+          <button
+            type="button"
+            onClick={copierLien}
+            className="inline-flex items-center gap-2 min-h-12 px-5 rounded-full bg-white text-[15px] font-bold text-[#1A1A1A] border border-[#C9DCDB] hover:border-[#007F78] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#007F78]"
+          >
+            <Copy className="w-4 h-4 text-[#007F78]" aria-hidden="true" />
+            Copier le lien pour la cliente
+          </button>
+          <p aria-live="polite" className="m-0 min-h-5 text-sm text-center text-[#4A5455]">
+            {lienCopie === 'ok' && 'Lien copié. Il est valide 7 jours, pour un seul achat.'}
+            {lienCopie === 'erreur' && 'La copie n’a pas fonctionné. Copie l’adresse de la page à la main.'}
+          </p>
+        </div>
+
+        {autres.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setAutresOuverts((o) => !o)}
+            aria-expanded={autresOuverts}
+            className="self-center min-h-12 px-5 text-[15px] font-bold text-[#007F78] underline underline-offset-[3px]"
+          >
+            {autresOuverts ? 'Masquer les autres options' : 'Voir les deux autres options'}
+          </button>
+        )}
+
+        {autresOuverts && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {autres.map((p) => (
+              <CarteForfait
+                key={p}
+                grille={grille}
+                palier={p}
+                duree={duree}
+                variante="secondaire"
+                onChoisir={() => {
+                  setPalier(p);
+                  setMode('abonnement');
+                  setAutresOuverts(false);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <SiLaVieChange variante="bloc" />
+
+        <section
+          ref={sectionPaiement}
+          aria-label="Paiement"
+          className="bg-white rounded-[22px] p-5 sm:p-7 border border-[#DCE5E5] scroll-mt-4"
+        >
+          {prix && (
+            <SectionPaiement
+              commande={mode === 'carte' ? { type: 'carte' } : { type: 'abonnement', palier, duree, prix }}
+              source={{
+                type: 'naturo',
+                jeton,
+                cliente: apercu.cliente,
+                datePremierPaiement: apercu.date_premier_paiement ?? null,
+                onJetonExpire: jetonExpire,
+              }}
+              utm={lireUtm(params)}
+              onRevenirAuxForfaits={() => setMode('abonnement')}
+            />
+          )}
+        </section>
+
+        {CARTE_ACTIVE && (
+          <BlocCarte
+            variante="compact"
+            onReserver={() => {
+              setMode('carte');
+              allerAuPaiement();
+            }}
+          />
+        )}
+      </>
     );
   }
 
-  // Réservé à la naturo, à la première étape : la cliente ne voit qu'un forfait.
-  const changerForfait = !expire && apercu && grille && etape === 'forfait' && (
+  const menuForfait = !expire && apercu && grille && (
     <div className="relative">
       <button
         type="button"
         onClick={() => setChoixOuvert((o) => !o)}
         aria-expanded={choixOuvert}
         aria-controls="choix-forfait"
-        className="px-4 py-2 rounded-full bg-gray-100 text-sm font-semibold text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+        className="px-4 py-2 rounded-full bg-white/70 text-sm font-semibold text-[#4A5455] hover:bg-white transition-colors"
       >
         Changer de forfait
       </button>
       {choixOuvert && (
         <div
           id="choix-forfait"
-          className="absolute right-0 top-full mt-2 z-20 w-56 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-lg"
+          className="absolute right-0 top-full mt-2 z-20 w-60 rounded-2xl border border-[#E3E8E8] bg-white p-1.5 shadow-lg"
         >
           {ORDRE_PALIERS.filter((p) => grille[p]).map((p) => (
             <button
               key={p}
               type="button"
               onClick={() => {
+                setPalierNaturo(p);
                 setPalier(p);
+                setMode('abonnement');
                 setChoixOuvert(false);
               }}
-              aria-current={p === palier}
+              aria-current={p === palierNaturo}
               className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-base font-semibold ${
-                p === palier ? 'bg-neo/[.08] text-gray-900' : 'text-gray-700 hover:bg-gray-50'
+                p === palierNaturo ? 'bg-[#EBF8F7] text-[#1A1A1A]' : 'text-[#4A5455] hover:bg-[#F5FAFA]'
               }`}
             >
               {NOMS_PALIERS[p]}
-              {p === palier && <Check className="w-5 h-5 text-neo" strokeWidth={3} aria-hidden="true" />}
+              {p === palierNaturo && <Check className="w-5 h-5 text-[#007F78]" strokeWidth={3} aria-hidden="true" />}
             </button>
           ))}
         </div>
@@ -450,17 +326,20 @@ const ContinuiteNaturo: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-100">
-        <div className="mx-auto max-w-5xl px-5 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div className="text-[#1A1A1A] bg-[#EBF8F7] w-full min-h-screen">
+      <BandeauSimulation />
+      <div className="max-w-[800px] mx-auto px-5 sm:px-6 pt-8 pb-12 flex flex-col gap-7">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Image src={LOGO_URL} alt="NEO Performance" width={36} height={36} className="h-9 w-auto object-contain" />
-            <span className="text-sm font-extrabold tracking-wider uppercase text-neo-700">NEO Continuité</span>
+            <Image src={LOGO_URL} alt="NEO Performance" width={40} height={40} priority className="h-10 w-auto" />
+            <span className="hidden sm:inline text-xs font-bold tracking-[0.12em] uppercase text-[#007F78]">
+              NEO Continuité
+            </span>
           </div>
-          {changerForfait}
+          {menuForfait}
         </div>
-      </header>
-      {contenu}
+        {contenu}
+      </div>
     </div>
   );
 };
