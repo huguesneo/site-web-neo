@@ -7,6 +7,7 @@ import {
   PALIER_RECOMMANDE,
   RESUMES_PALIERS,
   argent,
+  ligneEngagement,
 } from '@/lib/continuite/contenu';
 import { economie, type Grille } from '@/lib/continuite/offre';
 import type { Duree, Palier } from '@/lib/continuite/types';
@@ -54,14 +55,12 @@ export default function CartesPaliers({ grille, duree, selection, onChoisir }: P
               <span className="text-[15px] font-semibold text-gray-500 pb-1">par mois, + taxes</span>
             </div>
 
-            <p className="text-sm mt-3 min-h-[2.5rem]">
-              {eco ? (
-                <span className="text-neo-700 font-semibold">
-                  {argent(eco.parMois)} de moins par mois, soit {argent(eco.total)} d&apos;économie sur{' '}
-                  {eco.mois} mois.
+            <p className="text-[13px] text-gray-500 mt-2 min-h-[2.5rem]">{ligneEngagement(duree)}</p>
+            <p className="text-sm mt-1 min-h-[1.25rem]">
+              {eco && (
+                <span className="text-neo-700 font-bold">
+                  Tu économises {argent(eco.total)} sur {eco.mois} mois
                 </span>
-              ) : (
-                <span className="text-gray-500">Sans engagement, mois par mois.</span>
               )}
             </p>
 

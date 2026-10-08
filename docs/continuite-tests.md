@@ -19,14 +19,14 @@ Pour retirer les mocks une fois les endpoints déployés : supprimer `lib/contin
 | # | Scénario | Étapes | Résultat attendu |
 | --- | --- | --- | --- |
 | A1 | Offre | Ouvrir `/continuite` | Bandeau « Mode démo », 3 paliers, Continuité+ étiqueté « Recommandé », 6 mois coché par défaut, prix « par mois, + taxes » |
-| A2 | Durées | Cliquer Mensuel, 6 mois, 12 mois | Les prix changent. En 6 et 12 mois, l'économie par mois et totale s'affiche |
+| A2 | Durées | Cliquer Mensuel, 6 mois, 12 mois | Les prix changent. Sous chaque prix : « Engagement de X mois, puis… » ou « Sans engagement. ». En 6 et 12 mois : « Tu économises X $ sur 6 (ou 12) mois » |
 | A3 | Validation | Cliquer « Passer au paiement » sans rien remplir | Message sous chaque champ, focus sur Prénom, case de consentement en erreur |
 | A4 | Trop de tentatives | Courriel `x+limite@exemple.test` | « Trop de tentatives… », Turnstile se recharge |
 | A5 | Captcha | Courriel `x+captcha@exemple.test` | Message de vérification anti-robot |
 | A6 | Erreur serveur | Courriel `x+serveur@exemple.test` | Message d'erreur serveur |
 | A7 | Achat public | Courriel normal, chaque durée | Panneau « Paiement simulé » avec le bon palier et la bonne durée, puis la page merci |
-| A8 | Naturo avec cliente | `/continuite/naturo?t=abc&utm_source=app_neo&utm_medium=naturo&utm_campaign=continuite&utm_content=julie` | Sans menu ni chatbot. Petite barre « Continuité / Continuité+ / Extra » en haut, Continuité+ et 6 mois par défaut. Un seul forfait affiché, en grand. « Premier paiement le 16 novembre 2026 » |
-| A8b | Changement de forfait | Cliquer Continuité, puis Extra, puis changer de durée | Le forfait affiché change sans rechargement, le prix s'anime, « Tu économises X $ par année » se met à jour (rien en mensuel) |
+| A8 | Naturo avec cliente | `/continuite/naturo?t=abc&utm_source=app_neo&utm_medium=naturo&utm_campaign=continuite&utm_content=julie` | Sans menu ni chatbot. Continuité+ et 6 mois par défaut, un seul forfait affiché, en grand. Prix mensuel barré à gauche, « Engagement de 6 mois, puis… », « Tu économises 60 $ sur 6 mois ». « Premier paiement le 16 novembre 2026 » |
+| A8b | Changement de forfait | « Changer de forfait » en haut à droite, choisir Extra, puis 12 mois, puis Mensuel | Le menu ne s'ouvre qu'au clic et se ferme au choix (ou Échap, ou clic ailleurs). Le prix s'anime, l'économie est calculée sur la durée de l'engagement. En mensuel : pas de prix barré, pas de badge, « Sans engagement. » |
 | A8c | Coordonnées verrouillées | « Forfait choisi » | Prénom, nom et courriel masqué non modifiables, conditions, consentement, puis paiement simulé. « Modifier » ramène au forfait |
 | A8d | Hors programme | `?t=hors-programme` | Aucune phrase de premier paiement |
 | A9 | Naturo générique | `?t=generique` | Prénom, nom et courriel obligatoires, téléphone facultatif |

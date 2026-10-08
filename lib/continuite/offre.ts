@@ -20,7 +20,6 @@ export function economie(g: Grille, palier: Palier, duree: Duree) {
   return {
     parMois,
     total: parMois * MOIS_ENGAGEMENT[duree],
-    parAnnee: parMois * 12,
     mois: MOIS_ENGAGEMENT[duree],
     pourcentage: Math.round((parMois / base) * 100),
   };

@@ -15,6 +15,7 @@ import {
   PALIER_RECOMMANDE,
   argent,
   dateLongue,
+  ligneEngagement,
 } from '@/lib/continuite/contenu';
 import { economie } from '@/lib/continuite/offre';
 import { lireUtm } from '@/lib/continuite/utm';
@@ -36,8 +37,8 @@ import { useOffre } from '@/components/continuite/useOffre';
   Plein écran, sans menu ni chatbot (voir SiteChrome).
 
   Le moins de choix possible pour la cliente :
-    1. La naturo choisit UN forfait dans la petite barre du haut ; seul ce
-       forfait est affiché, en grand. La durée (6 mois par défaut) met le
+    1. Un seul forfait est affiché, en grand. La naturo peut en changer
+       par le petit bouton « Changer de forfait » en haut à droite. La durée (6 mois par défaut) met le
        prix à jour en temps réel.
     2. « Forfait choisi » ouvre les coordonnées (verrouillées si le lien
        porte une cliente), les conditions et le consentement.
@@ -95,6 +96,23 @@ const ContinuiteNaturo: React.FC = () => {
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [choixOuvert, setChoixOuvert] = useState(false);
+
+  // Le menu « Changer de forfait » se ferme avec Échap ou un clic ailleurs.
+  useEffect(() => {
+    if (!choixOuvert) return;
+    const fermer = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.key !== 'Escape') return;
+      if (e instanceof MouseEvent && (e.target as Element).closest?.('#choix-forfait, [aria-controls="choix-forfait"]')) return;
+      setChoixOuvert(false);
+    };
+    document.addEventListener('keydown', fermer);
+    document.addEventListener('mousedown', fermer);
+    return () => {
+      document.removeEventListener('keydown', fermer);
+      document.removeEventListener('mousedown', fermer);
+    };
+  }, [choixOuvert]);
 
   const verifierLien = useCallback(() => {
     if (!jeton) return;
@@ -116,6 +134,9 @@ const ContinuiteNaturo: React.FC = () => {
   const prix = grille?.[palier]?.[duree];
   const eco = grille ? economie(grille, palier, duree) : null;
   const datePremierPaiement = apercu?.date_premier_paiement || null;
+  // Prix mensuel sans engagement, barré à côté du prix avec engagement.
+  const prixSansEngagement =
+    duree !== 'mensuel' && eco ? (grille?.[palier]?.mensuel?.montant_mensuel_cents ?? null) : null;
 
   const allerA = (e: Etape) => {
     setEtape(e);
@@ -217,7 +238,7 @@ const ContinuiteNaturo: React.FC = () => {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mt-1">{NOMS_PALIERS[palier]}</h1>
 
         {/* Durée */}
-        <fieldset className="mt-6">
+        <fieldset className="mt-5">
           <legend className="sr-only">Durée de l&apos;abonnement</legend>
           <div className="grid grid-cols-3 gap-3">
             {ORDRE_DUREES.map((d) => {
@@ -250,7 +271,13 @@ const ContinuiteNaturo: React.FC = () => {
         {/* Prix en temps réel */}
         {prix ? (
           <>
-            <div className="mt-7 flex items-end justify-center gap-2" aria-live="polite">
+            <div className="mt-6 flex items-end justify-center gap-3" aria-live="polite">
+              {prixSansEngagement != null && (
+                <s className="text-3xl sm:text-4xl font-bold text-gray-400 pb-2 decoration-2">
+                  <span className="sr-only">Au lieu de </span>
+                  {argent(prixSansEngagement)}
+                </s>
+              )}
               <motion.span
                 key={prix.montant_mensuel_cents}
                 initial={{ opacity: 0, y: 12, scale: 0.96 }}
@@ -262,18 +289,17 @@ const ContinuiteNaturo: React.FC = () => {
               </motion.span>
               <span className="text-xl font-semibold text-gray-500 pb-2">par mois, + taxes</span>
             </div>
-            <div className="h-9 mt-3 flex items-center justify-center">
-              {eco ? (
+            <p className="mt-3 text-[15px] text-gray-500">{ligneEngagement(duree)}</p>
+            <div className="h-9 mt-2 flex items-center justify-center">
+              {eco && (
                 <motion.span
                   key={`eco-${palier}-${duree}`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="inline-block rounded-full bg-neo text-white text-lg font-bold px-5 py-1.5"
                 >
-                  Tu économises {argent(eco.parAnnee)} par année
+                  Tu économises {argent(eco.total)} sur {eco.mois} mois
                 </motion.span>
-              ) : (
-                <span className="text-lg text-gray-500">Sans engagement, mois par mois</span>
               )}
             </div>
           </>
@@ -282,7 +308,7 @@ const ContinuiteNaturo: React.FC = () => {
         )}
 
         {/* Inclus */}
-        <ul className="mt-6 space-y-3 text-left text-lg text-gray-800 max-w-xl mx-auto">
+        <ul className="mt-5 space-y-2.5 text-left text-lg text-gray-800 max-w-xl mx-auto">
           {INCLUS_COURT[palier].map((item) => (
             <li key={item} className="flex gap-3">
               <Check className="w-6 h-6 mt-0.5 shrink-0 text-neo" strokeWidth={3} aria-hidden="true" />
@@ -384,22 +410,42 @@ const ContinuiteNaturo: React.FC = () => {
     );
   }
 
-  // La barre des forfaits n'est utile qu'à la naturo, à la première étape.
-  const barrePaliers = !expire && apercu && grille && etape === 'forfait' && (
-    <div role="group" aria-label="Forfait proposé" className="inline-flex bg-gray-100 rounded-full p-1">
-      {ORDRE_PALIERS.filter((p) => grille[p]).map((p) => (
-        <button
-          key={p}
-          type="button"
-          onClick={() => setPalier(p)}
-          aria-pressed={p === palier}
-          className={`px-3.5 sm:px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-            p === palier ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-          }`}
+  // Réservé à la naturo, à la première étape : la cliente ne voit qu'un forfait.
+  const changerForfait = !expire && apercu && grille && etape === 'forfait' && (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setChoixOuvert((o) => !o)}
+        aria-expanded={choixOuvert}
+        aria-controls="choix-forfait"
+        className="px-4 py-2 rounded-full bg-gray-100 text-sm font-semibold text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+      >
+        Changer de forfait
+      </button>
+      {choixOuvert && (
+        <div
+          id="choix-forfait"
+          className="absolute right-0 top-full mt-2 z-20 w-56 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-lg"
         >
-          {p === 'continuite' ? 'Continuité' : p === 'continuite_plus' ? 'Continuité+' : 'Extra'}
-        </button>
-      ))}
+          {ORDRE_PALIERS.filter((p) => grille[p]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => {
+                setPalier(p);
+                setChoixOuvert(false);
+              }}
+              aria-current={p === palier}
+              className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-base font-semibold ${
+                p === palier ? 'bg-neo/[.08] text-gray-900' : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {NOMS_PALIERS[p]}
+              {p === palier && <Check className="w-5 h-5 text-neo" strokeWidth={3} aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -412,7 +458,7 @@ const ContinuiteNaturo: React.FC = () => {
             <Image src={LOGO_URL} alt="NEO Performance" width={36} height={36} className="h-9 w-auto object-contain" />
             <span className="text-sm font-extrabold tracking-wider uppercase text-neo-700">NEO Continuité</span>
           </div>
-          {barrePaliers}
+          {changerForfait}
         </div>
       </header>
       {contenu}

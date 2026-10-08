@@ -31,6 +31,13 @@ export const DETAILS_DUREES: Record<Duree, string> = {
   '12_mois': 'Engagement 12 mois',
 };
 
+// Ligne discrète sous le prix.
+export function ligneEngagement(duree: Duree): string {
+  if (duree === 'mensuel') return 'Sans engagement.';
+  const mois = duree === '6_mois' ? 6 : 12;
+  return `Engagement de ${mois} mois, puis le forfait continue au même prix, mois par mois.`;
+}
+
 /*
   Contenu de chaque palier. Sert de repli si l'endpoint renvoie un champ
   `inclus` vide, et alimente les réponses simulées.
