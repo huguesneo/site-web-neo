@@ -40,7 +40,7 @@ const FAQ: { q: string; r: string }[] = [
   },
   {
     q: 'Et si je n’utilise pas tout mon crédit ?',
-    r: 'Ton crédit suppléments est remis chaque mois en carte-cadeau dans ton compte neoperformance.ca. Il s’utilise dans le mois et ne se reporte pas. Ton ou ta naturopathe t’aide à l’utiliser pour ce dont tu as vraiment besoin.',
+    r: 'Ton crédit suppléments est remis chaque mois en carte-cadeau dans ton compte neoperformance.ca. Il est valide jusqu’au paiement suivant et ne se reporte pas. Ton ou ta naturopathe t’aide à l’utiliser pour ce dont tu as vraiment besoin.',
   },
   {
     q: 'Pourquoi ne pas simplement réserver quand j’en ai besoin ?',

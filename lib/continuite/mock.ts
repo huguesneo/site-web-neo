@@ -11,7 +11,7 @@
   continuite-checkout-carte est déployé.
 
   Les montants et les textes reprennent la réponse réelle de continuite-offre
-  du 8 octobre 2026, mais seul l'endpoint fait foi.
+  du 8 octobre 2026 (soir), mais seul l'endpoint fait foi.
 
   Scénarios d'erreur :
     - courriel contenant « +captcha » / « +limite » / « +serveur »
@@ -42,28 +42,27 @@ const MONTANTS: Record<Palier, Record<Duree, number>> = {
 
 const INCLUS: Record<Palier, string[]> = {
   continuite: [
-    '35 $ de crédit suppléments (utilisable dans le mois, non cumulable)',
+    '35 $ en carte-cadeau chaque mois pour tes suppléments (valide jusqu’au paiement suivant, non cumulable)',
     'Léo, 7 jours sur 7',
-    'Application NEO complète',
-    'Cours en ligne',
-    'Rencontre de groupe mensuelle avec une naturopathe',
+    'L’application NEO complète et les cours en ligne',
+    'Une rencontre de groupe chaque mois avec un ou une naturopathe',
   ],
   continuite_plus: [
-    '50 $ de crédit suppléments chaque mois (utilisable dans le mois, non cumulable)',
-    '1 suivi de 30 minutes aux 2 mois avec sa naturopathe',
+    '1 suivi de 30 minutes aux 2 mois avec ton ou ta naturopathe',
+    'Le chat avec ton ou ta naturopathe',
+    '50 $ en carte-cadeau chaque mois pour tes suppléments (valide jusqu’au paiement suivant, non cumulable)',
     'Léo, 7 jours sur 7',
-    'Application NEO complète',
-    'Cours en ligne',
-    'Rencontre de groupe mensuelle avec une naturopathe',
+    'L’application NEO complète et les cours en ligne',
+    'Une rencontre de groupe chaque mois avec un ou une naturopathe',
   ],
   continuite_extra: [
-    '75 $ de crédit suppléments (utilisable dans le mois, non cumulable)',
-    '10 % de rabais sur tous les suppléments au-delà du crédit',
-    '1 suivi de 30 minutes avec sa naturopathe',
+    '1 suivi de 30 minutes par mois avec ton ou ta naturopathe',
+    'Le chat avec ton ou ta naturopathe',
+    '75 $ en carte-cadeau chaque mois pour tes suppléments (valide jusqu’au paiement suivant, non cumulable)',
+    '10 % de rabais sur tous tes suppléments au-delà du crédit',
     'Léo, 7 jours sur 7',
-    'Application NEO complète',
-    'Cours en ligne',
-    'Rencontre de groupe mensuelle avec une naturopathe',
+    'L’application NEO complète et les cours en ligne',
+    'Une rencontre de groupe chaque mois avec un ou une naturopathe',
   ],
 };
 

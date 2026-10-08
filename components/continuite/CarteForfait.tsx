@@ -2,6 +2,7 @@
 import { Check } from 'lucide-react';
 import {
   BADGE_RECOMMANDE,
+  BADGE_RECOMMANDE_PUBLIC,
   BOUTONS_PALIERS,
   MOIS_DUREE,
   NOMS_PALIERS,
@@ -56,7 +57,7 @@ export default function CarteForfait({ grille, palier, duree, recommande, select
     >
       {recommande && (
         <span className="absolute -top-3.5 left-6 bg-[#007F78] text-white text-xs font-bold px-3.5 py-1.5 rounded-full">
-          {BADGE_RECOMMANDE}
+          {variante === 'publique' ? BADGE_RECOMMANDE_PUBLIC : BADGE_RECOMMANDE}
         </span>
       )}
 
