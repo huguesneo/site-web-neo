@@ -1,22 +1,27 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Mono, Montserrat } from 'next/font/google';
+import localFont from 'next/font/local';
 import '@/index.css';
 
-// Polices self-hostées par Next (plus de requête bloquante vers Google Fonts,
-// plus de CLS de police). `display: swap` + variables CSS branchées dans
-// index.css. Quicksand a été retirée : elle était chargée mais jamais utilisée.
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+// Polices self-hostées depuis le dépôt (app/fonts, sous-ensemble latin, licence
+// OFL). On n'utilise plus next/font/google : au build sur Netlify, Google Fonts
+// renvoie parfois des URL de fichiers sans extension et next/font plante
+// (« Cannot read properties of null (reading '1') »). `display: swap` +
+// variables CSS branchées dans index.css.
+const montserrat = localFont({
+  src: './fonts/montserrat-latin-wght-normal.woff2',
+  weight: '100 900',
+  style: 'normal',
   variable: '--font-montserrat',
   display: 'swap',
 });
 
 // Réservée aux valeurs mesurées de /porte-ouverte : la chasse fixe fait lire les
 // chiffres comme des données relevées, pas comme un argument de vente.
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
+const ibmPlexMono = localFont({
+  src: [
+    { path: './fonts/ibm-plex-mono-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/ibm-plex-mono-latin-500-normal.woff2', weight: '500', style: 'normal' },
+  ],
   variable: '--font-ibm-plex-mono',
   display: 'swap',
 });
