@@ -12,7 +12,7 @@ import Conditions from '@/components/continuite/Conditions';
 import ChampsCoordonnees, { focusPremiereErreur, valider, type ErreursChamps } from '@/components/continuite/ChampsCoordonnees';
 import Turnstile from '@/components/continuite/Turnstile';
 import CheckoutIntegre from '@/components/continuite/CheckoutIntegre';
-import { BandeauSimulation, Chargement, MessageErreur } from '@/components/continuite/Etats';
+import { Chargement, MessageErreur } from '@/components/continuite/Etats';
 import { useOffre } from '@/components/continuite/useOffre';
 
 const QUESTIONS: { q: string; r: React.ReactNode }[] = [
@@ -144,7 +144,6 @@ const Continuite: React.FC = () => {
       {/* Héro */}
       <div className="bg-neo/10 pt-32 pb-12 px-4">
         <div className="container mx-auto max-w-2xl text-center">
-          <BandeauSimulation className="rounded-xl mb-5" />
           <div className="inline-flex items-center gap-2 bg-white border border-neo/30 text-neo-700 text-[11px] font-bold tracking-wider uppercase px-4 py-2 rounded-full mb-5">
             NEO Continuité · Après ton programme
           </div>

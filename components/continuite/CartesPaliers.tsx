@@ -28,7 +28,10 @@ export default function CartesPaliers({ grille, duree, selection, onChoisir }: P
         const eco = economie(grille, palier, duree);
         const recommande = palier === PALIER_RECOMMANDE;
         const choisi = selection === palier;
-        const inclus = prix.inclus?.length ? prix.inclus : INCLUS_PAR_DEFAUT[palier];
+        const inclus = prix.inclus?.length ? [...prix.inclus] : INCLUS_PAR_DEFAUT[palier];
+        if (prix.suivi_additionnel_cents && !inclus.some((l) => /suivi additionnel/i.test(l))) {
+          inclus.push(`Suivi additionnel de 30 minutes : ${argent(prix.suivi_additionnel_cents)}`);
+        }
         return (
           <div
             key={palier}

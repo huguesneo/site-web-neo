@@ -10,6 +10,8 @@ export type Prix = {
   montant_mensuel_cents: number;
   price_id: string;
   inclus: string[];
+  // Prix d'un suivi additionnel de 30 minutes pour ce palier.
+  suivi_additionnel_cents?: number | null;
 };
 
 export type Utm = {

@@ -1,6 +1,5 @@
 'use client';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { modeSimule } from '@/lib/continuite/api';
 
 export function Chargement({ texte = 'Chargement des forfaits…' }: { texte?: string }) {
   return (
@@ -23,16 +22,6 @@ export function MessageErreur({ message, onReessayer }: { message: string; onRee
           </button>
         )}
       </div>
-    </div>
-  );
-}
-
-// Bandeau visible seulement en mode simulé, pour éviter toute confusion.
-export function BandeauSimulation({ className = '' }: { className?: string }) {
-  if (!modeSimule) return null;
-  return (
-    <div className={`bg-amber-100 text-amber-900 text-center text-xs font-bold px-4 py-2 ${className}`}>
-      Mode démo : réponses et paiement simulés (NEXT_PUBLIC_CONTINUITE_MOCK=1)
     </div>
   );
 }

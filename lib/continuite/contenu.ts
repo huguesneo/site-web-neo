@@ -40,7 +40,7 @@ export function ligneEngagement(duree: Duree): string {
 
 /*
   Contenu de chaque palier. Sert de repli si l'endpoint renvoie un champ
-  `inclus` vide, et alimente les réponses simulées.
+  `inclus` vide.
 */
 export const INCLUS_PAR_DEFAUT: Record<Palier, string[]> = {
   continuite: [

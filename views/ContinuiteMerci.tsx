@@ -6,7 +6,7 @@ import { CalendarCheck, CheckCircle2, Smartphone } from 'lucide-react';
 import { getSession, ErreurContinuite } from '@/lib/continuite/api';
 import { DETAILS_DUREES, NOMS_PALIERS, dateLongue } from '@/lib/continuite/contenu';
 import type { Session } from '@/lib/continuite/types';
-import { BandeauSimulation, Chargement, MessageErreur } from '@/components/continuite/Etats';
+import { Chargement, MessageErreur } from '@/components/continuite/Etats';
 
 // Date du jour en heure locale, au format AAAA-MM-JJ.
 function aujourdhui(): string {
@@ -59,7 +59,6 @@ const ContinuiteMerci: React.FC = () => {
   return (
     <div className="bg-neo/10 min-h-[80vh] pt-32 pb-16 px-4">
       <div className="container mx-auto max-w-xl">
-        <BandeauSimulation className="rounded-xl mb-5" />
 
         {erreur ? (
           <div className="bg-white rounded-[20px] p-6 sm:p-8 shadow-sm">

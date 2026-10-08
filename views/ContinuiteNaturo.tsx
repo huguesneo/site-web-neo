@@ -28,7 +28,7 @@ import ChampsCoordonnees, {
   type ErreursChamps,
 } from '@/components/continuite/ChampsCoordonnees';
 import CheckoutIntegre from '@/components/continuite/CheckoutIntegre';
-import { BandeauSimulation, Chargement, MessageErreur } from '@/components/continuite/Etats';
+import { Chargement, MessageErreur } from '@/components/continuite/Etats';
 import { useOffre } from '@/components/continuite/useOffre';
 
 /*
@@ -451,7 +451,6 @@ const ContinuiteNaturo: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <BandeauSimulation />
       <header className="border-b border-gray-100">
         <div className="mx-auto max-w-5xl px-5 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
