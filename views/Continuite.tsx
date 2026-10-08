@@ -65,12 +65,13 @@ const QUESTIONS: { q: string; r: React.ReactNode }[] = [
 ];
 
 const VIDE: Coordonnees = { prenom: '', nom: '', courriel: '', telephone: '' };
+const REQUIS: (keyof Coordonnees)[] = ['prenom', 'nom', 'courriel', 'telephone'];
 
 const Continuite: React.FC = () => {
   const params = useSearchParams();
   const { grille, rabais, erreur: erreurOffre, reessayer } = useOffre();
 
-  const [duree, setDuree] = useState<Duree>('12_mois');
+  const [duree, setDuree] = useState<Duree>('6_mois');
   const [palier, setPalier] = useState<Palier>(PALIER_RECOMMANDE);
   const [coord, setCoord] = useState<Coordonnees>(VIDE);
   const [erreursChamps, setErreursChamps] = useState<ErreursChamps>({});
@@ -99,7 +100,7 @@ const Continuite: React.FC = () => {
   const soumettre = async (e: React.FormEvent) => {
     e.preventDefault();
     setErreur(null);
-    const errs = valider(coord, true);
+    const errs = valider(coord, REQUIS);
     setErreursChamps(errs);
     setErreurConsent(!consent);
     if (Object.keys(errs).length || !consent) {
@@ -215,7 +216,7 @@ const Continuite: React.FC = () => {
                 <ChampsCoordonnees
                   valeurs={coord}
                   erreurs={erreursChamps}
-                  obligatoire
+                  requis={REQUIS}
                   onChange={(cle, v) => setCoord((c) => ({ ...c, [cle]: v }))}
                 />
 

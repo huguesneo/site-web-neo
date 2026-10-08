@@ -2,7 +2,7 @@ import type { CodeErreur } from './types';
 
 // Messages de repli, utilisés seulement si l'endpoint ne fournit pas le sien.
 export const MESSAGES: Record<CodeErreur, string> = {
-  captcha_invalide: 'La vérification de sécurité n’a pas fonctionné. Recharge la page et réessaie.',
+  captcha_invalide: 'La vérification anti-robot n’a pas fonctionné. Recharge la page et réessaie.',
   trop_de_tentatives: 'Trop de tentatives en peu de temps. Attends quelques minutes avant de réessayer.',
   prix_invalide: 'Ce forfait n’est plus disponible. Recharge la page pour voir les prix à jour.',
   jeton_invalide: 'Lien expiré, rouvre-le depuis l’app NEO.',

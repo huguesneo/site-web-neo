@@ -13,11 +13,11 @@ export type Prix = {
 };
 
 export type Utm = {
-  source: string | null;
-  medium: string | null;
-  campaign: string | null;
-  content: string | null;
-  term: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  utm_term: string | null;
 };
 
 export type Coordonnees = {
@@ -36,13 +36,20 @@ export type CheckoutPublicRequete = Coordonnees & {
 export type CheckoutNaturoRequete = Partial<Coordonnees> & {
   jeton: string;
   price_id: string;
-  client_id?: string;
   utm: Utm;
+};
+
+// Réponse du mode aperçu de continuite-checkout-naturo ({ jeton, apercu: true }).
+// `cliente` vaut null si le jeton ne porte pas de cliente ; le courriel est masqué.
+export type ApercuNaturo = {
+  naturo_prenom: string | null;
+  cliente: { prenom: string; nom: string; courriel: string } | null;
 };
 
 export type CheckoutReponse = { client_secret: string };
 
 export type Session = {
+  // complete | ouverte | expiree
   statut: string;
   palier: Palier;
   duree: Duree;

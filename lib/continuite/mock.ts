@@ -10,14 +10,17 @@
     - courriel contenant « +limite »   → trop_de_tentatives
     - courriel contenant « +serveur »  → erreur_serveur
     - price_id inconnu                 → prix_invalide
-    - jeton naturo « expire »          → jeton_expire
-    - jeton naturo « invalide »        → jeton_invalide
+    - jeton naturo « expire »          → jeton_expire (dès l'aperçu)
+    - jeton naturo « invalide »        → jeton_invalide (dès l'aperçu)
+    - jeton naturo « generique »       → aperçu sans cliente (coordonnées à saisir)
+    - tout autre jeton                 → aperçu avec la cliente Marie Tremblay
     - session_id « mock_inconnu »      → erreur_serveur
-    - session_id « mock_ouverte »      → statut « open » (paiement non terminé)
+    - session_id « mock_ouverte »      → statut « ouverte » (paiement non terminé)
 */
 import { ErreurContinuite } from './erreurs';
 import { INCLUS_PAR_DEFAUT, ORDRE_DUREES, ORDRE_PALIERS } from './contenu';
 import type {
+  ApercuNaturo,
   CheckoutNaturoRequete,
   CheckoutPublicRequete,
   CheckoutReponse,
@@ -58,7 +61,7 @@ export async function getOffre(): Promise<Prix[]> {
 
 export async function checkoutPublic(r: CheckoutPublicRequete): Promise<CheckoutReponse> {
   await attendre();
-  console.info('[continuite mock] checkout public', r);
+  console.info('[continuite mock] checkout public', JSON.stringify(r));
   if (!r.turnstile_token) throw new ErreurContinuite('captcha_invalide');
   if (r.courriel.includes('+captcha')) throw new ErreurContinuite('captcha_invalide');
   if (r.courriel.includes('+limite')) throw new ErreurContinuite('trop_de_tentatives');
@@ -66,11 +69,24 @@ export async function checkoutPublic(r: CheckoutPublicRequete): Promise<Checkout
   return { client_secret: secretPour(r.price_id) };
 }
 
+function verifierJeton(jeton: string) {
+  if (jeton === 'expire') throw new ErreurContinuite('jeton_expire');
+  if (jeton === 'invalide') throw new ErreurContinuite('jeton_invalide');
+}
+
+export async function apercuNaturo(jeton: string): Promise<ApercuNaturo> {
+  await attendre(500);
+  verifierJeton(jeton);
+  return {
+    naturo_prenom: 'Julie',
+    cliente: jeton === 'generique' ? null : { prenom: 'Marie', nom: 'Tremblay', courriel: 'm…@exemple.ca' },
+  };
+}
+
 export async function checkoutNaturo(r: CheckoutNaturoRequete): Promise<CheckoutReponse> {
   await attendre();
-  console.info('[continuite mock] checkout naturo', r);
-  if (r.jeton === 'expire') throw new ErreurContinuite('jeton_expire');
-  if (r.jeton === 'invalide') throw new ErreurContinuite('jeton_invalide');
+  console.info('[continuite mock] checkout naturo', JSON.stringify(r));
+  verifierJeton(r.jeton);
   return { client_secret: secretPour(r.price_id) };
 }
 
@@ -79,7 +95,7 @@ export async function getSession(sessionId: string): Promise<Session> {
   if (sessionId === 'mock_inconnu') throw new ErreurContinuite('erreur_serveur', 'Session introuvable.');
   const [, palier = 'continuite_plus', duree = '12_mois'] = sessionId.split('__');
   return {
-    statut: sessionId === 'mock_ouverte' ? 'open' : 'complete',
+    statut: sessionId === 'mock_ouverte' ? 'ouverte' : 'complete',
     palier: palier as Palier,
     duree: duree as Duree,
     date_premier_paiement: '2026-11-02',

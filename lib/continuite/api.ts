@@ -1,4 +1,5 @@
 import type {
+  ApercuNaturo,
   CheckoutNaturoRequete,
   CheckoutPublicRequete,
   CheckoutReponse,
@@ -12,7 +13,8 @@ import { ErreurContinuite, MESSAGES } from './erreurs';
 export { ErreurContinuite };
 
 /*
-  Appels aux Edge Functions NEO Continuité. Toute la logique de paiement
+  Appels aux Edge Functions NEO Continuité (contrat : docs/continuite-api.md
+  du dépôt de l'app NEO). Toute la logique de paiement
   (prix, taxes, engagement, attribution) vit dans l'app NEO : ce module ne
   fait que relayer et traduire les erreurs pour la cliente.
 
@@ -27,22 +29,23 @@ const BASE_URL = (
   `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}/functions/v1/`
 ).replace(/\/?$/, '/');
 
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-
 export const modeSimule = MOCK;
 
-async function appel<T>(chemin: string, init?: RequestInit): Promise<T> {
+// Les endpoints publics sont déployés sans vérification JWT : aucun en-tête
+// d'authentification n'est envoyé.
+async function appel<T>(chemin: string, corpsRequete?: unknown): Promise<T> {
   let reponse: Response;
   try {
-    reponse = await fetch(BASE_URL + chemin, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: ANON_KEY,
-        Authorization: `Bearer ${ANON_KEY}`,
-        ...init?.headers,
-      },
-    });
+    reponse = await fetch(
+      BASE_URL + chemin,
+      corpsRequete === undefined
+        ? undefined
+        : {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(corpsRequete),
+          },
+    );
   } catch {
     throw new ErreurContinuite('reseau');
   }
@@ -61,25 +64,27 @@ async function appel<T>(chemin: string, init?: RequestInit): Promise<T> {
   return corps as T;
 }
 
-export function getOffre(): Promise<Prix[]> {
+export async function getOffre(): Promise<Prix[]> {
   if (MOCK) return mock.getOffre();
-  return appel<Prix[]>('continuite-offre');
+  const { offre } = await appel<{ offre: Prix[] }>('continuite-offre');
+  return offre ?? [];
 }
 
 export function checkoutPublic(requete: CheckoutPublicRequete): Promise<CheckoutReponse> {
   if (MOCK) return mock.checkoutPublic(requete);
-  return appel<CheckoutReponse>('continuite-checkout-public', {
-    method: 'POST',
-    body: JSON.stringify(requete),
-  });
+  return appel<CheckoutReponse>('continuite-checkout-public', requete);
 }
 
 export function checkoutNaturo(requete: CheckoutNaturoRequete): Promise<CheckoutReponse> {
   if (MOCK) return mock.checkoutNaturo(requete);
-  return appel<CheckoutReponse>('continuite-checkout-naturo', {
-    method: 'POST',
-    body: JSON.stringify(requete),
-  });
+  return appel<CheckoutReponse>('continuite-checkout-naturo', requete);
+}
+
+// Valide le jeton dès l'ouverture de la page et renvoie de quoi préremplir,
+// sans créer de session Checkout.
+export function apercuNaturo(jeton: string): Promise<ApercuNaturo> {
+  if (MOCK) return mock.apercuNaturo(jeton);
+  return appel<ApercuNaturo>('continuite-checkout-naturo', { jeton, apercu: true });
 }
 
 export function getSession(sessionId: string): Promise<Session> {

@@ -11,14 +11,16 @@ const CHAMPS: { cle: keyof Coordonnees; libelle: string; type: string; autoCompl
 ];
 
 // Validation côté client, seulement pour guider la saisie : l'endpoint revalide.
-export function valider(v: Coordonnees, obligatoire: boolean): ErreursChamps {
+const MANQUANT: Record<keyof Coordonnees, string> = {
+  prenom: 'Indique ton prénom.',
+  nom: 'Indique ton nom.',
+  courriel: 'Indique ton courriel.',
+  telephone: 'Indique ton numéro de téléphone.',
+};
+
+export function valider(v: Coordonnees, requis: (keyof Coordonnees)[]): ErreursChamps {
   const e: ErreursChamps = {};
-  if (obligatoire) {
-    if (!v.prenom.trim()) e.prenom = 'Indique ton prénom.';
-    if (!v.nom.trim()) e.nom = 'Indique ton nom.';
-    if (!v.courriel.trim()) e.courriel = 'Indique ton courriel.';
-    if (!v.telephone.trim()) e.telephone = 'Indique ton numéro de téléphone.';
-  }
+  for (const cle of requis) if (!v[cle].trim()) e[cle] = MANQUANT[cle];
   if (v.courriel.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.courriel.trim())) {
     e.courriel = 'Ce courriel ne semble pas valide.';
   }
@@ -41,21 +43,26 @@ type Props = {
   valeurs: Coordonnees;
   erreurs: ErreursChamps;
   onChange: (cle: keyof Coordonnees, valeur: string) => void;
-  obligatoire: boolean;
+  requis: (keyof Coordonnees)[];
   grand?: boolean;
 };
 
-export default function ChampsCoordonnees({ valeurs, erreurs, onChange, obligatoire, grand }: Props) {
+export default function ChampsCoordonnees({ valeurs, erreurs, onChange, requis, grand }: Props) {
   return (
     <div className="grid grid-cols-2 gap-4">
       {CHAMPS.map((c) => {
         const id = `coord-${c.cle}`;
         const erreur = erreurs[c.cle];
+        const obligatoire = requis.includes(c.cle);
         return (
           <div key={c.cle} className={c.demi ? 'col-span-2 sm:col-span-1' : 'col-span-2'}>
             <label htmlFor={id} className="block text-sm font-semibold text-gray-700 mb-1.5">
               {c.libelle}
-              {obligatoire && <span className="text-neo-700" aria-hidden="true"> *</span>}
+              {obligatoire ? (
+                <span className="text-neo-700" aria-hidden="true"> *</span>
+              ) : (
+                <span className="font-normal text-gray-500"> (facultatif)</span>
+              )}
             </label>
             <input
               id={id}

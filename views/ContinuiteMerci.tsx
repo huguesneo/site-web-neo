@@ -53,7 +53,8 @@ const ContinuiteMerci: React.FC = () => {
     };
   }, [sessionId]);
 
-  const nonTermine = session && (session.statut === 'open' || session.statut === 'expired');
+  // Le contrat renvoie « ouverte » ou « expiree » ; les valeurs Stripe brutes sont acceptées par prudence.
+  const nonTermine = session && ['ouverte', 'expiree', 'open', 'expired'].includes(session.statut);
 
   return (
     <div className="bg-neo/10 min-h-[80vh] pt-32 pb-16 px-4">
