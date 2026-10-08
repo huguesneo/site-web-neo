@@ -48,6 +48,8 @@ type Props = {
   // Champs affichés (tous par défaut) et verrouillage complet (cliente portée par le jeton).
   champs?: (keyof Coordonnees)[];
   lectureSeule?: boolean;
+  // Texte d'aide affiché sous un champ.
+  aide?: Partial<Record<keyof Coordonnees, string>>;
 };
 
 export default function ChampsCoordonnees({
@@ -58,6 +60,7 @@ export default function ChampsCoordonnees({
   grand,
   champs,
   lectureSeule,
+  aide,
 }: Props) {
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -86,13 +89,18 @@ export default function ChampsCoordonnees({
               value={valeurs[c.cle]}
               onChange={(e) => onChange(c.cle, e.target.value)}
               aria-invalid={!!erreur}
-              aria-describedby={erreur ? `${id}-erreur` : undefined}
+              aria-describedby={erreur ? `${id}-erreur` : aide?.[c.cle] ? `${id}-aide` : undefined}
               className={`w-full border rounded-xl px-4 outline-none focus:border-neo focus:ring-2 focus:ring-neo/20 ${
                 grand ? 'py-3.5 text-lg' : 'py-3 text-base'
               } ${erreur ? 'border-red-400' : 'border-gray-200'} ${
                 lectureSeule ? 'bg-gray-50 text-gray-700 focus:ring-0 focus:border-gray-200' : 'bg-white text-gray-900'
               }`}
             />
+            {aide?.[c.cle] && !erreur && (
+              <p id={`${id}-aide`} className="text-sm text-[#4A5455] mt-1.5">
+                {aide[c.cle]}
+              </p>
+            )}
             {erreur && (
               <p id={`${id}-erreur`} className="text-sm text-red-600 mt-1">
                 {erreur}

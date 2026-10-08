@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CalendarCheck, CheckCircle2, Smartphone } from 'lucide-react';
 import { getSession, ErreurContinuite } from '@/lib/continuite/api';
-import { DETAILS_DUREES, NOMS_PALIERS, dateLongue } from '@/lib/continuite/contenu';
+import { NOMS_DUREES, NOMS_PALIERS, dateLongue } from '@/lib/continuite/contenu';
 import type { Session } from '@/lib/continuite/types';
 import { Chargement, MessageErreur } from '@/components/continuite/Etats';
 
@@ -89,6 +89,15 @@ const ContinuiteMerci: React.FC = () => {
               Revenir aux forfaits
             </Link>
           </div>
+        ) : session.type === 'a_la_carte' ? (
+          <div className="bg-white rounded-[20px] p-6 sm:p-8 shadow-sm text-center">
+            <CheckCircle2 className="w-14 h-14 text-neo mx-auto" aria-hidden="true" />
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-4">Ta rencontre est confirmée</h1>
+            <p className="text-gray-700 mt-4 leading-relaxed">
+              Ta rencontre est ajoutée à ton compte. Prends rendez-vous dans l&apos;application NEO, section
+              Prendre rendez-vous.
+            </p>
+          </div>
         ) : (
           <div className="bg-white rounded-[20px] p-6 sm:p-8 shadow-sm">
             <div className="text-center">
@@ -97,13 +106,17 @@ const ContinuiteMerci: React.FC = () => {
               <p className="text-gray-600 mt-2">Ton inscription est confirmée. Merci de ta confiance.</p>
             </div>
 
-            <div className="mt-6 rounded-2xl bg-neo/[.07] border border-neo/25 px-5 py-4 text-center">
-              <p className="text-xs font-bold uppercase tracking-wider text-neo-700">Ton forfait</p>
-              <p className="text-lg font-extrabold text-gray-900 mt-1">
-                {NOMS_PALIERS[session.palier] ?? session.palier}
-                <span className="font-semibold text-gray-600"> · {DETAILS_DUREES[session.duree] ?? session.duree}</span>
-              </p>
-            </div>
+            {session.palier && (
+              <div className="mt-6 rounded-2xl bg-neo/[.07] border border-neo/25 px-5 py-4 text-center">
+                <p className="text-xs font-bold uppercase tracking-wider text-neo-700">Ton forfait</p>
+                <p className="text-lg font-extrabold text-gray-900 mt-1">
+                  {NOMS_PALIERS[session.palier] ?? session.palier}
+                  {session.duree && (
+                    <span className="font-semibold text-gray-600"> · {NOMS_DUREES[session.duree] ?? session.duree}</span>
+                  )}
+                </p>
+              </div>
+            )}
 
             <h2 className="text-lg font-extrabold text-gray-900 mt-8 mb-4">La suite</h2>
             <ol className="space-y-5">

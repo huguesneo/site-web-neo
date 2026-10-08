@@ -1,5 +1,6 @@
 'use client';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { modeSimule } from '@/lib/continuite/api';
 
 export function Chargement({ texte = 'Chargement des forfaits…' }: { texte?: string }) {
   return (
@@ -22,6 +23,16 @@ export function MessageErreur({ message, onReessayer }: { message: string; onRee
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// Bandeau visible seulement en simulation locale (voir lib/continuite/mock.ts).
+export function BandeauSimulation() {
+  if (!modeSimule) return null;
+  return (
+    <div className="bg-amber-100 text-amber-900 text-center text-xs font-bold px-4 py-2">
+      Simulation locale : réponses et paiement simulés
     </div>
   );
 }
