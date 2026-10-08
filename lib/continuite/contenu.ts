@@ -37,7 +37,7 @@ export const DETAILS_DUREES: Record<Duree, string> = {
 */
 export const INCLUS_PAR_DEFAUT: Record<Palier, string[]> = {
   continuite: [
-    '35 $ de crédit suppléments par mois (utilisable dans le mois, non cumulable)',
+    '35 $ de crédit suppléments chaque mois, remis en carte-cadeau dans ton compte neoperformance.ca (utilisable dans le mois, non cumulable)',
     'Léo, 7 jours sur 7',
     'Application NEO complète',
     'Cours en ligne',
@@ -45,7 +45,7 @@ export const INCLUS_PAR_DEFAUT: Record<Palier, string[]> = {
     'Suivi additionnel de 30 minutes : 119 $',
   ],
   continuite_plus: [
-    '50 $ de crédit suppléments par mois (utilisable dans le mois, non cumulable)',
+    '50 $ de crédit suppléments chaque mois, remis en carte-cadeau dans ton compte neoperformance.ca (utilisable dans le mois, non cumulable)',
     '1 suivi de 30 minutes aux 2 mois avec ta naturopathe',
     'Chat avec ta naturopathe',
     'Léo, 7 jours sur 7',
@@ -54,7 +54,7 @@ export const INCLUS_PAR_DEFAUT: Record<Palier, string[]> = {
     'Suivi additionnel de 30 minutes : 69 $',
   ],
   continuite_extra: [
-    '75 $ de crédit suppléments par mois (utilisable dans le mois, non cumulable)',
+    '75 $ de crédit suppléments chaque mois, remis en carte-cadeau dans ton compte neoperformance.ca (utilisable dans le mois, non cumulable)',
     '10 % de rabais sur les suppléments au-delà du crédit',
     '1 suivi de 30 minutes par mois avec ta naturopathe',
     'Chat avec ta naturopathe',
@@ -62,6 +62,34 @@ export const INCLUS_PAR_DEFAUT: Record<Palier, string[]> = {
     'Application NEO complète et cours en ligne',
     'Rencontre de groupe mensuelle avec une naturopathe',
     'Suivi additionnel de 30 minutes : 59 $',
+  ],
+};
+
+/*
+  Liste courte pour la vente en face à face (/continuite/naturo) : 5 lignes
+  au maximum, les plus concrètes d'abord.
+*/
+export const INCLUS_COURT: Record<Palier, string[]> = {
+  continuite: [
+    '35 $ en carte-cadeau chaque mois pour tes suppléments',
+    'Une rencontre de groupe chaque mois avec une naturopathe',
+    'Léo, 7 jours sur 7',
+    'L’application NEO complète et les cours en ligne',
+    'Un suivi individuel de 30 minutes au besoin, à 119 $',
+  ],
+  continuite_plus: [
+    'Un suivi de 30 minutes aux 2 mois et le chat avec ta naturopathe',
+    '50 $ en carte-cadeau chaque mois pour tes suppléments',
+    'Léo, 7 jours sur 7',
+    'Une rencontre de groupe chaque mois avec une naturopathe',
+    'L’application NEO complète et les cours en ligne',
+  ],
+  continuite_extra: [
+    'Un suivi de 30 minutes chaque mois et le chat avec ta naturopathe',
+    '75 $ en carte-cadeau chaque mois pour tes suppléments, puis 10 % de rabais',
+    'Léo, 7 jours sur 7',
+    'Une rencontre de groupe chaque mois avec une naturopathe',
+    'L’application NEO complète et les cours en ligne',
   ],
 };
 

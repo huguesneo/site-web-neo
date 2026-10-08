@@ -110,8 +110,9 @@ const ContinuiteMerci: React.FC = () => {
                 <Smartphone className="w-6 h-6 text-neo shrink-0 mt-0.5" aria-hidden="true" />
                 <p className="text-gray-700 leading-relaxed">
                   <strong className="font-bold text-gray-900">Tout se passe dans l&apos;app NEO.</strong> Ouvre
-                  l&apos;application avec le même courriel que celui utilisé au paiement : Léo, les cours, ton
-                  crédit suppléments et la rencontre de groupe t&apos;y attendent.
+                  l&apos;application avec le même courriel que celui utilisé au paiement : Léo, les cours et la
+                  rencontre de groupe t&apos;y attendent. Ton crédit suppléments arrive chaque mois en
+                  carte-cadeau dans ton compte sur neoperformance.ca.
                 </p>
               </li>
               <li className="flex gap-4">

@@ -25,7 +25,10 @@ Pour retirer les mocks une fois les endpoints déployés : supprimer `lib/contin
 | A5 | Captcha | Courriel `x+captcha@exemple.test` | Message de vérification anti-robot |
 | A6 | Erreur serveur | Courriel `x+serveur@exemple.test` | Message d'erreur serveur |
 | A7 | Achat public | Courriel normal, chaque durée | Panneau « Paiement simulé » avec le bon palier et la bonne durée, puis la page merci |
-| A8 | Naturo avec cliente | `/continuite/naturo?t=abc&utm_source=app_neo&utm_medium=naturo&utm_campaign=continuite&utm_content=julie` | Sans menu ni chatbot. « Marie, choisis ton forfait », « Proposé par Julie ». Coordonnées affichées en lecture seule, courriel masqué |
+| A8 | Naturo avec cliente | `/continuite/naturo?t=abc&utm_source=app_neo&utm_medium=naturo&utm_campaign=continuite&utm_content=julie` | Sans menu ni chatbot. Petite barre « Continuité / Continuité+ / Extra » en haut, Continuité+ et 6 mois par défaut. Un seul forfait affiché, en grand. « Premier paiement le 16 novembre 2026 » |
+| A8b | Changement de forfait | Cliquer Continuité, puis Extra, puis changer de durée | Le forfait affiché change sans rechargement, le prix s'anime, « Tu économises X $ par année » se met à jour (rien en mensuel) |
+| A8c | Coordonnées verrouillées | « Forfait choisi » | Prénom, nom et courriel masqué non modifiables, conditions, consentement, puis paiement simulé. « Modifier » ramène au forfait |
+| A8d | Hors programme | `?t=hors-programme` | Aucune phrase de premier paiement |
 | A9 | Naturo générique | `?t=generique` | Prénom, nom et courriel obligatoires, téléphone facultatif |
 | A10 | Naturo sans jeton | `/continuite/naturo` | « Lien expiré, rouvre-le depuis l'app NEO » tout de suite |
 | A11 | Naturo expiré ou invalide | `?t=expire`, puis `?t=invalide` | « Lien expiré… » tout de suite, avant tout choix de forfait |
@@ -58,11 +61,11 @@ Pour retirer les mocks une fois les endpoints déployés : supprimer `lib/contin
 | B4 | Achat public, 12 mois | Idem | `duree=12_mois`, `engagement_fin` = date du jour + 12 mois |
 | B5 | UTM | Ouvrir avec `?utm_source=test&utm_medium=test&utm_campaign=continuite-test`, acheter | Les UTM figurent dans les métadonnées de l'abonnement |
 | B6 | Carte refusée | Bloquer temporairement ta carte dans l'app de ta banque, puis payer (ou entrer un mauvais CVC) | Stripe affiche le refus dans son cadre, aucune redirection, aucun abonnement créé. Débloquer la carte ensuite |
-| B7 | Lien naturo avec cliente | Depuis l'app, « Vendre NEO Continuité » sur un dossier test, ouvrir le lien, acheter | Prénom de la cliente et de la naturo affichés dès l'ouverture, coordonnées non modifiables. Dans Stripe : `source=naturo`, `vendu_par` = la naturo |
+| B7 | Lien naturo avec cliente | Depuis l'app, « Vendre NEO Continuité » sur un dossier test, ouvrir le lien sur tablette, acheter | Un seul forfait affiché, tout tient dans l'écran de la tablette. Prénom de la cliente et de la naturo affichés dès l'ouverture, coordonnées non modifiables. Dans Stripe : `source=naturo`, `vendu_par` = la naturo |
 | B8 | Lien naturo générique | Lien sans cliente, saisir des coordonnées de test | Prénom, nom et courriel demandés. Achat relié ou créé par courriel |
 | B9 | Lien naturo expiré | Ouvrir un lien de plus de 2 heures | « Lien expiré, rouvre-le depuis l'app NEO » dès l'ouverture |
 | B10 | Lien naturo modifié | Changer un caractère du jeton `t` | Même message, dès l'ouverture |
-| B11 | Cliente en programme | Lien naturo sur un dossier test en programme avant la semaine 15 | Carte validée sans prélèvement. La page merci annonce la date de la semaine 15 et précise qu'aucun montant n'est prélevé avant. **Annuler l'abonnement** ensuite (aucun remboursement à faire) |
+| B11 | Cliente en programme | Lien naturo sur un dossier test en programme avant la semaine 15 | Dès l'ouverture : « Tu gardes ton accès dès aujourd'hui. Premier paiement le [date] ». Carte validée sans prélèvement. La page merci annonce la date de la semaine 15 et précise qu'aucun montant n'est prélevé avant. **Annuler l'abonnement** ensuite (aucun remboursement à faire) |
 | B12 | Trop de tentatives | Ouvrir le Checkout 4 fois de suite avec le même courriel, sans payer | 4e fois : message « trop de tentatives » de l'endpoint |
 | B13 | Turnstile | Clé de production sur le domaine | Le widget passe sans friction pour une vraie visiteuse |
 | B14 | Merci | Recharger la page merci. Puis un `session_id` bidon | Même confirmation. Puis « Confirmation introuvable » |
@@ -74,4 +77,5 @@ Pour retirer les mocks une fois les endpoints déployés : supprimer `lib/contin
 
 - **CORS : `https://www.neoperformance.ca` est obligatoire.** `neoperformance.ca` redirige (301) vers `www`, donc les pages tournent toujours sur `www` : sans cette origine, tous les appels échouent. Ajouter aussi `https://neoperformance.ca` et l'URL d'aperçu Netlify, avec l'en-tête `content-type`. Le site n'envoie aucun en-tête d'authentification.
 - Mode aperçu de `continuite-checkout-naturo` (`{ jeton, apercu: true }`) : le site l'appelle à l'ouverture de `/continuite/naturo` et affiche « Lien expiré » sur `jeton_invalide` ou `jeton_expire`.
+- **Champ à ajouter dans la réponse de l'aperçu : `date_premier_paiement`** (`YYYY-MM-DD`, début de la semaine 15 si la cliente est en programme avant la semaine 15, sinon `null`). Le site affiche la phrase « Premier paiement le… » seulement si ce champ est présent.
 - `continuite-session` : `ouverte` et `expiree` sont traités comme non payés, toute autre valeur comme confirmée.

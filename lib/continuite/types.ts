@@ -41,9 +41,12 @@ export type CheckoutNaturoRequete = Partial<Coordonnees> & {
 
 // Réponse du mode aperçu de continuite-checkout-naturo ({ jeton, apercu: true }).
 // `cliente` vaut null si le jeton ne porte pas de cliente ; le courriel est masqué.
+// `date_premier_paiement` (YYYY-MM-DD) : début de la semaine 15 si la cliente
+// est en programme avant la semaine 15, sinon absent ou null.
 export type ApercuNaturo = {
   naturo_prenom: string | null;
   cliente: { prenom: string; nom: string; courriel: string } | null;
+  date_premier_paiement?: string | null;
 };
 
 export type CheckoutReponse = { client_secret: string };

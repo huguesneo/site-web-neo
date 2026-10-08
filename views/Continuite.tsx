@@ -20,9 +20,10 @@ const QUESTIONS: { q: string; r: React.ReactNode }[] = [
     q: 'Comment fonctionne le crédit suppléments ?',
     r: (
       <>
-        Chaque mois, ton forfait te donne un crédit à utiliser sur les suppléments NEO : 35 $, 50 $ ou 75 $ selon
-        le palier. Le crédit s&apos;utilise dans le mois et ne se cumule pas d&apos;un mois à l&apos;autre. Avec
-        Continuité Extra, tu as aussi 10 % de rabais sur les suppléments au-delà du crédit.
+        Chaque mois, ton crédit est remis en carte-cadeau dans ton compte sur neoperformance.ca : 35 $, 50 $ ou
+        75 $ selon le palier. Tu l&apos;utilises dans la boutique pour tes suppléments, dans le mois où il est
+        remis. Il ne se cumule pas d&apos;un mois à l&apos;autre. Avec Continuité Extra, tu as aussi 10 % de
+        rabais sur les suppléments au-delà du crédit.
       </>
     ),
   },
@@ -151,8 +152,9 @@ const Continuite: React.FC = () => {
             Tu as fait le travail. On t&apos;aide à garder tes résultats.
           </h1>
           <p className="text-gray-600 text-lg leading-relaxed">
-            NEO Continuité garde en place ce qui fonctionne : ta naturopathe, Léo, l&apos;application et une
-            rencontre de groupe chaque mois. Tu choisis le niveau d&apos;accompagnement qui te convient.
+            NEO Continuité garde en place ce qui fonctionne : ta naturopathe, Léo, l&apos;application, une
+            rencontre de groupe et une carte-cadeau suppléments chaque mois. Tu choisis le niveau
+            d&apos;accompagnement qui te convient.
           </p>
         </div>
       </div>

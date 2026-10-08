@@ -45,12 +45,23 @@ type Props = {
   onChange: (cle: keyof Coordonnees, valeur: string) => void;
   requis: (keyof Coordonnees)[];
   grand?: boolean;
+  // Champs affichés (tous par défaut) et verrouillage complet (cliente portée par le jeton).
+  champs?: (keyof Coordonnees)[];
+  lectureSeule?: boolean;
 };
 
-export default function ChampsCoordonnees({ valeurs, erreurs, onChange, requis, grand }: Props) {
+export default function ChampsCoordonnees({
+  valeurs,
+  erreurs,
+  onChange,
+  requis,
+  grand,
+  champs,
+  lectureSeule,
+}: Props) {
   return (
     <div className="grid grid-cols-2 gap-4">
-      {CHAMPS.map((c) => {
+      {CHAMPS.filter((c) => !champs || champs.includes(c.cle)).map((c) => {
         const id = `coord-${c.cle}`;
         const erreur = erreurs[c.cle];
         const obligatoire = requis.includes(c.cle);
@@ -58,7 +69,7 @@ export default function ChampsCoordonnees({ valeurs, erreurs, onChange, requis, 
           <div key={c.cle} className={c.demi ? 'col-span-2 sm:col-span-1' : 'col-span-2'}>
             <label htmlFor={id} className="block text-sm font-semibold text-gray-700 mb-1.5">
               {c.libelle}
-              {obligatoire ? (
+              {lectureSeule ? null : obligatoire ? (
                 <span className="text-neo-700" aria-hidden="true"> *</span>
               ) : (
                 <span className="font-normal text-gray-500"> (facultatif)</span>
@@ -71,13 +82,16 @@ export default function ChampsCoordonnees({ valeurs, erreurs, onChange, requis, 
               autoComplete={c.autoComplete}
               inputMode={c.type === 'tel' ? 'tel' : c.type === 'email' ? 'email' : undefined}
               required={obligatoire}
+              readOnly={lectureSeule}
               value={valeurs[c.cle]}
               onChange={(e) => onChange(c.cle, e.target.value)}
               aria-invalid={!!erreur}
               aria-describedby={erreur ? `${id}-erreur` : undefined}
-              className={`w-full border rounded-xl px-4 outline-none text-gray-900 bg-white focus:border-neo focus:ring-2 focus:ring-neo/20 ${
+              className={`w-full border rounded-xl px-4 outline-none focus:border-neo focus:ring-2 focus:ring-neo/20 ${
                 grand ? 'py-3.5 text-lg' : 'py-3 text-base'
-              } ${erreur ? 'border-red-400' : 'border-gray-200'}`}
+              } ${erreur ? 'border-red-400' : 'border-gray-200'} ${
+                lectureSeule ? 'bg-gray-50 text-gray-700 focus:ring-0 focus:border-gray-200' : 'bg-white text-gray-900'
+              }`}
             />
             {erreur && (
               <p id={`${id}-erreur`} className="text-sm text-red-600 mt-1">

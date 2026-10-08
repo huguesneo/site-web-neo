@@ -13,7 +13,9 @@
     - jeton naturo « expire »          → jeton_expire (dès l'aperçu)
     - jeton naturo « invalide »        → jeton_invalide (dès l'aperçu)
     - jeton naturo « generique »       → aperçu sans cliente (coordonnées à saisir)
-    - tout autre jeton                 → aperçu avec la cliente Marie Tremblay
+    - jeton naturo « hors-programme »  → cliente Marie Tremblay, paiement immédiat
+    - tout autre jeton                 → cliente Marie Tremblay en programme
+                                         (premier paiement à la semaine 15)
     - session_id « mock_inconnu »      → erreur_serveur
     - session_id « mock_ouverte »      → statut « ouverte » (paiement non terminé)
 */
@@ -80,6 +82,7 @@ export async function apercuNaturo(jeton: string): Promise<ApercuNaturo> {
   return {
     naturo_prenom: 'Julie',
     cliente: jeton === 'generique' ? null : { prenom: 'Marie', nom: 'Tremblay', courriel: 'm…@exemple.ca' },
+    date_premier_paiement: jeton === 'generique' || jeton === 'hors-programme' ? null : '2026-11-16',
   };
 }
 
