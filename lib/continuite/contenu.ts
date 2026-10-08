@@ -41,7 +41,9 @@ export const NOMS_DUREES: Record<Duree, string> = {
   '12_mois': '12 mois',
 };
 
+// Page naturo : la naturo recommande. Page publique : « Recommandé » seulement.
 export const BADGE_RECOMMANDE = 'Recommandé par ton ou ta naturopathe';
+export const BADGE_RECOMMANDE_PUBLIC = 'Recommandé';
 
 // Rencontre à la carte : section et bouton « Réserver une rencontre » cachés tant
 // que NEXT_PUBLIC_CARTE_ACTIVE n'est pas défini (continuite-checkout-carte pas
@@ -64,14 +66,15 @@ export const TEXTE_CONSENTEMENT =
   'J’accepte les conditions de mon abonnement et je comprends que le montant choisi sera prélevé chaque mois. Je peux passer au mois par mois en payant la différence de prix.';
 
 export const NOTE_CARTE_CADEAU =
-  'Ton crédit suppléments est remis chaque mois en carte-cadeau dans ton compte neoperformance.ca. Il s’utilise dans le mois et ne se cumule pas.';
+  'Ton crédit suppléments est remis chaque mois en carte-cadeau dans ton compte neoperformance.ca. Il est valide jusqu’au paiement suivant et ne se cumule pas.';
 
 /*
   Les textes « inclus » viennent de la description des produits Stripe. On
-  harmonise seulement la façon de nommer la naturopathe.
+  harmonise seulement la façon de nommer la naturopathe. Idempotent : un texte
+  qui dit déjà « ton ou ta naturopathe » reste tel quel.
 */
 export function texteInclus(ligne: string): string {
-  return ligne.replace(/\b(sa|ta) naturopathe\b/gi, 'ton ou ta naturopathe');
+  return ligne.replace(/(?<!ton ou )\b(sa|ta) naturopathe\b/gi, 'ton ou ta naturopathe');
 }
 
 // Lignes « inclus » d'un prix, avec le suivi additionnel en dernier.
@@ -83,9 +86,10 @@ export function lignesInclus(prix: Prix): string[] {
   return lignes;
 }
 
-// Montant du crédit suppléments, lu dans la ligne « inclus » qui le mentionne.
+// Montant du crédit suppléments, lu dans la ligne « inclus » qui le mentionne
+// (« 35 $ en carte-cadeau… » ou, anciennement, « 35 $ de crédit suppléments… »).
 export function creditCents(prix: Prix | undefined): number | null {
-  const ligne = prix?.inclus.find((l) => /crédit suppléments/i.test(l));
+  const ligne = prix?.inclus.find((l) => /carte-cadeau|crédit suppléments/i.test(l));
   const m = ligne && /(\d+)\s*\$/.exec(ligne);
   return m ? Number(m[1]) * 100 : null;
 }
