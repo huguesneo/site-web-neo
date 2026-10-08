@@ -66,11 +66,13 @@ const ContinuiteMerci: React.FC = () => {
             <h1 className="text-2xl font-extrabold text-gray-900 mb-4">Confirmation introuvable</h1>
             <MessageErreur message={erreur} />
             <p className="text-sm text-gray-600 mt-5 leading-relaxed">
-              Si ton paiement a été accepté, tu recevras quand même ton accès. Pour toute question, écris-nous à{' '}
+              Si ton paiement a été accepté, ton accès NEO Continuité est activé dans l&apos;application NEO.
+              Connecte-toi avec le même courriel que celui utilisé pour le paiement. Si tu ne vois pas ton forfait
+              d&apos;ici quelques minutes, écris-nous à{' '}
               <a href="mailto:info@neoperformance.ca" className="text-neo-700 font-semibold">
                 info@neoperformance.ca
-              </a>
-              .
+              </a>{' '}
+              et on règle ça rapidement.
             </p>
           </div>
         ) : !session ? (
@@ -109,10 +111,15 @@ const ContinuiteMerci: React.FC = () => {
               <li className="flex gap-4">
                 <Smartphone className="w-6 h-6 text-neo shrink-0 mt-0.5" aria-hidden="true" />
                 <p className="text-gray-700 leading-relaxed">
-                  <strong className="font-bold text-gray-900">Tout se passe dans l&apos;app NEO.</strong> Ouvre
-                  l&apos;application avec le même courriel que celui utilisé au paiement : Léo, les cours et la
-                  rencontre de groupe t&apos;y attendent. Ton crédit suppléments arrive chaque mois en
-                  carte-cadeau dans ton compte sur neoperformance.ca.
+                  <strong className="font-bold text-gray-900">
+                    Ton accès NEO Continuité est activé dans l&apos;application NEO.
+                  </strong>{' '}
+                  Connecte-toi avec le même courriel que celui utilisé pour le paiement. Si tu ne vois pas ton
+                  forfait d&apos;ici quelques minutes, écris-nous à{' '}
+                  <a href="mailto:info@neoperformance.ca" className="text-neo-700 font-semibold">
+                    info@neoperformance.ca
+                  </a>{' '}
+                  et on règle ça rapidement.
                 </p>
               </li>
               <li className="flex gap-4">
@@ -122,14 +129,6 @@ const ContinuiteMerci: React.FC = () => {
                 </p>
               </li>
             </ol>
-
-            <p className="text-sm text-gray-500 mt-8 leading-relaxed">
-              Une question sur ton forfait ? Écris-nous à{' '}
-              <a href="mailto:info@neoperformance.ca" className="text-neo-700 font-semibold">
-                info@neoperformance.ca
-              </a>
-              .
-            </p>
           </div>
         )}
       </div>
