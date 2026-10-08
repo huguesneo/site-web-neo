@@ -22,13 +22,17 @@ import Chatbot from '@/components/Chatbot';
  *
  * Masqué aussi sur /lien : page « lien en bio » ouverte depuis Instagram —
  * expérience plein écran type Linktree, sans navigation ni chatbot.
+ *
+ * Masqué aussi sur /continuite/naturo : ouverte par une naturopathe depuis
+ * l'app NEO et montrée à la cliente à l'écran pendant un suivi.
  */
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isFullScreen =
     pathname?.startsWith('/studio') ||
     pathname?.startsWith('/protocole-neo') ||
-    pathname === '/lien';
+    pathname === '/lien' ||
+    pathname?.startsWith('/continuite/naturo');
 
   if (isFullScreen) return <>{children}</>;
 
