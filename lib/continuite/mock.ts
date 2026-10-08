@@ -3,7 +3,7 @@
   NEXT_PUBLIC_CONTINUITE_MOCK=1. À supprimer une fois les Edge Functions
   déployées (voir api.ts).
 
-  Les montants sont FICTIFS : ils servent à tester l'affichage.
+  Les montants reprennent les vrais prix, mais seul continuite-offre fait foi.
 
   Scénarios d'erreur déclenchables :
     - courriel contenant « +captcha »  → captcha_invalide
@@ -32,10 +32,12 @@ import type {
   Session,
 } from './types';
 
+// Copie des vrais prix, pour des captures fidèles. En production, seuls les
+// prix renvoyés par continuite-offre (lus dans Stripe) font foi.
 const MONTANTS: Record<Palier, Record<Duree, number>> = {
-  continuite: { mensuel: 5900, '6_mois': 5400, '12_mois': 4900 },
-  continuite_plus: { mensuel: 9900, '6_mois': 8900, '12_mois': 7900 },
-  continuite_extra: { mensuel: 14900, '6_mois': 13400, '12_mois': 11900 },
+  continuite: { mensuel: 8900, '6_mois': 7900, '12_mois': 7400 },
+  continuite_plus: { mensuel: 14900, '6_mois': 12900, '12_mois': 11900 },
+  continuite_extra: { mensuel: 22800, '6_mois': 19800, '12_mois': 18300 },
 };
 
 const OFFRE: Prix[] = ORDRE_PALIERS.flatMap((palier) =>

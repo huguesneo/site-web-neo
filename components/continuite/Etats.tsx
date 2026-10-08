@@ -27,12 +27,12 @@ export function MessageErreur({ message, onReessayer }: { message: string; onRee
   );
 }
 
-// Bandeau visible seulement en mode simulé, pour éviter toute confusion sur les prix.
+// Bandeau visible seulement en mode simulé, pour éviter toute confusion.
 export function BandeauSimulation({ className = '' }: { className?: string }) {
   if (!modeSimule) return null;
   return (
     <div className={`bg-amber-100 text-amber-900 text-center text-xs font-bold px-4 py-2 ${className}`}>
-      Mode démo : prix fictifs et paiement simulé (NEXT_PUBLIC_CONTINUITE_MOCK=1)
+      Mode démo : réponses et paiement simulés (NEXT_PUBLIC_CONTINUITE_MOCK=1)
     </div>
   );
 }
