@@ -9,6 +9,7 @@ Contrat d'API : `docs/continuite-api.md` du dépôt de l'app NEO.
 | --- | --- |
 | `NEXT_PUBLIC_CONTINUITE_API_URL` | URL de base des Edge Functions (repli : `NEXT_PUBLIC_SUPABASE_URL/functions/v1/`) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clé publiable Stripe **réelle** (`pk_live_…`). Il n'existe pas de mode test pour ces prix. |
+| `NEXT_PUBLIC_CARTE_ACTIVE` | `1` = affiche la rencontre à la carte (section et bouton). Absente : cachée. À poser quand `continuite-checkout-carte` est déployé. |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Clé de site Cloudflare Turnstile (repli : clé de test qui passe toujours) |
 
 
@@ -39,7 +40,8 @@ Contrat d'API : `docs/continuite-api.md` du dépôt de l'app NEO.
 | B6 | Carte refusée | Bloquer temporairement ta carte dans l'app de ta banque, puis payer (ou entrer un mauvais CVC) | Stripe affiche le refus dans son cadre, aucune redirection, aucun abonnement créé. Débloquer la carte ensuite |
 | B7 | Lien naturo avec cliente | Depuis l'app, « Vendre NEO Continuité » sur un dossier test, ouvrir le lien sur tablette, acheter | Un seul forfait affiché, tout tient dans l'écran de la tablette. Prénom de la cliente et de la naturo affichés dès l'ouverture, coordonnées non modifiables. Dans Stripe : `source=naturo`, `vendu_par` = la naturo |
 | B8 | Lien naturo générique | Lien sans cliente, saisir des coordonnées de test | Prénom, nom et courriel demandés. Achat relié ou créé par courriel |
-| B9 | Lien naturo expiré | Ouvrir un lien de plus de 2 heures | « Lien expiré, rouvre-le depuis l'app NEO » dès l'ouverture |
+| B9 | Lien naturo expiré | Ouvrir un lien de plus de 7 jours, ou un lien déjà utilisé pour un achat | « Lien expiré, rouvre-le depuis l'app NEO » dès l'ouverture |
+| B9b | Lien copié pour la cliente | « Copier le lien pour la cliente » sur Extra, 12 mois, puis ouvrir le lien copié | Message « Lien copié. Il est valide 7 jours, pour un seul achat. ». Le lien ouvre Extra, 12 mois, mis en avant. Avec palier ou duree invalide : comportement normal |
 | B10 | Lien naturo modifié | Changer un caractère du jeton `t` | Même message, dès l'ouverture |
 | B11 | Cliente en programme | Lien naturo sur un dossier test en programme avant la semaine 15 | Dès l'ouverture : « Tu gardes ton accès dès aujourd'hui. Premier paiement le [date] ». Carte validée sans prélèvement. La page merci annonce la date de la semaine 15 et précise qu'aucun montant n'est prélevé avant. **Annuler l'abonnement** ensuite (aucun remboursement à faire) |
 | B12 | Trop de tentatives | Ouvrir le Checkout 4 fois de suite avec le même courriel, sans payer | 4e fois : message « trop de tentatives » de l'endpoint |

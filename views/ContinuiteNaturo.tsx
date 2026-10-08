@@ -2,11 +2,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { Check, Link2Off } from 'lucide-react';
+import { Check, Copy, Link2Off } from 'lucide-react';
 import { apercuNaturo, ErreurContinuite } from '@/lib/continuite/api';
 import {
   DUREE_PAR_DEFAUT,
+  CARTE_ACTIVE,
   NOMS_PALIERS,
+  ORDRE_DUREES,
   ORDRE_PALIERS,
   PALIER_RECOMMANDE,
 } from '@/lib/continuite/contenu';
@@ -36,6 +38,12 @@ import { useOffre } from '@/components/continuite/useOffre';
   Lien attendu :
     /continuite/naturo?t=<jeton>&utm_source=app_neo&utm_medium=naturo
       &utm_campaign=continuite&utm_content=<prénom de la naturo>
+  Le jeton est valide 7 jours, pour un seul achat.
+
+  « Copier le lien pour la cliente » ajoute palier=… et duree=… à l'URL. À
+  l'ouverture, s'ils existent dans continuite-offre, ils fixent seulement le
+  forfait et la durée mis en avant. Rien d'autre ne les lit : le prix reste
+  validé par l'app au paiement.
 */
 
 function LienExpire() {
@@ -46,8 +54,8 @@ function LienExpire() {
       </div>
       <h1 className="text-3xl font-extrabold">Lien expiré, rouvre-le depuis l’app NEO</h1>
       <p className="text-lg text-[#4A5455] mt-3 max-w-md">
-        Pour des raisons de sécurité, ce lien n’est valide que pour une courte durée. Génère un nouveau lien à
-        partir du dossier de la cliente dans l’app NEO.
+        Un lien est valide 7 jours, pour un seul achat. Génère un nouveau lien à partir du dossier de la cliente
+        dans l’app NEO.
       </p>
     </div>
   );
@@ -82,7 +90,37 @@ const ContinuiteNaturo: React.FC = () => {
   const [autresOuverts, setAutresOuverts] = useState(false);
   const [choixOuvert, setChoixOuvert] = useState(false);
   const [mode, setMode] = useState<'abonnement' | 'carte'>('abonnement');
+  const [lienCopie, setLienCopie] = useState<'ok' | 'erreur' | null>(null);
+  const preselectionFaite = useRef(false);
   const sectionPaiement = useRef<HTMLElement>(null);
+
+  // Présélection d'affichage depuis l'URL (palier, duree), une seule fois, si l'offre la contient.
+  useEffect(() => {
+    if (!grille || preselectionFaite.current) return;
+    preselectionFaite.current = true;
+    const p = params.get('palier') as Palier | null;
+    const d = params.get('duree') as Duree | null;
+    if (p && d && ORDRE_PALIERS.includes(p) && ORDRE_DUREES.includes(d) && grille[p]?.[d]) {
+      setPalierNaturo(p);
+      setPalier(p);
+      setDuree(d);
+    }
+  }, [grille, params]);
+
+  // Le message de copie disparaît dès que le choix affiché change.
+  useEffect(() => setLienCopie(null), [palier, duree]);
+
+  const copierLien = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('palier', palier);
+    url.searchParams.set('duree', duree);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setLienCopie('ok');
+    } catch {
+      setLienCopie('erreur');
+    }
+  };
 
   const verifierLien = useCallback(() => {
     if (!jeton) return;
@@ -165,6 +203,21 @@ const ContinuiteNaturo: React.FC = () => {
           }}
         />
 
+        <div className="flex flex-col items-center gap-2 -mt-2">
+          <button
+            type="button"
+            onClick={copierLien}
+            className="inline-flex items-center gap-2 min-h-12 px-5 rounded-full bg-white text-[15px] font-bold text-[#1A1A1A] border border-[#C9DCDB] hover:border-[#007F78] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#007F78]"
+          >
+            <Copy className="w-4 h-4 text-[#007F78]" aria-hidden="true" />
+            Copier le lien pour la cliente
+          </button>
+          <p aria-live="polite" className="m-0 min-h-5 text-sm text-center text-[#4A5455]">
+            {lienCopie === 'ok' && 'Lien copié. Il est valide 7 jours, pour un seul achat.'}
+            {lienCopie === 'erreur' && 'La copie n’a pas fonctionné. Copie l’adresse de la page à la main.'}
+          </p>
+        </div>
+
         {autres.length > 0 && (
           <button
             type="button"
@@ -219,13 +272,15 @@ const ContinuiteNaturo: React.FC = () => {
           )}
         </section>
 
-        <BlocCarte
-          variante="compact"
-          onReserver={() => {
-            setMode('carte');
-            allerAuPaiement();
-          }}
-        />
+        {CARTE_ACTIVE && (
+          <BlocCarte
+            variante="compact"
+            onReserver={() => {
+              setMode('carte');
+              allerAuPaiement();
+            }}
+          />
+        )}
       </>
     );
   }

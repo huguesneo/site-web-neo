@@ -43,6 +43,11 @@ export const NOMS_DUREES: Record<Duree, string> = {
 
 export const BADGE_RECOMMANDE = 'Recommandé par ton ou ta naturopathe';
 
+// Rencontre à la carte : section et bouton « Réserver une rencontre » cachés tant
+// que NEXT_PUBLIC_CARTE_ACTIVE n'est pas défini (continuite-checkout-carte pas
+// encore déployé). La colonne du tableau comparatif reste visible.
+export const CARTE_ACTIVE = process.env.NEXT_PUBLIC_CARTE_ACTIVE === '1';
+
 // Rencontre à la carte, sans abonnement. Le montant réellement facturé est
 // fixé par continuite-checkout-carte ; ce prix sert à l'affichage.
 export const PRIX_CARTE_CENTS = 19800;

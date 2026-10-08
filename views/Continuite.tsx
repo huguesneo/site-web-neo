@@ -8,6 +8,7 @@ import {
   NOMS_DUREES,
   NOMS_PALIERS,
   ONGLETS_PALIERS,
+  CARTE_ACTIVE,
   ORDRE_PALIERS,
   PALIER_RECOMMANDE,
   PRIX_CARTE_CENTS,
@@ -43,7 +44,9 @@ const FAQ: { q: string; r: string }[] = [
   },
   {
     q: 'Pourquoi ne pas simplement réserver quand j’en ai besoin ?',
-    r: 'Parce qu’on revient souvent quand ça a déjà glissé. Un suivi régulier te garde sur la bonne voie avant que ça arrive. Le suivi à la carte reste toutefois possible, sans abonnement.',
+    r:
+      'Parce qu’on revient souvent quand ça a déjà glissé. Un suivi régulier te garde sur la bonne voie avant que ça arrive.' +
+      (CARTE_ACTIVE ? ' Le suivi à la carte reste toutefois possible, sans abonnement.' : ''),
   },
   {
     q: 'Quand le paiement est-il prélevé ?',
@@ -237,7 +240,7 @@ const Continuite: React.FC = () => {
                 </div>
               )}
 
-              <BlocCarte variante="large" onReserver={reserver} />
+              {CARTE_ACTIVE && <BlocCarte variante="large" onReserver={reserver} />}
             </>
           )}
         </div>
