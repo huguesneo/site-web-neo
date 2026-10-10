@@ -47,7 +47,7 @@ import { useOffre } from '@/components/continuite/useOffre';
 
   Il ajoute aussi vue=cliente : la page s'ouvre alors sans ce qui sert à la
   naturo (copie du lien, « Changer de forfait ») et, si le lien a expiré,
-  la cliente est invitée à en demander un nouveau.
+  la cliente est invitée à communiquer avec l'équipe NEO.
 */
 
 function LienExpire({ vueCliente }: { vueCliente: boolean }) {
@@ -60,7 +60,7 @@ function LienExpire({ vueCliente }: { vueCliente: boolean }) {
         <>
           <h1 className="text-3xl font-extrabold">Ce lien a expiré</h1>
           <p className="text-lg text-[#4A5455] mt-3 max-w-md">
-            Un lien est valide 7 jours, pour un seul achat. Demande un nouveau lien à ton ou ta naturopathe.
+            Un lien est valide 7 jours, pour un seul achat. Communique avec l’équipe NEO pour en obtenir un nouveau.
           </p>
         </>
       ) : (
