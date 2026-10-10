@@ -43,14 +43,15 @@ export default function CarteForfait({ grille, palier, duree, recommande, select
   const caches = variante === 'publique' ? lignes.slice(LIGNES_VISIBLES) : [];
 
   const bouton = selectionne ? 'Forfait choisi' : BOUTONS_PALIERS[palier];
-  const plein = selectionne || (recommande && variante !== 'secondaire');
+  // Page publique : la mise en avant suit le forfait choisi; le badge « Recommandé » reste.
+  const plein = selectionne || (recommande && variante === 'principale');
 
   return (
     <article
       className={`relative flex flex-col h-full bg-white rounded-[22px] border-2 ${
         variante === 'secondaire' ? 'p-[22px]' : 'p-6 sm:p-7'
       } ${
-        selectionne || (recommande && variante === 'publique')
+        selectionne
           ? 'border-[#007F78] shadow-[0_24px_48px_-24px_rgba(0,127,120,0.45)]'
           : 'border-[#E3E8E8]'
       } ${recommande && variante === 'publique' ? 'lg:-translate-y-2' : ''}`}
