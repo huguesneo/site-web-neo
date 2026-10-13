@@ -28,6 +28,9 @@ import Chatbot from '@/components/Chatbot';
  *
  * Masqué aussi sur /continuite/naturo : ouverte par une naturopathe depuis
  * l'app NEO et montrée à la cliente à l'écran pendant un suivi.
+ *
+ * Masqué aussi sur /evaluation-reprise (et /reserver) : page envoyée par
+ * courriel de réactivation, avec son propre en-tête et son pied de page.
  */
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,7 +39,8 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
     pathname?.startsWith('/protocole-neo') ||
     pathname === '/lien' ||
     pathname === '/continuite' ||
-    pathname?.startsWith('/continuite/naturo');
+    pathname?.startsWith('/continuite/naturo') ||
+    pathname?.startsWith('/evaluation-reprise');
 
   if (isFullScreen) return <>{children}</>;
 
