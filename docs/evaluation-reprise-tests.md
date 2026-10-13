@@ -28,8 +28,8 @@ Les paramètres servent seulement à préremplir le formulaire (une balise GHL n
 - `return_url` du Checkout : `https://www.neoperformance.ca/evaluation-reprise/reserver?session_id={CHECKOUT_SESSION_ID}`.
 - CORS : `https://www.neoperformance.ca`, `https://neoperformance.ca` et l'URL d'aperçu Netlify, avec l'en-tête `content-type`.
 - `evaluation-reprise-session` : `ouverte` et `expiree` renvoient à la page 1 ; toute autre valeur est traitée comme payée.
-- **Hors contrat, souhaité** : `prenom` et `naturo: { prenom }` dans la réponse de `evaluation-reprise-session`, pour « Merci {prénom} … avec {naturo} » dès l'arrivée. Sans eux, la page affiche « Merci, ton évaluation est payée » et le prénom de la naturo apparaît après le choix du mode (réponse de `evaluation-reprise-creneaux`).
-- `evaluation-reprise-creneaux` : `naturo` accepté sous forme `{ prenom }` ou de chaîne. `debut` = AAAA-MM-JJ (Montréal), fenêtre de 14 jours ; « Semaine suivante » avance `debut` de 7 jours.
+- `evaluation-reprise-session` renvoie aussi `prenom` et `naturo: { prenom } | null`, pour « Merci {prénom} … avec {naturo} » dès l'arrivée. Si l'un des deux est nul, la page dit « Merci, ton évaluation est payée » ou « avec ta naturopathe ».
+- `evaluation-reprise-creneaux` : `naturo` est `{ prenom } | null`. `debut` = AAAA-MM-JJ (Montréal), fenêtre de 14 jours ; « Semaine suivante » avance `debut` de 7 jours.
 - `evaluation-reprise-reserver` : `date` en AAAA-MM-JJ, `heure` en HH:MM (Montréal). Codes gérés : `creneau_indisponible` (message affiché, créneaux rechargés) et `deja_reserve` (confirmation affichée).
 
 ## Scénarios simulés (`NEXT_PUBLIC_EVALUATION_REPRISE_MOCK=1`)
@@ -50,6 +50,7 @@ Les paramètres servent seulement à préremplir le formulaire (une balise GHL n
 
 | # | Scénario | Résultat attendu |
 | --- | --- | --- |
+| R0 | Dossier test | Tous les tests en réel se font sur le dossier test `hugues.pugliese@gmail.com` |
 | R1 | Lien GHL réel sur téléphone | Prénom dans le titre, formulaire prérempli, naturo de la cliente affichée |
 | R2 | Paiement avec ta carte | Checkout intégré, retour sur `/reserver`, « Merci … ton évaluation est payée » |
 | R3 | Réservation clinique | Rendez-vous créé dans l'agenda de la naturo, confirmation avec adresse, courriel reçu |

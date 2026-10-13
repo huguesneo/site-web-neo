@@ -86,14 +86,15 @@ export async function creerCheckout(r: CheckoutRequete): Promise<CheckoutReponse
 export async function getSession(sessionId: string): Promise<Session> {
   await attendre(500);
   if (!sessionId.startsWith('mock_er_')) throw new ErreurReprise('session_introuvable', 'Nous ne trouvons pas ce paiement.');
-  if (sessionId.includes('ouverte')) return { statut: 'ouverte', deja_reserve: false };
+  if (sessionId.includes('ouverte')) return { statut: 'ouverte', deja_reserve: false, prenom: null, naturo: null };
   const rdv = lireReservations()[sessionId];
-  if (rdv) return { statut: 'complete', deja_reserve: true, rdv, prenom: 'Marie' };
+  if (rdv) return { statut: 'complete', deja_reserve: true, rdv, prenom: 'Marie', naturo: { prenom: rdv.naturo_prenom ?? naturoDe(sessionId) } };
   if (sessionId.includes('reserve')) {
     return {
       statut: 'complete',
       deja_reserve: true,
       prenom: 'Marie',
+      naturo: { prenom: 'Julie' },
       rdv: {
         date: ajouterJours(aujourdhui(), 3),
         heure: '10:30',

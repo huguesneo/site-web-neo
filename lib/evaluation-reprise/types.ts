@@ -42,14 +42,13 @@ export type Session = {
   statut: string;
   deja_reserve: boolean;
   rdv?: Rdv | null;
-  // Hors contrat pour l'instant : affichés seulement s'ils sont présents.
-  prenom?: string | null;
-  naturo?: { prenom: string } | string | null;
+  prenom: string | null;
+  naturo: { prenom: string } | null;
 };
 
 // GET evaluation-reprise-creneaux?session_id=&mode=&debut=
 export type Creneaux = {
-  naturo: { prenom: string } | string | null;
+  naturo: { prenom: string } | null;
   jours: { date: string; creneaux: string[] }[];
 };
 

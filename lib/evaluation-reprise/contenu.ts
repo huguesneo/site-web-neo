@@ -93,7 +93,6 @@ export function parametrePropre(valeur: string | null): string {
   return v.includes('{{') ? '' : v.slice(0, 120);
 }
 
-export function prenomNaturo(naturo: { prenom: string } | string | null | undefined): string | null {
-  if (!naturo) return null;
-  return (typeof naturo === 'string' ? naturo : naturo.prenom)?.trim() || null;
+export function prenomNaturo(naturo: { prenom: string } | null | undefined): string | null {
+  return naturo?.prenom?.trim() || null;
 }
