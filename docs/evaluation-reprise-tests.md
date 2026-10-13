@@ -27,7 +27,9 @@ Les paramètres servent seulement à préremplir le formulaire (une balise GHL n
 
 - `return_url` du Checkout : `https://www.neoperformance.ca/evaluation-reprise/reserver?session_id={CHECKOUT_SESSION_ID}`.
 - CORS : `https://www.neoperformance.ca`, `https://neoperformance.ca` et l'URL d'aperçu Netlify, avec l'en-tête `content-type`.
-- `evaluation-reprise-session` : `ouverte` et `expiree` renvoient à la page 1 ; toute autre valeur est traitée comme payée.
+- `evaluation-reprise-session` : `ouverte` et `expiree` renvoient à la page 1 ; `remboursee` affiche « Ce paiement a été remboursé » sans agenda ; toute autre valeur est traitée comme payée.
+- Courriel : le formulaire retire tous les espaces, passe en minuscules et valide avec la même expression que `evaluation-reprise-checkout` (254 caractères au plus, 64 avant le @) avant Turnstile et le Checkout (`lib/evaluation-reprise/courriel.ts`). Le code `courriel_invalide` du serveur s'affiche sous le champ courriel.
+- `trop_de_tentatives` (créneaux et réservation) : le message du serveur est affiché tel quel.
 - `evaluation-reprise-session` renvoie aussi `prenom` et `naturo: { prenom } | null`, pour « Merci {prénom} … avec {naturo} » dès l'arrivée. Si l'un des deux est nul, la page dit « Merci, ton évaluation est payée » ou « avec ta naturopathe ».
 - `evaluation-reprise-creneaux` : `naturo` est `{ prenom } | null`. `debut` = AAAA-MM-JJ (Montréal), fenêtre de 14 jours ; « Semaine suivante » avance `debut` de 7 jours.
 - `evaluation-reprise-reserver` : `date` en AAAA-MM-JJ, `heure` en HH:MM (Montréal). Codes gérés : `creneau_indisponible` (message affiché, créneaux rechargés) et `deja_reserve` (confirmation affichée).
@@ -40,11 +42,14 @@ Les paramètres servent seulement à préremplir le formulaire (une balise GHL n
 | Naturo inconnue | `cid=sans-naturo`, ou aucun `cid` |
 | Profil en erreur | `cid=erreur` (page utilisable, naturo de l'équipe) |
 | Erreur Checkout | courriel contenant `+captcha` ou `+serveur` |
+| Courriel refusé par le serveur | courriel contenant `+invalide` |
+| Courriel refusé par le formulaire | `hugues,pugliese@gmail.com`, `a@b.c`, `x@gmail` |
 | Payée | `/evaluation-reprise/reserver?session_id=mock_er_paye` |
 | Aucun créneau | `session_id=mock_er_aucun` (ou courriel `+aucun` en page 1) |
 | Créneau pris | `session_id=mock_er_conflit` (ou courriel `+conflit`) |
 | Déjà réservée | `session_id=mock_er_reserve` |
 | Non payée | `session_id=mock_er_ouverte` (retour à la page 1) |
+| Remboursée | `session_id=mock_er_remboursee` |
 
 ## Tests en réel (à faire une fois les endpoints déployés)
 

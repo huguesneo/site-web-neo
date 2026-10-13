@@ -15,6 +15,7 @@
     - cid « sans-naturo »    : profil sans naturo
     - cid « erreur »         : le profil échoue (la page reste utilisable)
     - courriel « +captcha » / « +serveur » : erreur du Checkout
+    - courriel « +invalide »  : courriel_invalide renvoyé par le serveur
     - courriel « +aucun »    : la session simulée n'aura aucun créneau
     - courriel « +conflit »  : le premier créneau choisi sera déjà pris
     Page 2 (session_id)
@@ -24,6 +25,7 @@
     - mock_er_conflit        : creneau_indisponible au premier essai
     - mock_er_reserve        : déjà réservée (affiche la confirmation)
     - mock_er_ouverte        : non payée (retour à la page 1)
+    - mock_er_remboursee     : remboursée (message, aucun choix possible)
 */
 import { ErreurReprise } from './erreurs';
 import { FUSEAU, ajouterJours, aujourdhui } from './contenu';
@@ -72,6 +74,7 @@ export async function creerCheckout(r: CheckoutRequete): Promise<CheckoutReponse
   await attendre();
   if (!r.turnstile_token) throw new ErreurReprise('captcha_invalide', 'La vérification anti-robot n’a pas fonctionné. Recharge la page et réessaie.');
   if (r.courriel.includes('+captcha')) throw new ErreurReprise('captcha_invalide', 'La vérification anti-robot n’a pas fonctionné. Recharge la page et réessaie.');
+  if (r.courriel.includes('+invalide')) throw new ErreurReprise('courriel_invalide', 'Ce courriel n’est pas valide (réponse du serveur).');
   if (r.courriel.includes('+serveur')) throw new ErreurReprise('erreur_serveur', 'Un problème est survenu de notre côté. Réessaie dans un instant.');
   const scenario = r.courriel.includes('+aucun')
     ? 'aucun'
@@ -86,6 +89,7 @@ export async function creerCheckout(r: CheckoutRequete): Promise<CheckoutReponse
 export async function getSession(sessionId: string): Promise<Session> {
   await attendre(500);
   if (!sessionId.startsWith('mock_er_')) throw new ErreurReprise('session_introuvable', 'Nous ne trouvons pas ce paiement.');
+  if (sessionId.includes('remboursee')) return { statut: 'remboursee', deja_reserve: false, prenom: 'Marie', naturo: { prenom: 'Julie' } };
   if (sessionId.includes('ouverte')) return { statut: 'ouverte', deja_reserve: false, prenom: null, naturo: null };
   const rdv = lireReservations()[sessionId];
   if (rdv) return { statut: 'complete', deja_reserve: true, rdv, prenom: 'Marie', naturo: { prenom: rdv.naturo_prenom ?? naturoDe(sessionId) } };

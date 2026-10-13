@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, ShieldCheck } from 'lucide-react';
-import { creerCheckout, messageErreur } from '@/lib/evaluation-reprise/api';
+import { creerCheckout, messageErreur, ErreurReprise } from '@/lib/evaluation-reprise/api';
+import { MESSAGE_COURRIEL_INVALIDE, courrielValide, normaliserCourriel } from '@/lib/evaluation-reprise/courriel';
 import type { Coordonnees, Utm } from '@/lib/continuite/types';
 import ChampsCoordonnees, {
   focusPremiereErreur,
@@ -38,7 +39,12 @@ export default function Paiement({ cid, initiales, utm }: Props) {
   const soumettre = async (e: React.FormEvent) => {
     e.preventDefault();
     setErreur(null);
-    const errs = valider(coord, TOUS);
+    // Courriel normalisé (sans aucun espace, en minuscules) et validé comme le
+    // serveur, avant Turnstile et avant le Checkout.
+    const courriel = normaliserCourriel(coord.courriel);
+    if (courriel !== coord.courriel) setCoord((c) => ({ ...c, courriel }));
+    const errs = valider({ ...coord, courriel }, TOUS);
+    if (courriel && !courrielValide(courriel)) errs.courriel = MESSAGE_COURRIEL_INVALIDE;
     setErreursChamps(errs);
     if (Object.keys(errs).length) {
       focusPremiereErreur(errs);
@@ -55,14 +61,21 @@ export default function Paiement({ cid, initiales, utm }: Props) {
         ...(cid ? { cid } : {}),
         prenom: coord.prenom.trim(),
         nom: coord.nom.trim(),
-        courriel: coord.courriel.trim(),
+        courriel,
         telephone: coord.telephone.trim(),
         turnstile_token: turnstile,
         utm,
       });
       setClientSecret(client_secret);
     } catch (err) {
-      setErreur(messageErreur(err));
+      if (err instanceof ErreurReprise && err.code === 'courriel_invalide') {
+        // Sous le champ courriel, pas en bandeau général.
+        const e = { courriel: err.message };
+        setErreursChamps(e);
+        focusPremiereErreur(e);
+      } else {
+        setErreur(messageErreur(err));
+      }
       // Le jeton Turnstile est à usage unique : on en demande un nouveau.
       setTurnstile(null);
       setCleTurnstile((n) => n + 1);

@@ -38,7 +38,7 @@ export type Rdv = {
 
 // GET evaluation-reprise-session?session_id=
 export type Session = {
-  // complete | ouverte | expiree
+  // complete | ouverte | expiree | remboursee
   statut: string;
   deja_reserve: boolean;
   rdv?: Rdv | null;

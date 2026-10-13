@@ -174,6 +174,19 @@ const EvaluationRepriseReserver: React.FC = () => {
     );
   }
 
+  if (session.statut === 'remboursee') {
+    return (
+      <Cadre>
+        <div className="max-w-[560px] mx-auto px-4 py-12 flex flex-col gap-4 text-center">
+          <h1 className="m-0 text-2xl font-extrabold">Ce paiement a été remboursé</h1>
+          <p className="m-0 text-[15px] leading-relaxed text-[#4A5455]">
+            Il n’est donc plus possible de réserver avec ce lien. Pour toute question, appelle-nous au <Telephone />.
+          </p>
+        </div>
+      </Cadre>
+    );
+  }
+
   if (rdv || session.deja_reserve) {
     return (
       <Cadre>
