@@ -69,8 +69,9 @@ export default function Paiement({ cid, initiales, utm }: Props) {
       setClientSecret(client_secret);
     } catch (err) {
       if (err instanceof ErreurReprise && err.code === 'courriel_invalide') {
-        // Sous le champ courriel, pas en bandeau général.
-        const e = { courriel: err.message };
+        // Sous le champ courriel, pas en bandeau général. Texte du site (au
+        // « tu ») plutôt que celui du serveur, partagé avec d'autres offres.
+        const e = { courriel: MESSAGE_COURRIEL_INVALIDE };
         setErreursChamps(e);
         focusPremiereErreur(e);
       } else {

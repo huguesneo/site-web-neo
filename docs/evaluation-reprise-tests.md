@@ -28,7 +28,7 @@ Les paramètres servent seulement à préremplir le formulaire (une balise GHL n
 - `return_url` du Checkout : `https://www.neoperformance.ca/evaluation-reprise/reserver?session_id={CHECKOUT_SESSION_ID}`.
 - CORS : `https://www.neoperformance.ca`, `https://neoperformance.ca` et l'URL d'aperçu Netlify, avec l'en-tête `content-type`.
 - `evaluation-reprise-session` : `ouverte` et `expiree` renvoient à la page 1 ; `remboursee` affiche « Ce paiement a été remboursé » sans agenda ; toute autre valeur est traitée comme payée.
-- Courriel : le formulaire retire tous les espaces, passe en minuscules et valide avec la même expression que `evaluation-reprise-checkout` (254 caractères au plus, 64 avant le @) avant Turnstile et le Checkout (`lib/evaluation-reprise/courriel.ts`). Le code `courriel_invalide` du serveur s'affiche sous le champ courriel.
+- Courriel : le formulaire retire tous les espaces, passe en minuscules et valide avec la même expression que `evaluation-reprise-checkout` (254 caractères au plus, 64 avant le @) avant Turnstile et le Checkout (`lib/evaluation-reprise/courriel.ts`). Le code `courriel_invalide` du serveur affiche le texte du site (au « tu ») sous le champ courriel ; pour les autres codes, le message du serveur s'affiche tel quel.
 - `trop_de_tentatives` (créneaux et réservation) : le message du serveur est affiché tel quel.
 - `evaluation-reprise-session` renvoie aussi `prenom` et `naturo: { prenom } | null`, pour « Merci {prénom} … avec {naturo} » dès l'arrivée. Si l'un des deux est nul, la page dit « Merci, ton évaluation est payée » ou « avec ta naturopathe ».
 - `evaluation-reprise-creneaux` : `naturo` est `{ prenom } | null`. `debut` = AAAA-MM-JJ (Montréal), fenêtre de 14 jours ; « Semaine suivante » avance `debut` de 7 jours.
