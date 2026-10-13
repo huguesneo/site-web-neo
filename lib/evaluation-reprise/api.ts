@@ -20,9 +20,12 @@ export { ErreurReprise, messageErreur };
   affiche `message` tel quel.
 
   Simulation locale : NEXT_PUBLIC_EVALUATION_REPRISE_MOCK=1 (voir mock.ts).
-  Jamais sur Netlify.
+  Jamais sur Netlify. Le test sur NODE_ENV (toujours figé au build) garantit
+  qu'un build de production ne peut pas l'activer, même si la variable
+  était définie par erreur.
 */
-const MOCK = process.env.NEXT_PUBLIC_EVALUATION_REPRISE_MOCK === '1';
+const MOCK =
+  process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_EVALUATION_REPRISE_MOCK === '1';
 export const modeSimule = MOCK;
 const BASE_URL = (
   process.env.NEXT_PUBLIC_EVALUATION_REPRISE_API_URL ||
