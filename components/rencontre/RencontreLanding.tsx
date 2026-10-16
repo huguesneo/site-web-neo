@@ -34,11 +34,23 @@ const BULLETS = [
   'Tu repars avec une idée claire de la suite, même si tu ne fais pas affaire avec nous',
 ];
 
-const ETAPES = [
-  {
+const ETAPE_1 = {
+  A: {
     titre: 'Tu choisis ta plage',
     texte: 'En quelques clics, tu réserves le moment qui te convient. Tu reçois le lien de la visio par courriel et par texto.',
   },
+  B: {
+    titre: 'Tu réponds et choisis ta plage',
+    texte: '4 questions, puis tu réserves le moment qui te convient. Tu reçois le lien de la visio par courriel et par texto.',
+  },
+};
+
+const SOUS_TITRE = {
+  A: "En 45 minutes en visio, un membre de l'équipe NEO regarde avec toi ce que tu as essayé, ce qui bloque, et si notre programme de 15 semaines est fait pour toi. Gratuit et sans engagement.",
+  B: "Réponds à 4 questions rapides, puis choisis ta plage. En 45 minutes, un membre de l'équipe NEO regarde avec toi ce que tu as essayé, ce qui bloque, et si notre programme de 15 semaines est fait pour toi.",
+};
+
+const ETAPES_SUIVANTES = [
   {
     titre: 'On fait le point ensemble',
     texte: 'Ton objectif, ce que tu as déjà essayé, tes habitudes au quotidien. On cherche ce qui empêche ton corps de relâcher le poids.',
@@ -73,7 +85,7 @@ const PROGRAMME = [
     badgeClasse: 'bg-gray-900 text-white',
     Icone: FlaskConical,
     titre: "L'évaluation initiale",
-    texte: '60 à 75 minutes avec ton ou ta naturopathe. On ne suppose rien, on teste : test de stress sur 180 points, test d’acidité et test de transit.',
+    texte: "60 à 75 minutes avec ton ou ta naturopathe. On ne suppose rien, on teste : test de stress sur 180 points, test d'acidité et test de transit.",
   },
   {
     badge: '14 J',
@@ -105,7 +117,7 @@ const AVIS = [
     detail: '15 semaines · avis Google',
   },
   {
-    texte: '« C’est la première fois que je ne me sens pas restreinte. Je ne regrette aucunement le 45 minutes de route. »',
+    texte: "« C'est la première fois que je ne me sens pas restreinte. Je ne regrette aucunement le 45 minutes de route. »",
     nom: 'Arianne C.',
     detail: '2 mois et demi · avis Google',
   },
@@ -146,7 +158,16 @@ function Etoiles({ taille }: { taille: number }) {
 const BOUTON =
   'inline-flex items-center justify-center gap-2 rounded-full bg-neo font-semibold text-white no-underline shadow-lg shadow-neo/30 transition hover:bg-neo-600 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neo';
 
-export default function RencontreLanding({ cta, carte }: { cta: string; carte: React.ReactNode }) {
+export default function RencontreLanding({
+  version,
+  cta,
+  carte,
+}: {
+  version: 'A' | 'B';
+  cta: string;
+  carte: React.ReactNode;
+}) {
+  const etapes = [ETAPE_1[version], ...ETAPES_SUIVANTES];
   const carteRef = useRef<HTMLDivElement>(null);
   const [carteVisible, setCarteVisible] = useState(true);
   const [faqOuverte, setFaqOuverte] = useState(0);
@@ -208,8 +229,7 @@ export default function RencontreLanding({ cta, carte }: { cta: string; carte: R
               </span>
             </h1>
             <p className="mt-5 max-w-[580px] text-base leading-[1.65] text-pretty text-gray-600 lg:text-[19px]">
-              En 45 minutes en visio, un membre de l&apos;équipe NEO regarde avec toi ce que tu as essayé, ce qui bloque,
-              et si notre programme de 15 semaines est fait pour toi. Gratuit et sans engagement.
+              {SOUS_TITRE[version]}
             </p>
             <ul className="mt-6 grid gap-2.5">
               {BULLETS.map((b) => (
@@ -267,7 +287,7 @@ export default function RencontreLanding({ cta, carte }: { cta: string; carte: R
             </p>
           </Reveal>
           <Stagger className="mt-10 grid gap-6 md:grid-cols-3 lg:mt-16">
-            {ETAPES.map((e, i) => {
+            {etapes.map((e, i) => {
               const n = String(i + 1).padStart(2, '0');
               return (
                 <StaggerItem

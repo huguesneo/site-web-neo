@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <RencontreLanding cta="Choisir ma plage" carte={<CarteCalendrierA />} />;
+  return <RencontreLanding version="A" cta="Choisir ma plage" carte={<CarteCalendrierA />} />;
 }
