@@ -18,7 +18,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { Reveal, Stagger, StaggerItem } from '@/components/Reveal';
-import CookieConsent from '@/components/CookieConsent';
 import MetaPixel from './MetaPixel';
 
 /**
@@ -555,7 +554,6 @@ export default function RencontreLanding({
         </a>
       </div>
 
-      <CookieConsent />
       <MetaPixel />
     </div>
   );
