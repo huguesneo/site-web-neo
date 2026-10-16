@@ -31,6 +31,9 @@ import Chatbot from '@/components/Chatbot';
  *
  * Masqué aussi sur /evaluation-reprise (et /reserver) : page envoyée par
  * courriel de réactivation, avec son propre en-tête et son pied de page.
+ *
+ * Masqué aussi sur /rencontre-gratuite : page de pub Meta, sans navigation
+ * ni chatbot, ni bannière cookies.
  */
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -40,7 +43,8 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
     pathname === '/lien' ||
     pathname === '/continuite' ||
     pathname?.startsWith('/continuite/naturo') ||
-    pathname?.startsWith('/evaluation-reprise');
+    pathname?.startsWith('/evaluation-reprise') ||
+    pathname?.startsWith('/rencontre-gratuite');
 
   if (isFullScreen) return <>{children}</>;
 
