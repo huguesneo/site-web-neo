@@ -29,7 +29,7 @@ const QUESTIONS: Question[] = [
   },
   {
     cle: 'depuis',
-    texte: 'Depuis combien de temps tu essaies de perdre du poids?',
+    texte: "Depuis combien de temps tu essaies d'atteindre cet objectif?",
     choix: ['Moins de 6 mois', '6 mois à 2 ans', 'Plus de 2 ans', "C'est la première fois que je m'y mets"],
   },
   {
