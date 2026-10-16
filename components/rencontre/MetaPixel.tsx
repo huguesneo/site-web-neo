@@ -7,16 +7,13 @@ import { useEffect } from 'react';
  * Monté seulement sur les pages de pub /rencontre-gratuite*. Ne pas utiliser
  * l'autre pixel (1022843418482938).
  *
- * Loi 25 : le pixel se charge seulement si la personne a accepté les témoins
- * dans la bannière du site (CookieConsent). Si elle accepte pendant sa visite,
- * on le charge à ce moment-là.
+ * Chargé pour toutes les visites, peu importe le choix fait dans la bannière
+ * cookies : décision d'affaires de NEO (attribution des pubs Meta).
  *
  * Pas de Lead ni de Schedule ici : la réservation est comptée par GHL sur la
  * page de confirmation.
  */
 export const META_PIXEL_ID = '731004690765374';
-
-const CLE_CONSENTEMENT = 'neo_cookie_consent';
 
 type Fbq = ((...args: unknown[]) => void) & {
   callMethod?: (...args: unknown[]) => void;
@@ -30,15 +27,6 @@ declare global {
   interface Window {
     fbq?: Fbq;
     _fbq?: Fbq;
-  }
-}
-
-function consentementAccepte(): boolean {
-  try {
-    const brut = localStorage.getItem(CLE_CONSENTEMENT);
-    return brut ? JSON.parse(brut)?.choice === 'accepted' : false;
-  } catch {
-    return false;
   }
 }
 
@@ -65,33 +53,22 @@ function chargerPixel() {
   fbq('track', 'PageView');
 }
 
-/** Événement personnalisé ; ignoré si le pixel n'est pas chargé (pas de consentement). */
+/** Événement personnalisé ; ignoré si le pixel n'est pas encore chargé. */
 export function trackCustom(nom: string, params?: Record<string, string>) {
   window.fbq?.('trackCustom', nom, params);
 }
 
 export default function MetaPixel() {
   useEffect(() => {
-    let annule = false;
-
-    // Après le rendu principal : on attend un moment calme du navigateur.
-    const plusTard = (fn: () => void) => {
-      if ('requestIdleCallback' in window) window.requestIdleCallback(fn, { timeout: 2500 });
-      else setTimeout(fn, 1500);
-    };
-
-    const essayer = () => {
-      if (!annule && consentementAccepte()) plusTard(chargerPixel);
-    };
-
-    // Pas d'attente de l'événement `load` : il attend la fin de l'iframe du
+    // Après le rendu principal : on attend un moment calme du navigateur. Pas
+    // d'attente de l'événement `load` : il attend la fin de l'iframe du
     // calendrier, ce qui retarderait le PageView de plusieurs secondes.
-    essayer();
-    window.addEventListener('neo:cookie-consent-resolved', essayer);
-    return () => {
-      annule = true;
-      window.removeEventListener('neo:cookie-consent-resolved', essayer);
-    };
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(chargerPixel, { timeout: 2500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(chargerPixel, 1500);
+    return () => clearTimeout(id);
   }, []);
 
   return null;

@@ -33,7 +33,7 @@ import Chatbot from '@/components/Chatbot';
  * courriel de réactivation, avec son propre en-tête et son pied de page.
  *
  * Masqué aussi sur /rencontre-gratuite : page de pub Meta, sans navigation
- * ni chatbot. Elle affiche elle-même la bannière cookies (Loi 25).
+ * ni chatbot. Elle affiche elle-même la bannière cookies.
  */
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
