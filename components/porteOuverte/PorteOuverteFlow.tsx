@@ -310,7 +310,7 @@ export default function PorteOuverteFlow() {
                 Voir si je suis admissible
               </Button>
               <p className="mt-3.5 text-center text-[13px] leading-normal text-gray-500">
-                Réservé aux personnes qui n’ont pas été clientes de NEO Performance dans la dernière année.
+                Réservé aux personnes qui ne sont pas client(e)s actif(ve)s de NEO Performance.
               </p>
             </div>
 

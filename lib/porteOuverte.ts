@@ -78,7 +78,7 @@ export type Difficulte = 'temps' | 'constance' | 'alimentation' | 'energie' | 's
 export type Pret = 'totalement' | 'accompagnee' | 'pas-maintenant';
 
 export const Q_CLIENTE = {
-  question: 'Es-tu cliente, ou as-tu été cliente de NEO Performance dans la dernière année ?',
+  question: 'Es-tu client(e) activement de NEO Performance ?',
   options: [
     { valeur: 'oui', label: 'Oui' },
     { valeur: 'non', label: 'Non' },
@@ -168,10 +168,9 @@ export const REPONSES_VIDES: Reponses = {
 
 /**
  * Trois sorties, pas de score :
- * - cliente, ou cliente dans la dernière année → elle parle à sa
- *   naturopathe, pas de calendrier ;
+ * - client(e) actif(ve) → elle parle à sa naturopathe, pas de calendrier ;
  * - « pas prête pour l'instant » → groupe Facebook et guide gratuit ;
- * - tout le reste (clientes d'il y a plus d'un an et participantes de
+ * - tout le reste (ancien(ne)s client(e)s et participantes de
  *   février comprises) → calendrier.
  */
 export type Sortie = 'cliente-active' | 'information' | 'calendrier';

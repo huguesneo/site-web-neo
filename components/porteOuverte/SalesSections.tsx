@@ -102,7 +102,7 @@ const REPARTS = [
 const EXCLUSIONS = [
   'Si tu cherches une diète de 1 200 calories.',
   'Si tu veux perdre 20 lb en 3 semaines.',
-  'Si tu es cliente NEO, ou l’as été dans la dernière année.',
+  'Si tu es client(e) actif(ve) de NEO Performance.',
   'Si tu n’as pas 60 minutes à bloquer le 23 octobre.',
 ];
 
@@ -133,9 +133,9 @@ const FAQ = [
       'À la clinique, au 7005 boulevard Taschereau à Brossard, ou en visio. Une réserve honnête sur la visio : l’analyse InBody demande la machine, donc elle se fait sur place seulement. Le reste de l’évaluation est identique.',
   },
   {
-    question: 'Je suis déjà cliente de NEO. Je peux réserver une place ?',
+    question: 'Je suis déjà client(e) de NEO. Je peux réserver une place ?',
     reponse:
-      'Si tu es cliente, ou l’as été dans la dernière année, non : tu as déjà ton portrait et ta naturopathe — écris-lui plutôt dans l’application. Si ça fait plus d’un an, ou si tu es venue à la porte ouverte de février, tu es la bienvenue.',
+      'Si tu es client(e) actif(ve), non : tu as déjà ton portrait et ta naturopathe — écris-lui plutôt dans l’application. Si tu n’es plus accompagné(e), ou si tu es venu(e) à la porte ouverte de février, tu es le ou la bienvenu(e).',
   },
 ];
 
@@ -409,7 +409,7 @@ export default function SalesSections() {
             Voir si je suis admissible
           </a>
           <p className="mx-auto mt-3.5 max-w-[460px] text-[12.5px] leading-relaxed text-neo-800 md:text-[13.5px]">
-            Réservé aux personnes qui n’ont pas été clientes de NEO Performance dans la dernière année. Dépôt de 20 $
+            Réservé aux personnes qui ne sont pas client(e)s actif(ve)s de NEO Performance. Dépôt de 20 $
             pour confirmer la place, remboursé le jour même à ton arrivée.
           </p>
         </div>
