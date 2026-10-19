@@ -176,12 +176,19 @@ export const REPONSES_VIDES: Reponses = {
 export type Sortie = 'cliente-active' | 'information' | 'calendrier';
 
 /**
+ * Parcours court (/porte-ouverte-reservation) : seule la modalité est
+ * demandée, donc la seule sortie possible est le calendrier.
+ */
+export type Parcours = 'complet' | 'court';
+
+/**
  * Sortie dès que les réponses la déterminent, `null` tant qu'il manque une
  * réponse décisive. La cliente sort dès la première question, le « pas pour
  * l'instant » dès la question sur les changements, sans passer par la
  * modalité.
  */
-export function calculerSortie(reponses: Reponses): Sortie | null {
+export function calculerSortie(reponses: Reponses, parcours: Parcours = 'complet'): Sortie | null {
+  if (parcours === 'court') return reponses.modalite === null ? null : 'calendrier';
   if (reponses.cliente === 'oui') return 'cliente-active';
   if (reponses.cliente === null || reponses.pret === null) return null;
   if (reponses.pret === 'pas-maintenant') return 'information';

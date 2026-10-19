@@ -53,12 +53,14 @@ export default function BookingScreen({
   modalitePreferee,
   disponibilites,
   onRetour,
+  libelleRetour = 'Revenir aux questions',
 }: {
   coordonnees: Coordonnees;
   modalitePreferee: Modalite;
   disponibilites: Disponibilites;
   /** Ramène à la dernière question du questionnaire, réponses conservées. */
   onRetour: () => void;
+  libelleRetour?: string;
 }) {
   const offertes = (Object.keys(CALENDRIERS) as Modalite[]).filter((m) => disponibilites[m]);
   const [modalite, setModalite] = useState<Modalite>(
@@ -100,7 +102,7 @@ export default function BookingScreen({
         className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-gray-500 transition-colors hover:text-neo"
       >
         <ArrowLeft size={16} />
-        Revenir aux questions
+        {libelleRetour}
       </button>
 
       <h1 className="text-2xl md:text-4xl font-bold text-gray-900 leading-snug text-center">

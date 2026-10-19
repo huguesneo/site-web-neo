@@ -15,6 +15,7 @@ import {
   REPONSES_VIDES,
   calculerSortie,
   type Disponibilites,
+  type Parcours,
   type Reponses,
 } from '@/lib/porteOuverte';
 import CaptureScreen, {
@@ -34,9 +35,15 @@ import SalesSections from './SalesSections';
 type Phase = 'capture' | 'questions' | 'verification' | 'booking' | 'complet' | 'cliente' | 'information';
 
 /** Les cinq questions, dans l'ordre. */
-const ETAPES = ['cliente', 'objectif', 'difficulte', 'pret', 'modalite'] as const;
+const ETAPES_COMPLET = ['cliente', 'objectif', 'difficulte', 'pret', 'modalite'] as const;
 
-type EtapeId = (typeof ETAPES)[number];
+type EtapeId = (typeof ETAPES_COMPLET)[number];
+
+/** Parcours court : coordonnées, puis seulement le choix clinique ou visio. */
+const ETAPES_PAR_PARCOURS: Record<Parcours, readonly EtapeId[]> = {
+  complet: ETAPES_COMPLET,
+  court: ['modalite'],
+};
 
 /** Au-delà, on arrête d'attendre GHL et on ouvre les deux calendriers. */
 const ATTENTE_MAX_MS = 4000;
@@ -75,7 +82,8 @@ function envoyer(charge: Record<string, unknown>): Promise<{ contact_id?: string
   });
 }
 
-export default function PorteOuverteFlow() {
+export default function PorteOuverteFlow({ parcours = 'complet' }: { parcours?: Parcours }) {
+  const ETAPES = ETAPES_PAR_PARCOURS[parcours];
   const [phase, setPhase] = useState<Phase>('capture');
   const [coordonnees, setCoordonnees] = useState<Coordonnees>(COORDONNEES_VIDES);
   const [reponses, setReponses] = useState<Reponses>(REPONSES_VIDES);
@@ -132,10 +140,10 @@ export default function PorteOuverteFlow() {
 
   /** Fin du parcours : on écrit les réponses dans GHL, puis on route. */
   const terminer = (reponsesFinales: Reponses) => {
-    const sortie = calculerSortie(reponsesFinales);
+    const sortie = calculerSortie(reponsesFinales, parcours);
     if (!sortie) return;
 
-    void envoyerAvecContact({ action: 'questionnaire', reponses: reponsesFinales });
+    void envoyerAvecContact({ action: 'questionnaire', parcours, reponses: reponsesFinales });
 
     if (sortie === 'cliente-active') {
       setPhase('cliente');
@@ -182,7 +190,7 @@ export default function PorteOuverteFlow() {
 
     // Les deux sorties sans calendrier sortent dès que la réponse décisive est
     // donnée : personne ne répond à une question de plus pour rien.
-    const sortie = calculerSortie(reponses);
+    const sortie = calculerSortie(reponses, parcours);
     if (sortie === 'cliente-active' || sortie === 'information' || index === ETAPES.length - 1) {
       terminer(reponses);
       return;
@@ -246,30 +254,33 @@ export default function PorteOuverteFlow() {
 
   const questionnaire = (
     <div>
-      <div className="flex items-center gap-4 mb-10">
-        <button
-          type="button"
-          onClick={() => setIndex((i) => Math.max(i - 1, 0))}
-          disabled={index === 0}
-          aria-label="Question précédente"
-          className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:border-neo hover:text-neo disabled:opacity-0 disabled:pointer-events-none"
-        >
-          <ArrowLeft size={18} />
-        </button>
+      {/* Une seule question : ni retour ni barre de progression. */}
+      {ETAPES.length > 1 && (
+        <div className="flex items-center gap-4 mb-10">
+          <button
+            type="button"
+            onClick={() => setIndex((i) => Math.max(i - 1, 0))}
+            disabled={index === 0}
+            aria-label="Question précédente"
+            className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:border-neo hover:text-neo disabled:opacity-0 disabled:pointer-events-none"
+          >
+            <ArrowLeft size={18} />
+          </button>
 
-        <div className="flex-1">
-          <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-neo transition-all duration-500 ease-out"
-              style={{ width: `${((index + 1) / ETAPES.length) * 100}%` }}
-            />
+          <div className="flex-1">
+            <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-neo transition-all duration-500 ease-out"
+                style={{ width: `${((index + 1) / ETAPES.length) * 100}%` }}
+              />
+            </div>
           </div>
-        </div>
 
-        <span className="shrink-0 text-sm font-semibold text-gray-400 tabular-nums">
-          {index + 1} / {ETAPES.length}
-        </span>
-      </div>
+          <span className="shrink-0 text-sm font-semibold text-gray-400 tabular-nums">
+            {index + 1} / {ETAPES.length}
+          </span>
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -347,6 +358,7 @@ export default function PorteOuverteFlow() {
             modalitePreferee={reponses.modalite ?? 'clinique'}
             disponibilites={disponibilites}
             onRetour={retourAuQuestionnaire}
+            libelleRetour={parcours === 'court' ? 'Revenir à la question' : undefined}
           />
         );
       case 'complet':
@@ -360,7 +372,12 @@ export default function PorteOuverteFlow() {
 
   return (
     <>
-      <Hero compact={phase !== 'capture'} />
+      <Hero
+        compact={phase !== 'capture'}
+        titreCompact={
+          parcours === 'court' ? 'Une question, et on regarde s’il te reste une place.' : undefined
+        }
+      />
 
       <div className={`bg-gray-50 ${phase === 'capture' ? 'pb-16 md:pb-26' : 'pb-20'}`}>
         {/* La carte chevauche la bande foncée : c'est ce décalage qui donne du

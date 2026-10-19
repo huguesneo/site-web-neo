@@ -17,7 +17,13 @@ const VIDEO_OPTIN =
  * Deux halos turquoise superposés — un large et diffus en haut, un plus serré
  * derrière le titre. C'est ce qui empêche le fond foncé de paraître plat.
  */
-export default function Hero({ compact = false }: { compact?: boolean }) {
+export default function Hero({
+  compact = false,
+  titreCompact = 'Quelques questions, et on regarde s’il te reste une place.',
+}: {
+  compact?: boolean;
+  titreCompact?: string;
+}) {
   return (
     <div
       className={`relative overflow-hidden bg-gray-900 text-white text-center ${
@@ -39,7 +45,7 @@ export default function Hero({ compact = false }: { compact?: boolean }) {
 
         {compact ? (
           <h1 className="mx-auto max-w-2xl text-xl font-bold leading-snug md:text-2xl">
-            Quelques questions, et on regarde s’il te reste une place.
+            {titreCompact}
           </h1>
         ) : (
           <>
