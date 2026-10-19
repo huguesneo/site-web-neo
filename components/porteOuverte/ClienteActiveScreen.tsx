@@ -4,7 +4,7 @@ import { Heart } from 'lucide-react';
 import ShareBlock from './ShareBlock';
 
 /**
- * Sortie « cliente, ou cliente dans la dernière année » — pas de calendrier.
+ * Sortie « client(e) actif(ve) » — pas de calendrier.
  *
  * La porte ouverte est pour les gens qui ne sont pas encore accompagnés. Une
  * cliente récente a déjà mieux : sa naturopathe. On la renvoie vers elle, et on lui

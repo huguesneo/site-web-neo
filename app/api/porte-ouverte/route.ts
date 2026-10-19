@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
 
       case 'questionnaire': {
         const reponses = lireReponses(charge.reponses);
-        const sortie = calculerSortie(reponses);
+        const sortie = calculerSortie(reponses, charge.parcours === 'court' ? 'court' : 'complet');
         if (!sortie) return NextResponse.json({ error: 'Questionnaire incomplet' }, { status: 400 });
 
         const id = await contactId(charge, contact);
