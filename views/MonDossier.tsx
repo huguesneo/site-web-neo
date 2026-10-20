@@ -12,7 +12,14 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { Eyebrow, Reveal, Stagger, StaggerItem, scrollToId } from '@/components/PitchKit';
+import {
+  Eyebrow,
+  PrixProgramme,
+  Reveal,
+  Stagger,
+  StaggerItem,
+  scrollToId,
+} from '@/components/PitchKit';
 import {
   ENGAGEMENTS,
   GOOGLE_LISTING_URL,
@@ -481,7 +488,7 @@ function OuvrirDossier() {
 
 /* ──────────────────────────────── La page ──────────────────────────────── */
 
-export default function MonDossier() {
+export default function MonDossier({ promoActive }: { promoActive: boolean }) {
   const [calcOpen, setCalcOpen] = useState(false);
   const closeCalc = useCallback(() => setCalcOpen(false), []);
 
@@ -757,17 +764,8 @@ export default function MonDossier() {
                   <span className="absolute -left-[12%] -right-[12%] top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-neo-500 shadow-[0_0_15px_rgba(0,187,177,0.5)]" />
                 </span>
 
-                <div className="mt-10 w-full max-w-xl rounded-2xl border border-neo-500 bg-white/5 px-8 py-10 text-center shadow-[0_20px_50px_rgba(0,0,0,0.4)] md:px-14">
-                  <div className="flex flex-wrap items-baseline justify-center gap-3">
-                    <span className="text-6xl font-extrabold tracking-tight md:text-7xl">2 400 $</span>
-                    <span className="text-gray-400">+ taxes applicables</span>
-                  </div>
-                  <div className="mt-3 text-lg font-semibold text-neo-400">
-                    Paiement unique (meilleur rapport qualité/prix)
-                  </div>
-                </div>
+                <PrixProgramme promoActive={promoActive} />
 
-                <p className="mt-6 italic text-gray-400">Programme normalement à 2 799 $</p>
               </div>
             </div>
           </Reveal>
