@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
 import MonDossier from '@/views/MonDossier';
+import { isPromoDecouverteActive } from '@/lib/promoDecouverte';
+
+// Rendu à chaque requête : le prix promo bascule tout seul à la fin de la
+// Semaine découverte NEO, sans redéploiement.
+export const dynamic = 'force-dynamic';
 
 // Page privée : envoyée par les closers aux prospects qui n'ont pas closé
 // pendant l'appel. noindex + nofollow et absente du sitemap pour ne jamais
@@ -15,5 +20,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <MonDossier />;
+  return <MonDossier promoActive={isPromoDecouverteActive()} />;
 }

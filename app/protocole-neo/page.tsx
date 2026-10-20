@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
 import ProtocoleNeo from '@/views/ProtocoleNeo';
+import { isPromoDecouverteActive } from '@/lib/promoDecouverte';
+
+// Rendu à chaque requête : le prix promo bascule tout seul à la fin de la
+// Semaine découverte NEO, sans redéploiement.
+export const dynamic = 'force-dynamic';
 
 // Page privée : accessible uniquement par lien direct (partage d'écran des
 // closers). noindex + nofollow et absente du sitemap pour ne jamais
@@ -15,5 +20,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <ProtocoleNeo />;
+  return <ProtocoleNeo promoActive={isPromoDecouverteActive()} />;
 }
