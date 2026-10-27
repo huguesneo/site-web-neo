@@ -1,23 +1,113 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Flame, Leaf, Activity, Star, ShieldCheck, Clock, HeartHandshake } from 'lucide-react';
+import { Flame, Leaf, Activity, Star, ShieldCheck, Clock, HeartHandshake, X, Check, Search, ClipboardList } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type StepId =
-  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
-  | 'int1' | 'int2' | 'int3'
-  | 'loading' | 'form' | 'results' | 'roadmap' | 'value-non' | 'calendar';
+  | 'intro' | 'sexe' | 'age' | 'essais' | 'resultat' | 'int1'
+  | 'energie' | 'sommeil' | 'symptomes' | 'int2'
+  | 'gras' | 'ballon' | 'selles' | 'hormones' | 'int3'
+  | 'objectif' | 'livres' | 'impact'
+  | 'loading' | 'form' | 'results' | 'value-non' | 'calendar';
+
+// Ordre du parcours — sert uniquement à la barre de progression
+const FLOW: StepId[] = [
+  'intro', 'sexe', 'age', 'essais', 'resultat', 'int1',
+  'energie', 'sommeil', 'symptomes', 'int2',
+  'gras', 'ballon', 'selles', 'hormones', 'int3',
+  'objectif', 'livres', 'impact', 'loading', 'form', 'results', 'calendar',
+];
+
+type Sys = 'cortisol' | 'digestion' | 'hormones';
 
 interface Answers {
-  q1?: string; q2?: string; q3?: string; q4?: string;
-  q5: string[]; q6?: string; q7?: string; q8?: string; q9?: string;
-  q10: string[]; q11?: string;
-  worstBlockName?: string;
+  q1?: string; q2?: string;
+  essais: string[]; resultat?: string;
+  q3?: string; q4?: string; q5: string[];
+  q6?: string; q7?: string; q9?: string; q8: string[];
+  q11?: string; livres?: string; q10: string[];
 }
 
 interface Metrics { effScore: number; cortisol: number; digestion: number; hormones: number; }
 
 const S = '#f26457'; // secondary / coral
+
+// Ce que la personne a déjà essayé — le « faux problème » qu'on recadre
+const ESSAIS: { val: string; label: string; short: string; stop: string }[] = [
+  { val: 'calories', label: 'Couper les calories / suivre une diète', short: 'couper les calories', stop: 'Couper encore plus les calories' },
+  { val: 'cardio', label: "M'entraîner plus (cardio, gym)", short: "t'entraîner plus", stop: 'Ajouter du cardio pour compenser' },
+  { val: 'jeune', label: 'Le jeûne intermittent', short: 'le jeûne', stop: 'Sauter des repas' },
+  { val: 'programme', label: 'Un programme minceur (points, keto, repas préparés…)', short: 'les programmes minceur', stop: 'Recommencer un énième programme' },
+  { val: 'shakes', label: 'Des shakes ou suppléments minceur', short: 'les shakes et suppléments', stop: 'Remplacer des repas par des shakes' },
+  { val: 'medic', label: 'Une médication pour maigrir', short: 'la médication', stop: "Compter seulement sur la médication" },
+];
+
+const REFRAME: Record<string, string> = {
+  calories: "Couper les calories, ton corps le lit comme une période de manque. Il ralentit sa dépense et s'accroche à ses réserves. C'est pour ça que le poids revient dès que tu relâches, souvent avec quelques livres de plus.",
+  programme: "Points, keto, repas préparés : différents emballages, même idée — manger moins. Ton corps répond toujours de la même façon : il ralentit et protège ses réserves. Le poids revient dès que le programme s'arrête.",
+  cardio: "Ajouter du cardio à un corps déjà épuisé, c'est ajouter du stress. Et un corps stressé protège ses réserves, surtout au ventre. Tu as travaillé plus fort… sur la mauvaise chose.",
+  jeune: "Sauter des repas quand ton énergie est déjà basse, c'est un stress de plus pour ton corps. Il répond en se mettant en mode économie, pas en brûlant davantage.",
+  shakes: "Les shakes et les suppléments remplacent des repas. Ils ne changent rien à la raison pour laquelle ton corps stocke au lieu de brûler.",
+  medic: "La médication coupe l'appétit. Elle ne change pas la raison pour laquelle ton corps stockait au départ — c'est pour ça que le poids revient souvent à l'arrêt.",
+  rien: "Bonne nouvelle : tu pars sans les mauvais réflexes. La plupart des gens passent des années à couper les calories avant de comprendre que ce n'était pas ça, le problème.",
+};
+const REFRAME_PRIORITY = ['calories', 'programme', 'cardio', 'jeune', 'medic', 'shakes'];
+
+const RESULTAT_LINE: Record<string, string> = {
+  repris: "Tu as perdu, puis tout repris. Ça ne veut pas dire que tu as échoué. Ça veut dire que la méthode visait la mauvaise cible.",
+  plateau: "Tu as perdu un peu, puis plus rien. Ce plateau n'est pas un hasard : c'est ton corps qui se défend.",
+  rien: "Tu as fait des efforts et rien n'a bougé. Ce n'est pas que tu n'as pas assez essayé. C'est que la méthode visait la mauvaise cible.",
+};
+
+const PROFILES: Record<Sys | 'equilibre', {
+  name: string; title: string; explain: string; start: string[];
+  tips: { e: string; t: string; d: string }[];
+}> = {
+  cortisol: {
+    name: 'DOMINANCE CORTISOL',
+    title: 'Profil métabolique à dominance cortisol',
+    explain: "Quand ton corps encaisse trop de stress — charge mentale, nuits coupées, diètes, entraînements intenses — il se met en mode protection. Il garde ses réserves, surtout au ventre, et l'énergie ne suit plus. Dans ce mode-là, manger moins et bouger plus aggrave souvent la situation.",
+    start: ['Calmer ton système de stress avant de chercher à perdre', 'Protéger ton sommeil comme une vraie priorité', 'Manger assez, surtout le matin'],
+    tips: [
+      { e: '🍳', t: 'Déjeuner protéiné', d: "25 à 30 g de protéines dans l'heure suivant ton réveil. Sauter ce repas ajoute du stress à un corps déjà sous tension." },
+      { e: '🚶‍♀️', t: 'Marcher plutôt que courir', d: "10 min de marche après ton plus gros repas plutôt qu'un cardio intense en soirée." },
+      { e: '🌙', t: 'Couper les écrans', d: "Écrans fermés 45 min avant le coucher pour aider ton cerveau à décrocher." },
+    ],
+  },
+  digestion: {
+    name: 'DOMINANCE DIGESTIVE',
+    title: 'Profil métabolique à dominance digestive',
+    explain: "Quand ta digestion travaille en surcharge, ton corps assimile mal ce que tu manges. Résultat : ballonnements, énergie en dents de scie, et un poids qui ne répond pas à tes efforts. Tant que c'est le cas, manger « parfait » ne suffit pas.",
+    start: ['Remettre ta digestion en ordre avant le reste', 'Repérer ce qui déclenche tes ballonnements', 'Régulariser ton transit'],
+    tips: [
+      { e: '🍽️', t: 'Manger lentement', d: 'Assise, sans écran, en mastiquant longtemps. La digestion commence dans la bouche.' },
+      { e: '📝', t: 'Journal de 7 jours', d: 'Note ce que tu manges et quand tu gonfles. Les déclencheurs apparaissent vite.' },
+      { e: '💧', t: 'Eau et fibres', d: "1,5 à 2 L d'eau par jour, et des fibres ajoutées graduellement, pas d'un coup." },
+    ],
+  },
+  hormones: {
+    name: 'DOMINANCE HORMONALE',
+    title: 'Profil métabolique à dominance hormonale',
+    explain: "Quand ton équilibre hormonal change, ton corps ne joue plus selon les mêmes règles. Ce qui marchait il y a 10 ans ne marche plus — pas parce que tu fais moins d'efforts, mais parce que la cible a bougé.",
+    start: ['Adapter ton approche à ta phase hormonale', 'Miser sur la musculation plutôt que le cardio', 'Stabiliser ta glycémie à chaque repas'],
+    tips: [
+      { e: '🏋️‍♀️', t: 'Musculation', d: "2 séances par semaine plutôt que plus de cardio. Le muscle est ton meilleur allié métabolique." },
+      { e: '🥩', t: 'Protéines à chaque repas', d: 'Pour stabiliser ta glycémie et couper les rages de sucre de fin de journée.' },
+      { e: '⏰', t: 'Heure de coucher fixe', d: 'Ton sommeil règle une bonne partie de tes hormones. La régularité compte plus que la durée.' },
+    ],
+  },
+  equilibre: {
+    name: 'PROFIL ÉQUILIBRÉ',
+    title: 'Profil métabolique équilibré',
+    explain: "Ton corps envoie peu de signaux d'alarme. Ton enjeu n'est pas de réparer, c'est d'optimiser : passer de « ça va » à « je me sens au top ».",
+    start: ['Optimiser plutôt que restreindre', 'Construire du muscle pour la suite', 'Mesurer et ajuster avec précision'],
+    tips: [
+      { e: '🍳', t: 'Déjeuner protéiné', d: "25 à 30 g de protéines dans l'heure suivant ton réveil." },
+      { e: '🏋️‍♀️', t: 'Musculation', d: '2 à 3 séances par semaine pour garder un métabolisme actif.' },
+      { e: '🚶‍♀️', t: 'Marche digestive', d: '10 min de marche après ton plus gros repas.' },
+    ],
+  },
+};
 
 // ─── Sous-composants extraits (Correction du bug de Focus) ────────────────────
 
@@ -25,6 +115,13 @@ const Wrap = ({ wide, children, animKey }: { wide?: boolean; children: React.Rea
   <div key={animKey} className={`mx-auto px-4 animate-fade-in-up ${wide ? 'max-w-3xl' : 'max-w-xl'}`}>
     {children}
   </div>
+);
+
+const Q = ({ title, sub }: { title: string; sub?: string }) => (
+  <>
+    <h2 className={`text-2xl md:text-3xl font-extrabold text-gray-900 text-center ${sub ? 'mb-2' : 'mb-8'}`}>{title}</h2>
+    {sub && <p className="text-gray-500 text-center font-medium mb-8">{sub}</p>}
+  </>
 );
 
 const Opt = ({ label, sub, onClick }: { label: string; sub?: string; onClick: () => void }) => (
@@ -42,14 +139,16 @@ const Opt = ({ label, sub, onClick }: { label: string; sub?: string; onClick: ()
   </button>
 );
 
-const Multi = ({ label, checked, onClick }: { label: string; checked: boolean; onClick: () => void }) => (
+const Multi = ({ label, checked, onClick, none }: { label: string; checked: boolean; onClick: () => void; none?: boolean }) => (
   <button
     onClick={onClick}
-    className={`w-full text-left px-6 py-5 rounded-2xl border-2 transition-all duration-200
-                font-semibold flex items-center justify-between mb-3 ${
+    className={`w-full text-left px-6 rounded-2xl border-2 transition-all duration-200
+                font-semibold flex items-center justify-between ${none ? 'py-4 border-dashed mb-6' : 'py-5 mb-3'} ${
       checked
         ? 'border-neo bg-neo/5 text-neo shadow-[0_0_0_4px_rgba(0,187,177,0.08)]'
-        : 'border-gray-100 bg-white text-gray-800 hover:border-gray-200 hover:shadow-md'
+        : none
+          ? 'border-gray-200 text-gray-400 hover:border-gray-300'
+          : 'border-gray-100 bg-white text-gray-800 hover:border-gray-200 hover:shadow-md'
     }`}
   >
     <span className="flex-1 leading-snug">{label}</span>
@@ -103,29 +202,35 @@ const Revealed = ({ on, children }: { on: boolean; children: React.ReactNode }) 
   </div>
 );
 
+const Rating = () => (
+  <div className="flex items-center justify-center gap-2 text-sm text-gray-500 font-medium">
+    <div className="flex text-yellow-400">
+      {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" strokeWidth={0} />)}
+    </div>
+    <span><strong className="text-gray-900">4.9/5</strong> · 4000+ avis</span>
+  </div>
+);
+
 
 // ─── Quiz Component ─────────────────────────────────────────────────────────────
 const Quiz: React.FC = () => {
-  const [step, setStep] = useState<StepId>(0);
-  const [history, setHistory] = useState<StepId[]>([0]);
+  const [step, setStep] = useState<StepId>('intro');
+  const [history, setHistory] = useState<StepId[]>(['intro']);
   const [animKey, setAnimKey] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({ q5: [], q10: [] });
+  const [answers, setAnswers] = useState<Answers>({ essais: [], q5: [], q8: [], q10: [] });
   const [metrics, setMetrics] = useState<Metrics>({ effScore: 100, cortisol: 5, digestion: 5, hormones: 5 });
-
-  const [int1Text, setInt1Text] = useState('');
-  const [int1Revealed, setInt1Revealed] = useState(false);
-  const [int2Text, setInt2Text] = useState('');
-  const [int2Revealed, setInt2Revealed] = useState(false);
-  const [int3Text, setInt3Text] = useState('');
-  const [int3Revealed, setInt3Revealed] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   const [loadingIdx, setLoadingIdx] = useState(-1);
-  const [displayScore, setDisplayScore] = useState(0);
   const [barsOn, setBarsOn] = useState(false);
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', tel: '' });
   const [submitting, setSubmitting] = useState(false);
 
+  const fem = answers.q1 !== 'Homme';
+  const g = (f: string, m: string) => (fem ? f : m);
+
   const goTo = useCallback((next: StepId) => {
+    setRevealed(false);
     setAnimKey(k => k + 1);
     setStep(next);
     setHistory(h => [...h, next]);
@@ -136,123 +241,100 @@ const Quiz: React.FC = () => {
     if (history.length <= 1) return;
     const prev = history[history.length - 2];
     setHistory(h => h.slice(0, -1));
+    setRevealed(false);
     setAnimKey(k => k + 1);
     setStep(prev);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const progressMap: Record<string, number> = {
-    '0': 0, '1': 1, '2': 2, 'int1': 3, '3': 4, '4': 5, '5': 6,
-    'int2': 7, '6': 8, '7': 9, '8': 10, '9': 11, 'int3': 12,
-    '10': 13, '11': 14, 'loading': 15, 'form': 16,
-    'results': 17, 'roadmap': 18, 'value-non': 18, 'calendar': 19,
-  };
-  const progress = Math.round(((progressMap[String(step)] ?? 0) / 19) * 100);
-  const showBack = history.length > 1 && !['results', 'roadmap', 'calendar', 'value-non'].includes(String(step)) && step !== 0;
+  // Barre de progression : seulement pendant les questions
+  const qStart = FLOW.indexOf('sexe'), qEnd = FLOW.indexOf('loading');
+  const flowIdx = FLOW.indexOf(step);
+  const inQuestions = flowIdx >= qStart && flowIdx < qEnd;
+  const progress = Math.round(((flowIdx - qStart + 1) / (qEnd - qStart)) * 100);
+  const showBack = inQuestions && history.length > 1;
 
-  const pick = (key: keyof Answers, val: string, next: StepId, cb?: () => void) => {
+  const pick = (key: keyof Answers, val: string, next: StepId) => {
     setAnswers(a => ({ ...a, [key]: val }));
-    cb?.();
     setTimeout(() => goTo(next), 300);
   };
 
-  const toggleQ5 = (val: string) =>
+  // Sélection multiple — `none` est exclusif avec les autres choix
+  const toggle = (key: 'essais' | 'q5' | 'q8' | 'q10', val: string, none: string) =>
     setAnswers(a => {
-      if (val === 'F') return { ...a, q5: ['F'] };
-      const arr = a.q5.filter(v => v !== 'F');
-      return { ...a, q5: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
+      if (val === none) return { ...a, [key]: [none] };
+      const arr = a[key].filter(v => v !== none);
+      return { ...a, [key]: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
     });
 
-  const toggleQ10 = (val: string) =>
-    setAnswers(a => {
-      if (val === 'Rien') return { ...a, q10: ['Rien'] };
-      const arr = a.q10.filter(v => v !== 'Rien');
-      return { ...a, q10: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
-    });
+  // Révélation différée des écrans intermédiaires
+  useEffect(() => {
+    if (!['int1', 'int2', 'int3'].includes(step)) return;
+    setRevealed(false);
+    const t = setTimeout(() => setRevealed(true), 1300);
+    return () => clearTimeout(t);
+  }, [step, animKey]);
 
-  const showInt1 = (age: string) => {
-    setInt1Revealed(false);
-    goTo('int1');
-    setTimeout(() => {
-      setInt1Text(
-        answers.q1 === 'Femme' && ['25-35', '36-50'].includes(age)
-          ? "80% des 15 000 femmes que nous aidons se trouvent exactement dans ta tranche d'âge. C'est la période précise où les règles du jeu métabolique changent silencieusement."
-          : "L'algorithme a ciblé ton groupe démographique. Parmi nos 15 000 profils analysés, ton groupe traverse des adaptations métaboliques uniques — très souvent ignorées."
-      );
-      setInt1Revealed(true);
-    }, 1300);
+  const triedSomething = answers.essais.length > 0 && !answers.essais.includes('rien');
+  const triedShorts = ESSAIS.filter(e => answers.essais.includes(e.val)).map(e => e.short);
+  const joinFr = (arr: string[]) => arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')} et ${arr[arr.length - 1]}`;
+
+  const submitEssais = () => {
+    if (!answers.essais.length) return;
+    goTo(answers.essais.includes('rien') ? 'int1' : 'resultat');
   };
 
-  const showInt2 = (q5: string[]) => {
-    setInt2Revealed(false);
-    let msg = '';
-    if (answers.q3 === 'A' || q5.includes('C'))
-      msg = "La fatigue ressentie dès le réveil n'est pas de la paresse. C'est la preuve biologique d'un métabolisme qui tourne au ralenti, même après une nuit de repos.";
-    else if (['A', 'B'].includes(answers.q4 || '') || q5.includes('D'))
-      msg = "Ton sommeil altéré et ton cerveau hyperactif le soir indiquent que ton système nerveux est bloqué en mode alerte permanent.";
-    else if (q5.includes('A') || q5.includes('E'))
-      msg = "La charge mentale constante et ton mode « go go go » saturent tes surrénales, ordonnant à ton corps de stocker l'énergie au lieu de la brûler.";
-    else if (answers.q3 === 'B' || q5.includes('B'))
-      msg = "Les crashs d'énergie et tes rages de sucre sont les signes clairs de montagnes russes glycémiques qui épuisent tes réserves métaboliques.";
-    else
-      msg = "Les signaux que tu as sélectionnés sont les preuves directes d'un métabolisme qui s'est mis en mode survie pour se protéger.";
-    setInt2Text(msg);
-    setTimeout(() => setInt2Revealed(true), 1300);
-  };
-
-  const submitQ5 = () => {
+  const submitSymptomes = () => {
     if (!answers.q5.length) return;
-    if (answers.q5.includes('F') && answers.q3 === 'C' && answers.q4 === 'D') { goTo(6); return; }
-    showInt2(answers.q5);
+    if (answers.q5.includes('F') && answers.q3 === 'C' && answers.q4 === 'D') { goTo('gras'); return; }
     goTo('int2');
   };
 
-  const showInt3 = (transit: string) => {
-    setInt3Revealed(false);
-    const hasIssue = answers.q7 === 'Souvent' || answers.q7 === 'Parfois' || transit === 'Non';
-    setInt3Text(
-      hasIssue
-        ? "Tes réponses digestives pointent vers un métabolisme qui ne sait plus traiter l'énergie correctement. Quand l'assimilation est bloquée par l'inflammation, même une alimentation parfaite sera stockée plutôt que convertie."
-        : "Ta digestion semble bien fonctionner, mais tes autres signaux pointent vers un verrouillage métabolique de sécurité. Quand le corps est sous tension, même une alimentation parfaite est redirigée vers le stockage de graisse."
-    );
-    setTimeout(() => setInt3Revealed(true), 1300);
-  };
+  const calcMetrics = (ans: Answers): Metrics & { worst: Sys | 'equilibre' } => {
+    let c = 5, d = 5, h = 5;
+    if (ans.q3 === 'A') c += 25;
+    if (ans.q3 === 'B') c += 15;
+    if (ans.q4 === 'A') { c += 25; h += 10; }
+    if (ans.q4 === 'B') c += 20;
+    if (ans.q4 === 'C') { c += 10; d += 10; }
+    if (ans.q5.includes('A')) c += 15;
+    if (ans.q5.includes('B')) { d += 10; h += 10; }
+    if (ans.q5.includes('C')) c += 10;
+    if (ans.q5.includes('D')) c += 15;
+    if (ans.q5.includes('E')) c += 15;
+    if (ans.q6 === 'Ventre') c += 25;
+    if (ans.q6 === 'Diffuse') { h += 15; d += 10; }
+    if (ans.q6 === 'Hanches') h += 20;
+    if (ans.q7 === 'Souvent') d += 40;
+    if (ans.q7 === 'Parfois') d += 20;
+    if (ans.q9 === 'Non') d += 35;
+    if (ans.q8.includes('cycle')) h += 25;
+    if (ans.q8.includes('chaleurs')) h += 30;
+    if (ans.q8.includes('cheveux')) h += 20;
+    if (ans.q8.includes('libido')) h += 25;
+    if (ans.q8.includes('muscle')) h += 20;
+    if (ans.q1 !== 'Homme' && ans.q2 === '45-55') h += 15;
+    if (ans.q1 !== 'Homme' && ans.q2 === '35-44') h += 5;
+    // Les approches « stress » déjà essayées amplifient le profil cortisol
+    if (['calories', 'cardio', 'jeune'].some(v => ans.essais.includes(v))) c += 10;
 
-  const calcMetrics = (ans: Answers): Metrics & { worst: string } => {
-    let base = 100, c = 5, d = 5, h = 5;
-    if (ans.q3 === 'A') { base -= 18; c += 35; }
-    if (ans.q3 === 'B') { base -= 9; c += 20; }
-    if (ans.q4 === 'A') { base -= 12; c += 25; h += 15; }
-    if (ans.q4 === 'B') { base -= 10; c += 20; }
-    if (ans.q4 === 'C') { base -= 12; c += 10; d += 15; }
-    if (ans.q5.includes('A')) { base -= 8; c += 25; }
-    if (ans.q5.includes('B')) { base -= 6; d += 15; h += 10; }
-    if (ans.q5.includes('C')) { base -= 8; c += 15; }
-    if (ans.q6 === 'Ventre') { base -= 12; c += 35; h += 10; }
-    if (ans.q6 === 'Diffuse') { base -= 5; h += 25; }
-    if (ans.q7 === 'Souvent') { base -= 15; d += 50; }
-    if (ans.q7 === 'Parfois') { base -= 6; d += 20; }
-    if (ans.q8 === 'Oui') { base -= 10; h += 45; }
-    if (ans.q9 === 'Non') { base -= 12; d += 40; }
-    const blocks = [
-      { name: 'Cortisol (Stress)', score: Math.min(95, c) },
-      { name: 'Système Digestif', score: Math.min(95, d) },
-      { name: 'Système Hormonal', score: Math.min(95, h) },
-    ].sort((a, b) => b.score - a.score);
+    const cortisol = Math.min(95, c), digestion = Math.min(95, d), hormones = Math.min(95, h);
+    const ranked = ([['cortisol', cortisol], ['digestion', digestion], ['hormones', hormones]] as [Sys, number][])
+      .sort((a, b) => b[1] - a[1]);
+    const effScore = Math.max(14, 100 - Math.round((cortisol + digestion + hormones - 15) / 3));
     return {
-      effScore: Math.max(14, Math.floor(base)),
-      cortisol: Math.min(95, c),
-      digestion: Math.min(95, d),
-      hormones: Math.min(95, h),
-      worst: blocks[0].name,
+      effScore, cortisol, digestion, hormones,
+      worst: ranked[0][1] < 30 ? 'equilibre' : ranked[0][0],
     };
   };
 
+  const [worst, setWorst] = useState<Sys | 'equilibre'>('cortisol');
+
   useEffect(() => {
     if (step !== 'loading') return;
-    const { worst, ...m } = calcMetrics(answers);
+    const { worst: w, ...m } = calcMetrics(answers);
     setMetrics(m);
-    setAnswers(a => ({ ...a, worstBlockName: worst }));
+    setWorst(w);
     setLoadingIdx(-1);
     let i = 0;
     const t = setInterval(() => {
@@ -264,12 +346,44 @@ const Quiz: React.FC = () => {
 
   useEffect(() => {
     if (step !== 'results') return;
-    setDisplayScore(0); setBarsOn(false);
-    let cur = 0;
-    const t = setInterval(() => { cur++; setDisplayScore(cur); if (cur >= metrics.effScore) clearInterval(t); }, 15);
-    setTimeout(() => setBarsOn(true), 700);
-    return () => clearInterval(t);
-  }, [step, metrics.effScore]);
+    setBarsOn(false);
+    const t = setTimeout(() => setBarsOn(true), 500);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  const profile = PROFILES[worst];
+
+  // Signaux que la personne nous a donnés — renvoyés tels quels comme preuve
+  const signals = (): { text: string; sys: Sys }[] => {
+    const s: { text: string; sys: Sys }[] = [];
+    if (answers.q4 === 'A') s.push({ text: 'Tu te réveilles souvent entre 2h et 4h', sys: 'cortisol' });
+    if (answers.q4 === 'B') s.push({ text: "Ton cerveau refuse de s'éteindre pour t'endormir", sys: 'cortisol' });
+    if (answers.q4 === 'C') s.push({ text: g('Tu te réveilles fatiguée malgré tes heures de sommeil', 'Tu te réveilles fatigué malgré tes heures de sommeil'), sys: 'cortisol' });
+    if (answers.q6 === 'Ventre') s.push({ text: 'Ton gras se loge au ventre', sys: 'cortisol' });
+    if (answers.q3 === 'A') s.push({ text: 'Tu es fatigué' + g('e', '') + ' une bonne partie de la journée', sys: 'cortisol' });
+    if (answers.q3 === 'B') s.push({ text: "Tu as un crash d'énergie en après-midi", sys: 'cortisol' });
+    if (answers.q5.includes('A')) s.push({ text: 'Ta charge mentale déborde', sys: 'cortisol' });
+    if (answers.q5.includes('E')) s.push({ text: 'Tu es en mode « go go go » toute la journée', sys: 'cortisol' });
+    if (answers.q7 === 'Souvent') s.push({ text: 'Tu gonfles après presque chaque repas', sys: 'digestion' });
+    if (answers.q7 === 'Parfois') s.push({ text: 'Tu gonfles selon ce que tu manges', sys: 'digestion' });
+    if (answers.q9 === 'Non') s.push({ text: "Ton transit n'est pas régulier", sys: 'digestion' });
+    if (answers.q5.includes('B')) s.push({ text: 'Tu as des rages de sucre en fin de journée', sys: 'digestion' });
+    if (answers.q8.includes('chaleurs')) s.push({ text: 'Tu as des chaleurs ou des sueurs nocturnes', sys: 'hormones' });
+    if (answers.q8.includes('cycle')) s.push({ text: 'Ton cycle a changé', sys: 'hormones' });
+    if (answers.q8.includes('libido')) s.push({ text: 'Ta libido ou ta motivation a baissé', sys: 'hormones' });
+    if (answers.q8.includes('muscle')) s.push({ text: "Ton muscle fond malgré l'entraînement", sys: 'hormones' });
+    if (answers.q8.includes('cheveux')) s.push({ text: 'Cheveux plus fins, ongles cassants ou frilosité', sys: 'hormones' });
+    if (answers.q6 === 'Hanches') s.push({ text: 'Ton poids se loge aux hanches et aux cuisses', sys: 'hormones' });
+    if (answers.q6 === 'Diffuse') s.push({ text: 'Ta prise de poids est diffuse', sys: 'hormones' });
+    return [...s.filter(x => x.sys === worst), ...s.filter(x => x.sys !== worst)].slice(0, 3);
+  };
+
+  const goalLabel: Record<string, string> = {
+    'Perte de poids': 'perdre ' + (answers.livres && answers.livres !== 'aucun' ? answers.livres : 'du poids') + ' durablement',
+    'Réduire le stress': 'retrouver ton calme',
+    'Améliorer mon énergie': 'retrouver une énergie stable',
+    'Améliorer ma digestion': 'en finir avec les ballonnements',
+  };
 
   const submitForm = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,10 +398,12 @@ const Quiz: React.FC = () => {
           q_sexe: answers.q1, q_age: answers.q2, q_energie: answers.q3,
           q_sommeil: answers.q4, q_symptomes: answers.q5.join(', '),
           q_poids: answers.q6, q_ballonnements: answers.q7,
-          q_fragilite: answers.q8, q_selle: answers.q9,
+          q_fragilite: answers.q8.join(', '), q_selle: answers.q9,
           q_impact: answers.q10.join(', '), q_objectif: answers.q11,
+          q_essais: answers.essais.join(', '), q_resultat: answers.resultat || '',
+          q_livres: answers.livres || '',
           score_efficacite: metrics.effScore + '%',
-          pire_blocage: answers.worstBlockName || 'Aucun',
+          pire_blocage: profile.name,
         }),
       });
     } finally {
@@ -295,44 +411,21 @@ const Quiz: React.FC = () => {
     }
   };
 
-  const isGood = metrics.effScore >= 80;
-  const worst = answers.worstBlockName || 'Cortisol (Stress)';
-  const blockDesc: Record<string, string> = {
-    'Cortisol (Stress)': "Le cortisol élevé est ton frein principal. Il bloque l'oxydation des graisses et maintient ton corps en mode survie perpétuel.",
-    'Système Digestif': "L'inflammation digestive est ton frein. Une mauvaise assimilation t'empêche de convertir la nourriture en énergie.",
-    'Système Hormonal': "Le dérèglement hormonal est ton frein. Ton corps ne reçoit plus le bon signal cellulaire pour brûler l'énergie.",
-  };
-  const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  const target15w = new Date(Date.now() + 15 * 7 * 86400000);
-  const targetMonth = `${months[target15w.getMonth()]} ${target15w.getFullYear()}`;
-  const goalLabel: Record<string, string> = {
-    'Perte de poids': 'perte de poids durable',
-    'Réduire le stress': 'sérénité mentale',
-    'Améliorer mon énergie': 'vitalité absolue',
-    'Améliorer ma digestion': 'confort digestif optimal',
-  };
-  const fomoData = () => {
-    if (isGood) return { profile: 'MÉTABOLISME OPTIMAL', text: "Ton profil est solide. L'enjeu pour toi : passer de « ça va » à une vraie optimisation haute performance.", reassure: "C'est exactement le type de profil que nos spécialistes aiment faire progresser." };
-    if (worst.includes('Cortisol')) return { profile: 'RÉSISTANCE AU CORTISOL', text: "Ta signature pointe vers une dominance du cortisol qui maintient ton corps en mode survie. C'est notre expertise #1 en clinique.", reassure: "Des centaines de profils comme le tien ont été accompagnés par notre équipe." };
-    if (worst.includes('Digestif')) return { profile: 'INFLAMMATION DIGESTIVE', text: "Tes signaux digestifs montrent une assimilation perturbée qui freine la conversion d'énergie. C'est un terrain que nos naturopathes connaissent bien.", reassure: "Nos naturopathes accompagnent ce type de profil au quotidien." };
-    return { profile: 'RALENTISSEMENT HORMONAL', text: "Ta signature hormonale indique un signal cellulaire affaibli qui ralentit ta combustion. C'est précisément ce que notre équipe clinique optimise.", reassure: "Notre équipe accompagne régulièrement cette signature hormonale." };
-  };
-
   const renderStep = () => {
     switch (step) {
-      case 0:
+      case 'intro':
         return (
           <Wrap animKey={animKey}>
             <div className="text-center py-4">
               <div className="inline-flex items-center gap-2 bg-neo/10 text-neo px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
-                <Activity size={14} /> Analyse fondée sur +15 000 profils
+                <Activity size={14} /> Basé sur +15 000 profils analysés
               </div>
               <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-[1.1]">
-                Décrypte ton<br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-neo to-neo-600">code métabolique</span>
+                Tu fais des efforts.<br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-neo to-neo-600">Ton corps ne suit pas.</span>
               </h1>
               <p className="text-gray-500 text-lg leading-relaxed font-medium mb-8 max-w-md mx-auto">
-                Comprends pourquoi ton corps résiste et découvre exactement ce qui bloque tes résultats — en moins de 3 minutes.
+                En 3 minutes, découvre ton profil métabolique — et pourquoi les diètes, le cardio et les calories n'ont pas réglé le problème.
               </p>
 
               {/* Aperçu de ce que l'analyse révèle */}
@@ -351,53 +444,60 @@ const Quiz: React.FC = () => {
                 ))}
               </div>
 
-              <CTA label="Démarrer mon analyse →" onClick={() => goTo(1)} />
+              <CTA label="Découvrir mon profil →" onClick={() => goTo('sexe')} />
               <p className="text-gray-400 text-sm mt-4 font-medium flex items-center justify-center gap-1.5">
-                <ShieldCheck size={15} className="text-neo" /> Gratuit · Confidentiel · Sans engagement
+                <ShieldCheck size={15} className="text-neo" /> Gratuit · Confidentiel · 3 minutes
               </p>
-
-              {/* Preuve sociale réelle */}
-              <div className="flex items-center justify-center gap-3 mt-9 text-sm text-gray-500 font-medium">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                      <img src={`https://picsum.photos/seed/${i + 50}/100`} alt="" className="w-full h-full object-cover" loading="lazy" />
-                    </div>
-                  ))}
-                </div>
-                <div className="text-left">
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="currentColor" strokeWidth={0} />)}
-                  </div>
-                  <span><strong className="text-gray-900">4.9/5</strong> · 4000+ avis</span>
-                </div>
-              </div>
+              <div className="mt-9"><Rating /></div>
             </div>
           </Wrap>
         );
 
-      case 1:
+      case 'sexe':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-2">Quel est ton sexe biologique ?</h2>
-            <p className="text-gray-500 text-center font-medium mb-8">Nécessaire pour calculer tes variations hormonales.</p>
-            <Opt label="Féminin" onClick={() => pick('q1', 'Femme', 2)} />
-            <Opt label="Masculin" onClick={() => pick('q1', 'Homme', 2)} />
+            <Q title="Quel est ton sexe biologique ?" sub="Tes hormones ne fonctionnent pas de la même façon." />
+            <Opt label="Féminin" onClick={() => pick('q1', 'Femme', 'age')} />
+            <Opt label="Masculin" onClick={() => pick('q1', 'Homme', 'age')} />
           </Wrap>
         );
 
-      case 2:
+      case 'age':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-2">Dans quelle tranche d'âge te situes-tu ?</h2>
-            <p className="text-gray-500 text-center font-medium mb-8">L'âge influence directement ton profil métabolique.</p>
-            {[['18 - 24 ans', '18-24'], ['25 - 35 ans', '25-35'], ['36 - 50 ans', '36-50'], ['51 - 65 ans', '51-65'], ['66 ans et +', '66+']].map(([label, val]) => (
-              <Opt key={val} label={label} onClick={() => { setAnswers(a => ({ ...a, q2: val })); showInt1(val); }} />
+            <Q title="Quel âge as-tu ?" sub="Les règles du métabolisme changent avec les années." />
+            {[['18 - 34 ans', '18-34'], ['35 - 44 ans', '35-44'], ['45 - 55 ans', '45-55'], ['56 ans et +', '56+']].map(([label, val]) => (
+              <Opt key={val} label={label} onClick={() => pick('q2', val, 'essais')} />
             ))}
           </Wrap>
         );
 
-      case 'int1':
+      case 'essais':
+        return (
+          <Wrap animKey={animKey}>
+            <Q title="Qu'as-tu déjà essayé pour perdre du poids ou te sentir mieux ?" sub="Sélectionne tout ce qui s'applique" />
+            {ESSAIS.map(({ val, label }) => (
+              <Multi key={val} label={label} checked={answers.essais.includes(val)} onClick={() => toggle('essais', val, 'rien')} />
+            ))}
+            <Multi none label="Rien encore, je commence" checked={answers.essais.includes('rien')} onClick={() => toggle('essais', 'rien', 'rien')} />
+            <div className={`transition-all duration-300 ${answers.essais.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              <CTA label="Continuer →" onClick={submitEssais} disabled={answers.essais.length === 0} />
+            </div>
+          </Wrap>
+        );
+
+      case 'resultat':
+        return (
+          <Wrap animKey={animKey}>
+            <Q title="Et qu'est-ce qui s'est passé ?" />
+            <Opt label="J'ai perdu, puis tout repris (ou plus)" onClick={() => pick('resultat', 'repris', 'int1')} />
+            <Opt label="J'ai perdu un peu, puis plus rien ne bougeait" onClick={() => pick('resultat', 'plateau', 'int1')} />
+            <Opt label="Rien n'a bougé malgré mes efforts" onClick={() => pick('resultat', 'rien', 'int1')} />
+          </Wrap>
+        );
+
+      case 'int1': {
+        const key = REFRAME_PRIORITY.find(v => answers.essais.includes(v)) || 'rien';
         return (
           <Wrap animKey={animKey}>
             <PulseOrb>
@@ -406,67 +506,81 @@ const Quiz: React.FC = () => {
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
             </PulseOrb>
-            <p className={`text-xl font-black uppercase tracking-wider text-center mb-6 transition-colors duration-500 ${int1Revealed ? 'text-neo' : 'text-gray-300'}`}>
-              {int1Revealed ? "Tu n'es pas la seule." : 'Recherche de profils similaires...'}
+            <p className={`text-xl font-black uppercase tracking-wider text-center mb-4 transition-colors duration-500 ${revealed ? 'text-neo' : 'text-gray-300'}`}>
+              {revealed ? (fem ? "Tu n'es pas la seule." : "Tu n'es pas le seul.") : 'Comparaison avec des profils similaires...'}
             </p>
-            <Revealed on={int1Revealed}>
-              <p className="text-gray-600 leading-relaxed font-medium text-center mb-6 text-base">{int1Text}</p>
-              <CTA label="Analyser les signaux de mon corps →" onClick={() => goTo(3)} />
+            <Revealed on={revealed}>
+              <p className="text-3xl font-extrabold text-gray-900 text-center mb-4">
+                {triedSomething ? 'Ce n’est pas ta discipline.' : 'Tu pars du bon pied.'}
+              </p>
+              {answers.resultat && (
+                <p className="text-gray-500 text-center leading-relaxed mb-2 font-medium">{RESULTAT_LINE[answers.resultat]}</p>
+              )}
+              <InsightCard badge={triedSomething ? `CE QUE TU AS ESSAYÉ : ${joinFr(triedShorts).toUpperCase()}` : 'LE PIÈGE À ÉVITER'}>
+                {REFRAME[key]}
+              </InsightCard>
+              <p className="text-gray-900 text-center font-bold mt-6 mb-6 leading-relaxed">
+                Ton vrai levier n'est ni dans ton assiette ni sur le tapis roulant. Les prochaines questions vont le trouver.
+              </p>
+              <CTA label="Trouver mon vrai levier →" onClick={() => goTo('energie')} />
             </Revealed>
           </Wrap>
         );
+      }
 
-      case 3:
+      case 'energie':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-8">Comment décrirais-tu ton niveau d'énergie actuel ?</h2>
-            <Opt label="Je me sens fatiguée une bonne partie de la journée" onClick={() => pick('q3', 'A', 4)} />
-            <Opt label="Ça va, mais j'ai un crash en après-midi" onClick={() => pick('q3', 'B', 4)} />
-            <Opt label="J'ai de l'énergie du matin au soir" onClick={() => pick('q3', 'C', 4)} />
+            <Q title="Comment décrirais-tu ton niveau d'énergie actuel ?" />
+            <Opt label={g('Je me sens fatiguée une bonne partie de la journée', 'Je me sens fatigué une bonne partie de la journée')} onClick={() => pick('q3', 'A', 'sommeil')} />
+            <Opt label="Ça va, mais j'ai un crash en après-midi" onClick={() => pick('q3', 'B', 'sommeil')} />
+            <Opt label="J'ai de l'énergie du matin au soir" onClick={() => pick('q3', 'C', 'sommeil')} />
           </Wrap>
         );
 
-      case 4:
+      case 'sommeil':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-8">Comment dors-tu la nuit ?</h2>
-            <Opt label="Je me réveille souvent entre 2h et 4h" onClick={() => pick('q4', 'A', 5)} />
-            <Opt label="J'ai du mal à m'endormir (cerveau actif)" onClick={() => pick('q4', 'B', 5)} />
-            <Opt label="Je dors beaucoup mais je me réveille fatiguée" onClick={() => pick('q4', 'C', 5)} />
-            <Opt label="Je n'ai aucun problème de sommeil" onClick={() => pick('q4', 'D', 5)} />
+            <Q title="Comment dors-tu la nuit ?" />
+            <Opt label="Je me réveille souvent entre 2h et 4h" onClick={() => pick('q4', 'A', 'symptomes')} />
+            <Opt label="J'ai du mal à m'endormir (cerveau actif)" onClick={() => pick('q4', 'B', 'symptomes')} />
+            <Opt label={g('Je dors beaucoup mais je me réveille fatiguée', 'Je dors beaucoup mais je me réveille fatigué')} onClick={() => pick('q4', 'C', 'symptomes')} />
+            <Opt label="Je n'ai aucun problème de sommeil" onClick={() => pick('q4', 'D', 'symptomes')} />
           </Wrap>
         );
 
-      case 5:
+      case 'symptomes':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-2">À quoi t'identifies-tu le plus ?</h2>
-            <p className="text-gray-500 text-center font-medium mb-8">Sélectionne une ou plusieurs réponses</p>
+            <Q title="À quoi t'identifies-tu le plus ?" sub="Sélectionne une ou plusieurs réponses" />
             {[
-              ['A', "Je me sens submergée, grosse charge mentale"],
-              ['B', "J'ai des rages de sucres en pm et soirée"],
-              ['C', "Je suis fatiguée le matin au réveil"],
+              ['A', g('Je me sens submergée, grosse charge mentale', 'Je me sens submergé, grosse charge mentale')],
+              ['B', "J'ai des rages de sucre en après-midi et en soirée"],
+              ['C', g('Je suis fatiguée dès le réveil', 'Je suis fatigué dès le réveil')],
               ['D', "J'ai du mal à éteindre mon cerveau le soir"],
-              ['E', 'Je suis dans le "go go go" toute la journée'],
-            ].map(([val, label]) => <Multi key={val} label={label} checked={answers.q5.includes(val)} onClick={() => toggleQ5(val)} />)}
-            <button
-              onClick={() => toggleQ5('F')}
-              className={`w-full text-left px-6 py-4 rounded-2xl border-2 border-dashed transition-all duration-200 font-semibold flex items-center justify-between mb-6 ${
-                answers.q5.includes('F') ? 'border-neo bg-neo/5 text-neo' : 'border-gray-200 text-gray-400 hover:border-gray-300'
-              }`}
-            >
-              <span>Aucune de ces réponses</span>
-              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 ${answers.q5.includes('F') ? 'bg-neo border-neo' : 'border-gray-300'}`}>
-                {answers.q5.includes('F') && <span className="text-white text-[11px] font-black">✓</span>}
-              </div>
-            </button>
+              ['E', 'Je suis dans le « go go go » toute la journée'],
+            ].map(([val, label]) => <Multi key={val} label={label} checked={answers.q5.includes(val)} onClick={() => toggle('q5', val, 'F')} />)}
+            <Multi none label="Aucune de ces réponses" checked={answers.q5.includes('F')} onClick={() => toggle('q5', 'F', 'F')} />
             <div className={`transition-all duration-300 ${answers.q5.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              <CTA label="Continuer →" onClick={submitQ5} disabled={answers.q5.length === 0} />
+              <CTA label="Continuer →" onClick={submitSymptomes} disabled={answers.q5.length === 0} />
             </div>
           </Wrap>
         );
 
-      case 'int2':
+      case 'int2': {
+        const stressTried = ESSAIS.filter(e => ['calories', 'cardio', 'jeune'].includes(e.val) && answers.essais.includes(e.val)).map(e => e.short);
+        const signs: string[] = [];
+        if (answers.q4 === 'A') signs.push('réveils la nuit');
+        if (answers.q4 === 'B' || answers.q5.includes('D')) signs.push('cerveau qui ne décroche pas');
+        if (answers.q3 === 'A' || answers.q5.includes('C') || answers.q4 === 'C') signs.push('fatigue');
+        if (answers.q3 === 'B') signs.push("crash d'énergie");
+        if (answers.q5.includes('A') || answers.q5.includes('E')) signs.push('charge mentale');
+        if (answers.q5.includes('B')) signs.push('rages de sucre');
+        const list = signs.slice(0, 3);
+        const head = list.length ? list[0].charAt(0).toUpperCase() + joinFr(list).slice(1) : 'Ces signaux';
+        const msg = stressTried.length
+          ? `${head} : ce sont des signaux de stress. Et ${joinFr(stressTried)}, c'est ajouter du stress à un corps qui en a déjà trop. Sans le savoir, tu as peut-être nourri le blocage en essayant de le régler.`
+          : `${head} : ce sont des signaux de stress. Un corps sous tension en continu se met en mode protection — il garde ses réserves au lieu de les brûler.`;
         return (
           <Wrap animKey={animKey}>
             <PulseOrb>
@@ -476,60 +590,79 @@ const Quiz: React.FC = () => {
                 <line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>
               </svg>
             </PulseOrb>
-            <p className={`text-xl font-black uppercase tracking-wider text-center mb-4 transition-colors duration-500 ${int2Revealed ? 'text-neo' : 'text-gray-300'}`}>
-              {int2Revealed ? 'Premier lien établi.' : 'Identification du pattern...'}
+            <p className={`text-xl font-black uppercase tracking-wider text-center mb-4 transition-colors duration-500 ${revealed ? 'text-neo' : 'text-gray-300'}`}>
+              {revealed ? 'Premier lien établi.' : 'Lecture de tes signaux...'}
             </p>
-            <Revealed on={int2Revealed}>
+            <Revealed on={revealed}>
               <p className="text-3xl font-extrabold text-gray-900 text-center mb-4">Ce n'est pas dans ta tête.</p>
               <p className="text-gray-500 text-center leading-relaxed mb-2 font-medium">
-                Ce qui freine ton corps ne s'est pas installé la semaine dernière. L'analyse révèle une <strong className="text-gray-900">surcharge accumulée</strong>.
+                Ce qui freine ton corps ne s'est pas installé la semaine dernière. C'est une <strong className="text-gray-900">surcharge accumulée</strong>.
               </p>
-              <InsightCard badge="PATTERN DÉTECTÉ">{int2Text}</InsightCard>
-              <div className="mt-6"><CTA label="Localiser l'impact physique →" onClick={() => goTo(6)} /></div>
+              <InsightCard badge="CE QUE TES RÉPONSES MONTRENT">{msg}</InsightCard>
+              <div className="mt-6"><CTA label="Continuer mon profil →" onClick={() => goTo('gras')} /></div>
             </Revealed>
           </Wrap>
         );
+      }
 
-      case 6:
+      case 'gras':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-8">Où se loge principalement ton inconfort ou ta prise de poids ?</h2>
-            <Opt label="Au niveau du ventre" sub="Ceinture abdominale" onClick={() => pick('q6', 'Ventre', 7)} />
-            <Opt label="Partout de manière diffuse" onClick={() => pick('q6', 'Diffuse', 7)} />
-            <Opt label="Hanches et cuisses" onClick={() => pick('q6', 'Hanches', 7)} />
-            <Opt label="Aucune prise de poids / inconfort" onClick={() => pick('q6', 'Aucun', 7)} />
+            <Q title="Où se loge principalement ta prise de poids ?" />
+            <Opt label="Au niveau du ventre" sub="Ceinture abdominale" onClick={() => pick('q6', 'Ventre', 'ballon')} />
+            <Opt label="Hanches et cuisses" onClick={() => pick('q6', 'Hanches', 'ballon')} />
+            <Opt label="Partout de manière diffuse" onClick={() => pick('q6', 'Diffuse', 'ballon')} />
+            <Opt label="Aucune prise de poids" onClick={() => pick('q6', 'Aucun', 'ballon')} />
           </Wrap>
         );
 
-      case 7:
+      case 'ballon':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-8">À quelle fréquence as-tu des ballonnements ou un inconfort après les repas ?</h2>
-            <Opt label="Presque après chaque repas" onClick={() => pick('q7', 'Souvent', 8)} />
-            <Opt label="Parfois, selon ce que je mange" onClick={() => pick('q7', 'Parfois', 8)} />
-            <Opt label="Rarement" onClick={() => pick('q7', 'Rarement', 8)} />
+            <Q title="À quelle fréquence as-tu des ballonnements ou un inconfort après les repas ?" />
+            <Opt label="Presque après chaque repas" onClick={() => pick('q7', 'Souvent', 'selles')} />
+            <Opt label="Parfois, selon ce que je mange" onClick={() => pick('q7', 'Parfois', 'selles')} />
+            <Opt label="Rarement" onClick={() => pick('q7', 'Rarement', 'selles')} />
           </Wrap>
         );
 
-      case 8:
+      case 'selles':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-8">As-tu remarqué des changements physiques récents ?</h2>
-            <Opt label="Oui" sub="Perte de cheveux, ongles cassants, frilosité" onClick={() => pick('q8', 'Oui', 9)} />
-            <Opt label="Pas particulièrement" onClick={() => pick('q8', 'Non', 9)} />
+            <Q title="Vas-tu à la selle au moins une fois par jour, de manière régulière ?" />
+            <Opt label="Oui, c'est régulier" onClick={() => pick('q9', 'Oui', 'hormones')} />
+            <Opt label="Non, ce n'est pas régulier" onClick={() => pick('q9', 'Non', 'hormones')} />
           </Wrap>
         );
 
-      case 9:
+      case 'hormones': {
+        const opts = fem
+          ? [['cycle', 'Mon cycle a changé (plus irrégulier, SPM plus fort)'], ['chaleurs', 'Chaleurs ou sueurs nocturnes'], ['cheveux', 'Cheveux plus fins, ongles cassants ou frilosité']]
+          : [['libido', 'Baisse de libido ou de motivation'], ['muscle', "Je perds du muscle malgré l'entraînement"], ['cheveux', 'Cheveux plus fins, ongles cassants ou frilosité']];
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-8">Vas-tu à la selle au moins une fois par jour, de manière régulière ?</h2>
-            <Opt label="Oui, c'est régulier" onClick={() => { setAnswers(a => ({ ...a, q9: 'Oui' })); showInt3('Oui'); setTimeout(() => goTo('int3'), 300); }} />
-            <Opt label="Non, ce n'est pas régulier" onClick={() => { setAnswers(a => ({ ...a, q9: 'Non' })); showInt3('Non'); setTimeout(() => goTo('int3'), 300); }} />
+            <Q title="As-tu remarqué un de ces changements depuis 1 ou 2 ans ?" sub="Sélectionne tout ce qui s'applique" />
+            {opts.map(([val, label]) => <Multi key={val} label={label} checked={answers.q8.includes(val)} onClick={() => toggle('q8', val, 'aucun')} />)}
+            <Multi none label="Rien de tout ça" checked={answers.q8.includes('aucun')} onClick={() => toggle('q8', 'aucun', 'aucun')} />
+            <div className={`transition-all duration-300 ${answers.q8.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              <CTA label="Continuer →" onClick={() => answers.q8.length > 0 && goTo('int3')} disabled={answers.q8.length === 0} />
+            </div>
           </Wrap>
         );
+      }
 
-      case 'int3':
+      case 'int3': {
+        const dig = answers.q7 === 'Souvent' || answers.q7 === 'Parfois' || answers.q9 === 'Non';
+        const hor = answers.q8.length > 0 && !answers.q8.includes('aucun');
+        const digMsg = "Ballonnements et transit irrégulier : ton système digestif travaille en surcharge. Tant que c'est le cas, ton corps assimile mal ce que tu manges — et manger « parfait » ne suffit pas.";
+        const horMsg = fem
+          ? "Cycle qui change, chaleurs, cheveux plus fins : ton équilibre hormonal est en train de bouger. Ce qui marchait il y a 10 ans ne marche plus — pas parce que tu fais moins d'efforts, mais parce que la cible a bougé."
+          : "Moins de motivation, du muscle qui fond : ton équilibre hormonal est en train de bouger. Ce qui marchait il y a 10 ans ne marche plus — pas parce que tu fais moins d'efforts, mais parce que la cible a bougé.";
+        const msg = dig && hor
+          ? `${digMsg} Et en même temps, ton équilibre hormonal bouge. Deux freins qui s'additionnent.`
+          : dig ? digMsg
+          : hor ? horMsg
+          : "Ta digestion et tes hormones envoient peu de signaux. Bonne nouvelle : ça nous dit exactement où ne pas perdre ton temps.";
         return (
           <Wrap animKey={animKey}>
             <PulseOrb>
@@ -538,63 +671,61 @@ const Quiz: React.FC = () => {
                 <path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/>
               </svg>
             </PulseOrb>
-            <p className={`text-xl font-black uppercase tracking-wider text-center mb-4 transition-colors duration-500 ${int3Revealed ? 'text-neo' : 'text-gray-300'}`}>
-              {int3Revealed ? 'Le constat est clair.' : "Analyse de la conversion d'énergie..."}
+            <p className={`text-xl font-black uppercase tracking-wider text-center mb-4 transition-colors duration-500 ${revealed ? 'text-neo' : 'text-gray-300'}`}>
+              {revealed ? 'Le portrait se précise.' : 'Lecture de tes signaux...'}
             </p>
-            <Revealed on={int3Revealed}>
+            <Revealed on={revealed}>
               <p className="text-3xl font-extrabold text-gray-900 text-center mb-4">Arrête de te culpabiliser.</p>
               <p className="text-gray-500 text-center leading-relaxed mb-2 font-medium">
-                Le problème n'est pas ton manque d'efforts. C'est de la <strong className="text-gray-900">pure biologie</strong>.
+                Le problème n'est pas ton manque d'efforts. C'est <strong className="text-gray-900">où tu les mets</strong>.
               </p>
-              <InsightCard badge="RÉVÉLATION CLINIQUE" badgeColor="bg-neo">{int3Text}</InsightCard>
-              <div className="mt-6"><CTA label="Mesurer l'impact sur mon quotidien →" onClick={() => goTo(10)} /></div>
+              <InsightCard badge="CE QUE TON CORPS TE DIT" badgeColor="bg-neo">{msg}</InsightCard>
+              <div className="mt-6"><CTA label="Dernières questions →" onClick={() => goTo('objectif')} /></div>
             </Revealed>
           </Wrap>
         );
+      }
 
-      case 10:
+      case 'objectif':
         return (
           <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-2">Quel est l'impact le plus lourd sur ton quotidien ?</h2>
-            <p className="text-gray-500 text-center font-medium mb-8">Sélectionne une ou plusieurs réponses</p>
+            <Q title="Quel est ton objectif principal ?" sub="On en tient compte dans ton profil." />
+            <Opt label="Perdre du poids durablement" onClick={() => pick('q11', 'Perte de poids', 'livres')} />
+            <Opt label="Réduire mon stress et mon anxiété" onClick={() => pick('q11', 'Réduire le stress', 'impact')} />
+            <Opt label="Retrouver une énergie constante" onClick={() => pick('q11', 'Améliorer mon énergie', 'impact')} />
+            <Opt label="Régler mes problèmes de digestion" onClick={() => pick('q11', 'Améliorer ma digestion', 'impact')} />
+          </Wrap>
+        );
+
+      case 'livres':
+        return (
+          <Wrap animKey={animKey}>
+            <Q title="Combien de livres aimerais-tu perdre ?" />
+            {['moins de 10 lb', '10 à 20 lb', '20 à 40 lb', 'plus de 40 lb'].map(v => (
+              <Opt key={v} label={v.charAt(0).toUpperCase() + v.slice(1)} onClick={() => pick('livres', v, 'impact')} />
+            ))}
+          </Wrap>
+        );
+
+      case 'impact':
+        return (
+          <Wrap animKey={animKey}>
+            <Q title="Qu'est-ce qui pèse le plus sur ton quotidien ?" sub="Sélectionne une ou plusieurs réponses" />
             {[
-              ['Image', "L'image de soi — je m'habille pour me cacher."],
-              ['Energie', "L'énergie — je me sens constamment fatigué."],
-              ['Frustration', "La frustration — beaucoup d'efforts pour peu de résultats."],
-              ['Inconfort', "L'inconfort — les ballonnements dictent mes journées."],
-            ].map(([val, label]) => <Multi key={val} label={label} checked={answers.q10.includes(val)} onClick={() => toggleQ10(val)} />)}
-            <button
-              onClick={() => toggleQ10('Rien')}
-              className={`w-full text-left px-6 py-4 rounded-2xl border-2 border-dashed transition-all duration-200 font-semibold flex items-center justify-between mb-6 ${
-                answers.q10.includes('Rien') ? 'border-neo bg-neo/5 text-neo' : 'border-gray-200 text-gray-400 hover:border-gray-300'
-              }`}
-            >
-              <span>Tout va super bien !</span>
-              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 ${answers.q10.includes('Rien') ? 'bg-neo border-neo' : 'border-gray-300'}`}>
-                {answers.q10.includes('Rien') && <span className="text-white text-[11px] font-black">✓</span>}
-              </div>
-            </button>
+              ['Image', "Mon image — je m'habille pour me cacher"],
+              ['Energie', g("Mon énergie — je suis constamment fatiguée", 'Mon énergie — je suis constamment fatigué')],
+              ['Frustration', "La frustration — beaucoup d'efforts pour peu de résultats"],
+              ['Inconfort', "L'inconfort — les ballonnements dictent mes journées"],
+            ].map(([val, label]) => <Multi key={val} label={label} checked={answers.q10.includes(val)} onClick={() => toggle('q10', val, 'Rien')} />)}
+            <Multi none label="Rien de tout ça" checked={answers.q10.includes('Rien')} onClick={() => toggle('q10', 'Rien', 'Rien')} />
             <div className={`transition-all duration-300 ${answers.q10.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              <CTA label="Continuer →" onClick={() => answers.q10.length > 0 && goTo(11)} disabled={answers.q10.length === 0} />
+              <CTA label="Voir mon profil →" onClick={() => answers.q10.length > 0 && goTo('loading')} disabled={answers.q10.length === 0} />
             </div>
           </Wrap>
         );
 
-      case 11:
-        return (
-          <Wrap animKey={animKey}>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-2">Quel est ton objectif principal ?</h2>
-            <p className="text-gray-500 text-center font-medium mb-8">Cela adapte ta prédiction personnalisée.</p>
-            <Opt label="Perdre du poids durablement" onClick={() => pick('q11', 'Perte de poids', 'loading')} />
-            <Opt label="Réduire mon stress et mon anxiété" onClick={() => pick('q11', 'Réduire le stress', 'loading')} />
-            <Opt label="Retrouver une énergie constante" onClick={() => pick('q11', 'Améliorer mon énergie', 'loading')} />
-            <Opt label="Régler mes problèmes de digestion" onClick={() => pick('q11', 'Améliorer ma digestion', 'loading')} />
-          </Wrap>
-        );
-
       case 'loading': {
-        const items = ['Analyse du profil hormonal', 'Évaluation du cortisol', 'Vérification digestive', 'Calcul de résistance métabolique', "Génération du plan d'action"];
-        const texts = ['Analyse du profil hormonal...', 'Évaluation du cortisol...', 'Vérification digestive...', 'Calcul de résistance...', "Génération du plan d'action..."];
+        const items = ['Lecture des signaux de stress', 'Lecture des signaux digestifs', 'Lecture des signaux hormonaux', 'Croisement avec tes essais passés', 'Construction de ton profil'];
         return (
           <Wrap animKey={animKey}>
             <div className="text-center mb-8 pt-4">
@@ -603,9 +734,9 @@ const Quiz: React.FC = () => {
                 <div className="absolute inset-0 rounded-full border-4 border-neo border-t-transparent animate-spin" />
               </div>
               <p className="text-neo font-bold text-xl mb-1">
-                {loadingIdx >= 0 && loadingIdx < 5 ? texts[loadingIdx] : 'Initialisation...'}
+                {loadingIdx >= 0 && loadingIdx < 5 ? `${items[loadingIdx]}...` : 'Initialisation...'}
               </p>
-              <p className="text-gray-400 text-sm font-medium">Algorithme basé sur +15 000 profils</p>
+              <p className="text-gray-400 text-sm font-medium">Grille construite à partir de +15 000 profils</p>
             </div>
             <div className="bg-white rounded-3xl p-6 shadow-lg border border-gray-50 mb-6">
               <ul className="space-y-4">
@@ -623,20 +754,7 @@ const Quiz: React.FC = () => {
                 ))}
               </ul>
             </div>
-            <div className="overflow-hidden h-28 rounded-2xl relative" style={{ maskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)' }}>
-              <div className="flex flex-col" style={{ animation: 'scrollUp 10s linear infinite' }}>
-                {['Sophie T.','Isabelle G.','Marie C.','Sophie T.'].map((name, i) => (
-                  <div key={i} className="bg-white border border-gray-100 rounded-xl p-3 mb-3 shadow-sm mx-1">
-                    <div className="text-yellow-400 text-sm mb-1">★★★★★</div>
-                    <p className="text-gray-800 text-xs font-semibold leading-snug mb-1">
-                      {i % 3 === 0 ? '"J\'ai enfin compris. Le cortisol était mon pire ennemi !"' : i % 3 === 1 ? '"Ce n\'était pas dans ma tête ! C\'était ma digestion."' : '"Mon énergie est revenue en 4 semaines."'}
-                    </p>
-                    <span className="text-gray-400 text-[11px]">— {name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <style>{`@keyframes scrollUp { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }`}</style>
+            <Rating />
           </Wrap>
         );
       }
@@ -646,10 +764,10 @@ const Quiz: React.FC = () => {
           <Wrap animKey={animKey}>
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-neo/10 text-neo px-4 py-2 rounded-full text-sm font-bold mb-4">
-                ✅ Ton code métabolique est décrypté
+                ✅ Ton profil métabolique est prêt
               </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Reçois ton rapport personnalisé</h2>
-              <p className="text-gray-500 font-medium">Entre tes informations pour voir ton score et ton plan d'action.</p>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Où veux-tu recevoir ton profil ?</h2>
+              <p className="text-gray-500 font-medium">Tu vas voir ton profil, ce qu'il faut arrêter, et par où commencer.</p>
             </div>
             <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-50">
               <form onSubmit={submitForm} className="space-y-5">
@@ -681,71 +799,60 @@ const Quiz: React.FC = () => {
                     className="w-full px-4 py-4 rounded-xl border-2 border-gray-100 bg-gray-50 focus:outline-none focus:border-neo focus:bg-white focus:shadow-[0_0_0_4px_rgba(0,187,177,0.1)] transition-all font-medium text-gray-900"
                   />
                 </div>
-                <CTA label={submitting ? 'Analyse en cours...' : 'Voir mon rapport →'} type="submit" disabled={submitting} />
+                <CTA label={submitting ? 'Envoi en cours...' : 'Voir mon profil →'} type="submit" disabled={submitting} />
                 <p className="text-center text-gray-400 text-xs">🔒 Données sécurisées et confidentielles</p>
               </form>
             </div>
           </Wrap>
         );
 
-      case 'results':
+      case 'results': {
+        const sigs = signals();
+        const stops = ESSAIS.filter(e => answers.essais.includes(e.val)).map(e => e.stop).slice(0, 3);
+        stops.push('Te blâmer pour un « manque de volonté »');
         return (
           <Wrap animKey={animKey} wide>
-            <div className="text-center mb-10">
-              <p className="text-neo font-black text-xs tracking-widest uppercase mb-3">RAPPORT MÉTABOLIQUE PERSONNALISÉ</p>
-              <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-                Ton efficacité est de <span style={{ color: S }}>{displayScore}%</span>
-              </h2>
-              <span className="inline-block bg-gray-100 text-gray-600 px-5 py-2 rounded-full text-sm font-bold">
-                {isGood
-                  ? `Score supérieur à ${Math.max(85, metrics.effScore - 3)}% des personnes`
-                  : `Score inférieur à ${100 - metrics.effScore + 5}% des personnes de ton profil`}
-              </span>
+            <div className="text-center mb-8">
+              <p className="text-neo font-black text-xs tracking-widest uppercase mb-3">
+                {form.prenom ? `${form.prenom}, voici ton profil métabolique` : 'Ton profil métabolique'}
+              </p>
+              <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">{profile.title}</h2>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-50">
-                <h3 className="text-xs font-black uppercase tracking-wider text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-neo/10 flex items-center justify-center flex-shrink-0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00bbb1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                    </svg>
-                  </div>
-                  Profil de combustion
-                </h3>
-                <div className="flex items-end gap-3 h-28 mb-3">
-                  {[['Repos', isGood ? 22 : 14], ['Activité', isGood ? 85 : Math.min(metrics.effScore + 12, 92)], ['Digestion', isGood ? 32 : 6], ['Cerveau', isGood ? 62 : 22]].map(([l, v]) => (
-                    <div key={String(l)} className="flex flex-col items-center flex-1 h-full justify-end">
-                      <div className="w-full bg-gray-100 rounded-t-xl relative overflow-hidden" style={{ height: '100%' }}>
-                        <div className="absolute bottom-0 w-full bg-neo rounded-t-xl transition-all duration-[2000ms] ease-out"
-                          style={{ height: barsOn ? `${v}%` : '0%' }} />
-                      </div>
-                    </div>
+            {/* Miroir : ses propres réponses comme preuve */}
+            {sigs.length > 0 && (
+              <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-50 mb-6">
+                <p className="text-xs font-black uppercase tracking-wider text-gray-400 mb-4">Tu nous as dit :</p>
+                <ul className="space-y-3 mb-5">
+                  {sigs.map(({ text }) => (
+                    <li key={text} className="flex items-start gap-3 text-gray-900 font-semibold">
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(242,100,87,0.12)' }}>
+                        <Check size={14} style={{ color: S }} strokeWidth={3} />
+                      </span>
+                      {text}
+                    </li>
                   ))}
-                </div>
-                <div className="flex justify-between text-[10px] text-gray-400 font-black uppercase tracking-wide">
-                  {['Repos','Activité','Digestion','Cerveau'].map(l => <span key={l}>{l}</span>)}
-                </div>
-                <p className="text-gray-500 text-sm mt-5 leading-relaxed font-medium">
-                  {isGood ? "Ton métabolisme basal est parfaitement actif. La conversion d'énergie est optimale." : "Ton métabolisme basal est ralenti. Ton corps privilégie le stockage plutôt que la dépense énergétique."}
+                </ul>
+                <p className="text-gray-600 font-medium leading-relaxed">
+                  Pris un par un, ça ressemble à de la fatigue ou à un manque de volonté.
+                  Ensemble, c'est la signature d'un <strong className="text-gray-900">{profile.title.toLowerCase()}</strong>.
                 </p>
               </div>
+            )}
 
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
               <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-50">
-                <h3 className="text-xs font-black uppercase tracking-wider text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(242,100,87,0.1)' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f26457" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
-                    </svg>
-                  </div>
-                  Leviers de blocage
-                </h3>
-                {[
-                  { label: 'Cortisol (Stress)', val: metrics.cortisol, color: S },
+                <h3 className="text-xs font-black uppercase tracking-wider text-gray-900 mb-4">Ce qui se passe dans ton corps</h3>
+                <p className="text-gray-600 text-sm leading-relaxed font-medium">{profile.explain}</p>
+              </div>
+              <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-50">
+                <h3 className="text-xs font-black uppercase tracking-wider text-gray-900 mb-6">Intensité des signaux</h3>
+                {([
+                  { label: 'Stress (cortisol)', val: metrics.cortisol, color: S },
                   { label: 'Digestion', val: metrics.digestion, color: '#ef4444' },
                   { label: 'Hormones', val: metrics.hormones, color: '#f59e0b' },
-                ].map(({ label, val, color }) => (
-                  <div key={label} className="mb-5">
+                ]).map(({ label, val, color }) => (
+                  <div key={label} className="mb-5 last:mb-0">
                     <div className="flex justify-between text-xs font-black uppercase tracking-wide mb-2">
                       <span className="text-gray-800">{label}</span>
                       <span style={{ color }}>{barsOn ? val : 0}%</span>
@@ -756,49 +863,74 @@ const Quiz: React.FC = () => {
                     </div>
                   </div>
                 ))}
-                <div className={`relative rounded-2xl p-5 pt-8 mt-4 border ${isGood ? 'bg-neo/5 border-neo/20' : 'bg-red-50 border-red-100'}`}>
-                  <span className={`absolute -top-3 left-4 text-white text-[10px] font-black px-3 py-1.5 rounded-lg tracking-widest uppercase ${isGood ? 'bg-neo' : ''}`}
-                    style={!isGood ? { background: S } : {}}>
-                    {isGood ? 'PROFIL OPTIMAL' : 'SOURCE DU BLOCAGE'}
-                  </span>
-                  <p className={`text-sm font-semibold leading-relaxed ${isGood ? 'text-neo' : 'text-red-800'}`}>
-                    {isGood ? "Ton profil est exceptionnel. Ton corps est sain et prêt pour une optimisation avancée." : (blockDesc[worst] || blockDesc['Cortisol (Stress)'])}
-                  </p>
-                </div>
               </div>
             </div>
 
-            <div className="rounded-3xl p-10 text-center" style={{ background: 'linear-gradient(145deg, #0f172a, #1e293b)' }}>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Maintenant, que fait-on de tout ça ?</h2>
-              <p className="text-gray-400 mb-8 text-base leading-relaxed max-w-lg mx-auto font-medium">
-                Tu connais tes blocages. La prochaine étape, c'est de voir le plan concret pour les débloquer — adapté à ton profil.
+            {/* Le recadrage : arrête / commence */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="rounded-3xl p-8 border bg-red-50 border-red-100">
+                <h3 className="text-xs font-black uppercase tracking-wider mb-5" style={{ color: S }}>Arrête de travailler sur ça</h3>
+                <ul className="space-y-3">
+                  {stops.map(t => (
+                    <li key={t} className="flex items-start gap-3 text-red-900 font-semibold text-sm">
+                      <X size={16} className="flex-shrink-0 mt-0.5" style={{ color: S }} strokeWidth={3} /> {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-3xl p-8 border bg-neo/5 border-neo/20">
+                <h3 className="text-xs font-black uppercase tracking-wider text-neo mb-5">Ton vrai levier</h3>
+                <ul className="space-y-3">
+                  {profile.start.map(t => (
+                    <li key={t} className="flex items-start gap-3 text-gray-900 font-semibold text-sm">
+                      <Check size={16} className="flex-shrink-0 mt-0.5 text-neo" strokeWidth={3} /> {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Offre : analyse complète */}
+            <div className="rounded-3xl p-8 md:p-10 text-center" style={{ background: 'linear-gradient(145deg, #0f172a, #1e293b)' }}>
+              <p className="text-neo font-black text-xs tracking-widest uppercase mb-3">Prochaine étape</p>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4">
+                Savoir quoi arrêter, c'est la moitié du travail.
+              </h2>
+              <p className="text-gray-300 mb-6 text-base leading-relaxed max-w-lg mx-auto font-medium">
+                L'autre moitié, c'est de savoir par quel blocage commencer pour {goalLabel[answers.q11 || ''] || 'retrouver ton corps'}.
+                Pendant ton <strong className="text-white">analyse métabolique complète</strong>, on prend le temps de comprendre chacun de tes blocages et de voir lequel travailler en premier.
               </p>
-              <button onClick={() => goTo('roadmap')}
+              <p className="text-white font-bold mb-6">
+                <span className="line-through text-gray-500 mr-2">198 $</span>
+                <span className="text-neo">Offerte</span> parce que tu as complété ton profil
+              </p>
+              <button onClick={() => goTo('calendar')}
                 className="w-full py-5 rounded-full bg-neo text-white font-bold text-lg uppercase tracking-wide shadow-xl shadow-neo/30 hover:bg-neo-600 hover:-translate-y-0.5 transition-all duration-200 mb-4">
-                Voir mon plan d'action
-                <span className="block text-xs font-semibold tracking-wider mt-1.5 opacity-80">Personnalisé selon tes réponses</span>
+                Réserver mon analyse complète
+                <span className="block text-xs font-semibold tracking-wider mt-1.5 opacity-80">45 min · avec un membre de l'équipe · 0 $</span>
               </button>
               <button onClick={() => goTo('value-non')}
                 className="w-full py-4 rounded-full border-2 border-gray-700 text-gray-400 font-semibold text-sm hover:text-white hover:border-gray-500 transition-all">
-                Donne-moi d'abord 3 conseils gratuits
+                {g('Pas encore prête ?', 'Pas encore prêt ?')} Donne-moi 3 pistes pour commencer
               </button>
             </div>
+
+            <p className="text-center text-gray-400 text-xs mt-6 max-w-lg mx-auto leading-relaxed">
+              Ce profil métabolique est un outil d'orientation basé sur tes réponses. Il ne constitue pas un diagnostic et ne remplace pas l'avis d'un professionnel de la santé.
+            </p>
           </Wrap>
         );
+      }
 
       case 'value-non':
         return (
           <Wrap animKey={animKey} wide>
             <div className="text-center mb-10">
-              <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">C'est tout à fait correct !</h2>
-              <p className="text-gray-500 max-w-xl mx-auto leading-relaxed font-medium">Voici 3 actions puissantes et gratuites à commencer dès ce soir :</p>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Aucun problème.</h2>
+              <p className="text-gray-500 max-w-xl mx-auto leading-relaxed font-medium">Voici 3 pistes adaptées à ton profil, à commencer dès ce soir :</p>
             </div>
             <div className="grid md:grid-cols-3 gap-5 mb-10">
-              {[
-                { e: '💧', t: 'Hydratation', d: "500ml d'eau avec une pincée de sel marin dès le réveil active tes surrénales en douceur." },
-                { e: '🥩', t: 'Protéines', d: "Vise 30g de protéines dans l'heure suivant ton réveil pour couper les rages de sucre de 15h." },
-                { e: '🚶‍♀️', t: 'Marche', d: "10 min de marche après ton repas le plus copieux réduit le pic de glycémie de près de 30%." },
-              ].map(({ e, t, d }) => (
+              {profile.tips.map(({ e, t, d }) => (
                 <div key={t} className="bg-white rounded-2xl p-6 shadow-lg border border-gray-50 hover:-translate-y-1 transition-transform duration-300">
                   <div className="text-3xl mb-3">{e}</div>
                   <h3 className="font-black text-neo text-base mb-2">{t}</h3>
@@ -807,100 +939,32 @@ const Quiz: React.FC = () => {
               ))}
             </div>
             <div className="text-center">
-              <p className="font-bold text-gray-900 text-lg mb-5">Si tu veux accélérer tes résultats...</p>
-              <div className="max-w-sm mx-auto"><CTA label="Voir mon plan d'action →" onClick={() => goTo('roadmap')} /></div>
+              <p className="font-bold text-gray-900 text-lg mb-2">Ces pistes aident. Elles ne te disent pas par quel blocage commencer.</p>
+              <p className="text-gray-500 font-medium mb-5">Ton analyse métabolique complète (valeur de 198 $) reste offerte.</p>
+              <div className="max-w-sm mx-auto"><CTA label="Réserver mon analyse →" onClick={() => goTo('calendar')} /></div>
             </div>
           </Wrap>
         );
-
-      case 'roadmap': {
-        const fomo = fomoData();
-        return (
-          <Wrap animKey={animKey} wide>
-            <div className="text-center mb-10">
-              <p className="text-neo font-black text-xs tracking-widest uppercase mb-3">PRÉVISION ALGORITHMIQUE</p>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3">
-                Ta trajectoire de <span className="text-neo">{goalLabel[answers.q11 || ''] || 'transformation'}</span>
-              </h2>
-              <p className="text-gray-500 font-semibold">
-                Potentiel estimé atteint d'ici <strong className="text-gray-900">{targetMonth}</strong>
-              </p>
-            </div>
-
-            <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-50 mb-6">
-              <div className="grid grid-cols-3 gap-4 mb-8">
-                {[
-                  { n: '1', t: 'Désamorçage', d: `Optimisation du ${worst}`, c: 'text-gray-900', b: 'border-gray-900' },
-                  { n: '2', t: 'Accélération', d: 'Réactivation cellulaire et résultats visibles', c: `text-[${S}]`, b: `border-[${S}]`, style: { color: S, borderColor: S } },
-                  { n: '3', t: 'Optimisation', d: 'Autonomie totale et stabilisation à vie', c: 'text-neo', b: 'border-neo' },
-                ].map(({ n, t, d, c, b, style }) => (
-                  <div key={n} className="bg-gray-50 rounded-2xl p-4 text-center hover:bg-white hover:shadow-md transition-all duration-300 border border-gray-100">
-                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center mx-auto mb-3 text-sm font-black ${c} ${b}`} style={style}>{n}</div>
-                    <div className={`text-[10px] font-black uppercase tracking-wider mb-1 ${c}`} style={style}>{t}</div>
-                    <div className="text-xs text-gray-500 font-medium leading-snug">{d}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">
-                  <span>Sem. 1</span><span>Sem. 5</span><span>Sem. 10</span><span>Sem. 15 ✨</span>
-                </div>
-                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #f26457, #00bbb1)', animation: 'growBar 2.5s ease-out 0.3s both', width: '95%' }} />
-                </div>
-                <style>{`@keyframes growBar { from { width: 0% } to { width: 95% } }`}</style>
-                <div className="flex justify-between mt-2">
-                  <span className="text-[10px] font-bold text-gray-400">Aujourd'hui</span>
-                  <span className="text-[10px] font-bold text-neo">Potentiel optimal →</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative bg-gray-50 rounded-2xl p-6 mb-6 border border-gray-100 overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-neo rounded-l-full" />
-              <div className="flex gap-4 items-start">
-                <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 text-neo">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider mb-1">
-                    TON PROFIL : <span className="text-neo">{fomo.profile}</span>
-                  </p>
-                  <p className="text-sm text-gray-700 font-medium leading-relaxed">{fomo.text}</p>
-                  <span className="inline-flex items-center gap-1.5 mt-2 font-bold text-xs px-3 py-1 rounded-lg text-neo bg-neo/10">
-                    <HeartHandshake size={13} /> {fomo.reassure}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <CTA label="Réserver ma consultation découverte (gratuite)" onClick={() => goTo('calendar')} sub="45 min · sans engagement" />
-          </Wrap>
-        );
-      }
 
       case 'calendar':
         return (
           <Wrap animKey={animKey} wide>
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-neo/10 text-neo px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                <HeartHandshake size={14} /> Consultation découverte
+                <HeartHandshake size={14} /> Valeur de 198 $ · offerte
               </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Parlons de ton profil, sans engagement</h2>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Réserve ton analyse métabolique complète</h2>
               <p className="text-gray-500 font-medium max-w-lg mx-auto">
-                45 minutes avec un membre de notre équipe pour comprendre tes résultats et voir si on peut t'aider — gratuitement.
+                45 minutes avec un membre de notre équipe pour comprendre chacun de tes blocages et voir lequel travailler en premier.
               </p>
             </div>
 
-            {/* Ce qui se passe pendant l'appel — réduit le risque perçu */}
+            {/* Ce qui se passe pendant l'analyse — réduit le risque perçu */}
             <div className="grid md:grid-cols-3 gap-4 mb-8">
               {[
-                { icon: Activity, t: 'On revoit ton analyse', d: 'On décode ensemble ton profil métabolique en détail.' },
-                { icon: HeartHandshake, t: 'Des pistes concrètes', d: 'Tu repars avec des recommandations claires, applicables tout de suite.' },
-                { icon: ShieldCheck, t: 'Zéro pression', d: "Aucune obligation d'achat. Juste une vraie conversation." },
+                { icon: Search, t: 'On approfondit ton profil', d: 'On revoit tes signaux en détail pour confirmer ce qui freine vraiment ton corps.' },
+                { icon: Activity, t: triedSomething ? 'On comprend tes essais passés' : 'On fait le point', d: triedSomething ? "Pourquoi ce que tu as essayé n'a pas tenu, et quoi faire à la place." : 'Tes habitudes actuelles, ce qui aide et ce qui nuit.' },
+                { icon: ClipboardList, t: 'Tu sais par où commencer', d: "Le blocage à travailler en premier, et comment on peut t'aider à y arriver. Zéro pression." },
               ].map(({ icon: Icon, t, d }) => (
                 <div key={t} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-left">
                   <div className="w-10 h-10 rounded-xl bg-neo/10 flex items-center justify-center mb-3">
@@ -918,7 +982,7 @@ const Quiz: React.FC = () => {
                 scrolling="yes" title="Réservation NEO" />
             </div>
             <p className="text-center text-gray-400 text-sm mt-4 font-medium flex items-center justify-center gap-1.5">
-              <Clock size={14} className="text-neo" /> 45 min · en ligne ou par téléphone · 100 % gratuit
+              <Clock size={14} className="text-neo" /> 45 min · en ligne ou par téléphone · 0 $ aujourd'hui
             </p>
           </Wrap>
         );
@@ -928,24 +992,23 @@ const Quiz: React.FC = () => {
   };
 
   return (
-    <div className="pb-20">
-      {step !== 0 && (
-        <div className="sticky top-20 z-10 w-full h-1 bg-gray-100">
-          <div className="h-full bg-neo transition-all duration-500 ease-out shadow-[0_0_6px_rgba(0,187,177,0.5)]"
-            style={{ width: `${progress}%` }} />
+    <div className="pt-6 md:pt-10 pb-20">
+      {inQuestions && (
+        <div className="max-w-xl mx-auto px-4">
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-neo rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }} />
+          </div>
+          {showBack && (
+            <button onClick={goBack}
+              className="mt-4 flex items-center gap-1.5 text-gray-400 hover:text-neo text-sm font-semibold transition-colors">
+              ← Retour
+            </button>
+          )}
         </div>
       )}
 
-      {showBack && (
-        <div className="max-w-xl mx-auto px-4 pt-5 pb-2">
-          <button onClick={goBack}
-            className="flex items-center gap-1.5 text-gray-400 hover:text-neo text-sm font-semibold transition-colors">
-            ← Retour
-          </button>
-        </div>
-      )}
-
-      <div className="py-8 md:py-12">
+      <div className="py-8 md:py-10">
         {renderStep()}
       </div>
     </div>

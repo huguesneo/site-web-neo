@@ -3,13 +3,13 @@ import QuizPage from '@/views/QuizPage';
 
 export const metadata: Metadata = {
   title: 'Quiz Métabolique Gratuit',
-  description: 'Faites le test métabolique gratuit de 2 minutes. Identifiez vos blocages hormonaux, digestifs et liés au cortisol. Obtenez votre profil personnalisé instantanément.',
+  description: 'Tu fais des efforts et ton corps ne suit pas ? En 3 minutes, découvre ton profil métabolique et pourquoi les diètes, le cardio et les calories n’ont pas réglé le problème.',
   alternates: {
     canonical: 'https://www.neoperformance.ca/quiz',
   },
   openGraph: {
     title: 'Quiz Métabolique Gratuit | NEO Performance',
-    description: 'Faites le test métabolique gratuit de 2 minutes. Identifiez vos blocages hormonaux, digestifs et liés au cortisol. Obtenez votre profil personnalisé instantanément.',
+    description: 'Tu fais des efforts et ton corps ne suit pas ? En 3 minutes, découvre ton profil métabolique et pourquoi les diètes, le cardio et les calories n’ont pas réglé le problème.',
     url: 'https://www.neoperformance.ca/quiz',
     siteName: 'NEO Performance',
     locale: 'fr_CA',
