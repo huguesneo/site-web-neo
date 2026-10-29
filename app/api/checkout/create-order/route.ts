@@ -4,6 +4,7 @@ import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount,
 import { fetchCouponByCode, priceCartLines, evaluateCoupon, emailAllowed, perUserLimitReached, releaseUnpaidCouponHolds } from '../../../../lib/coupon-rules';
 import { normalizeGiftCardNumber, fetchGiftCardByNumber, isExpired, GC_META_NUMBER, GC_META_ID, GC_META_AMOUNT } from '../../../../lib/gift-card';
 import { cancelOrderWithNote, describeWcError } from '../../../../lib/order-notes';
+import { PICKUP_META_KEY, PICKUP_SHIPPING_TITLE } from '../../../../lib/pickup';
 
 /**
  * Route serveur — crée la commande WooCommerce de façon SÛRE.
@@ -43,6 +44,8 @@ interface Body {
   customer_note?: string;
   couponCode?: string | null;
   giftCardNumber?: string | null;
+  /** Cueillette en clinique : aucuns frais de livraison. */
+  pickup?: boolean;
   accessToken?: string | null;
 }
 
@@ -503,6 +506,10 @@ export async function POST(req: NextRequest) {
     }
   } catch { /* commande invité */ }
 
+  // Cueillette en clinique : mode d'expédition dédié (visible dans l'admin, le bon de
+  // préparation et les courriels) + meta lue par le snippet WordPress des courriels.
+  const pickup = body.pickup === true;
+
   const orderData: Record<string, unknown> = {
     status: 'pending',
     currency: 'CAD',
@@ -515,6 +522,12 @@ export async function POST(req: NextRequest) {
     customer_note: body.customer_note ?? '',
     ...(coupon_lines.length ? { coupon_lines } : {}),
     ...(fee_lines.length ? { fee_lines } : {}),
+    ...(pickup
+      ? {
+          shipping_lines: [{ method_id: 'local_pickup', method_title: PICKUP_SHIPPING_TITLE, total: '0.00' }],
+          meta_data: [{ key: PICKUP_META_KEY, value: 'yes' }],
+        }
+      : {}),
   };
 
   const appliedCoupon = applyUserCoupon ? userCoupon : null;
@@ -569,7 +582,8 @@ export async function POST(req: NextRequest) {
         .reduce((sum, li) => sum + parseFloat(li.total || '0'), 0);
       // Un code avec « livraison gratuite » (free_shipping) annule les frais — seulement
       // s'il a réellement été appliqué (pas écarté par l'arbitrage « meilleur des deux »).
-      const shipping = applyUserCoupon && userFreeShipping ? 0 : shippingFeeFor(physicalNet);
+      // La cueillette en clinique les annule aussi.
+      const shipping = pickup || (applyUserCoupon && userFreeShipping) ? 0 : shippingFeeFor(physicalNet);
       if (shipping > 0) {
         const upd = await fetch(wc(`/orders/${order.id}`), {
           method: 'PUT',
