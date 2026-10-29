@@ -951,7 +951,7 @@ const Quiz: React.FC = () => {
           <Wrap animKey={animKey} wide>
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-neo/10 text-neo px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                <HeartHandshake size={14} /> Analyse métabolique complète · gratuite
+                <HeartHandshake size={14} /> Gratuite · sans engagement
               </div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Réserve ton analyse métabolique complète</h2>
               <p className="text-gray-500 font-medium max-w-lg mx-auto">
