@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const number = normalizeGiftCardNumber(input);
   if (!number) {
     return NextResponse.json(
-      { error: 'Numéro invalide — il doit compter 16 caractères (ex. XXXX-XXXX-XXXX-XXXX).' },
+      { error: 'Numéro de carte-cadeau invalide — vérifie la saisie (ex. XXXX-XXXX-XXXX-XXXX).' },
       { status: 400 },
     );
   }

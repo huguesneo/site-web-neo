@@ -28,14 +28,28 @@ function pw(path: string, extra: Record<string, string> = {}): string {
 }
 
 /**
- * Normalise la saisie du client vers le format PW « XXXX-XXXX-XXXX-XXXX » :
- * majuscules, retrait de tout sauf lettres/chiffres, regroupement par 4.
- * Retourne null si la saisie ne peut pas former un numéro plausible.
+ * Forme canonique d'un numéro pour COMPARER deux saisies : majuscules, lettres et
+ * chiffres seulement (« abcd-1234 » et « ABCD 1234 » désignent la même carte).
+ */
+export function canonicalGiftCardNumber(input: string): string {
+  return String(input).toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/**
+ * Normalise la saisie du client avant la recherche PW :
+ *  - 16 caractères → format PW standard « XXXX-XXXX-XXXX-XXXX » (regroupement par 4) ;
+ *  - autre longueur → numéro PERSONNALISÉ créé à la main dans PW (ex. « NEOCADEAU25 ») :
+ *    gardé tel que saisi, en majuscules, sans espaces.
+ * Retourne null si la saisie ne peut pas former un numéro plausible (4 à 40
+ * lettres/chiffres, tirets et espaces tolérés).
  */
 export function normalizeGiftCardNumber(input: string): string | null {
-  const raw = String(input).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (raw.length !== 16) return null;
-  return raw.match(/.{4}/g)!.join('-');
+  const trimmed = String(input).trim().toUpperCase();
+  if (!/^[A-Z0-9 -]+$/.test(trimmed)) return null;
+  const raw = canonicalGiftCardNumber(trimmed);
+  if (raw.length === 16) return raw.match(/.{4}/g)!.join('-');
+  if (raw.length < 4 || raw.length > 40) return null;
+  return trimmed.replace(/\s+/g, '');
 }
 
 function parseCard(c: Record<string, unknown>): PwGiftCard {
@@ -67,7 +81,10 @@ export async function fetchGiftCardByNumber(number: string): Promise<PwGiftCard 
     if (!res.ok) return undefined;
     const data = await res.json();
     const arr = Array.isArray(data) ? data : [data];
-    const found = arr.find((c) => c && String(c.number) === number);
+    // Comparaison sur la forme canonique : un numéro personnalisé peut être
+    // enregistré dans PW en minuscules ou avec d'autres séparateurs.
+    const wanted = canonicalGiftCardNumber(number);
+    const found = arr.find((c) => c && canonicalGiftCardNumber(String(c.number ?? '')) === wanted);
     return found ? parseCard(found) : null;
   } catch {
     return undefined;

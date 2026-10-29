@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { isClientDiscountEligible, GIFT_CARD_PRODUCT_ID, giftCardClientDiscount, giftCardFaceValue, shippingFeeFor, SHIPPING_LABEL, NEO_ACCOMPANIMENT_WC_CATEGORY_ID } from '../../../../constants';
 import { fetchCouponByCode, priceCartLines, evaluateCoupon, emailAllowed, perUserLimitReached, releaseUnpaidCouponHolds } from '../../../../lib/coupon-rules';
 import { normalizeGiftCardNumber, fetchGiftCardByNumber, isExpired, GC_META_NUMBER, GC_META_ID, GC_META_AMOUNT } from '../../../../lib/gift-card';
+import { cancelOrderWithNote, describeWcError } from '../../../../lib/order-notes';
 
 /**
  * Route serveur — crée la commande WooCommerce de façon SÛRE.
@@ -257,7 +258,59 @@ async function findMissingVariationNames(
   }
 }
 
+/**
+ * Commandes « orphelines » : WordPress peut planter APRÈS avoir enregistré la
+ * commande (ex. plugin de coupons incompatible avec l'API → « Une erreur critique
+ * est survenue »). Le client reçoit une erreur, n'a pas de numéro de commande et
+ * ne pourra jamais la payer : elle resterait « en attente » pour toujours. On
+ * retrouve donc les commandes créées par CETTE requête — même courriel, mêmes
+ * produits, créées par l'API depuis son début, jamais payées — pour les annuler.
+ * Critères stricts pour ne jamais toucher une autre commande. Non bloquant.
+ */
+async function findOrphanOrderIds(
+  startedAtMs: number,
+  email: string,
+  productIds: number[],
+): Promise<number[]> {
+  const e = email.trim().toLowerCase();
+  if (!e) return [];
+  try {
+    // Les 20 commandes « pending » les plus récentes suffisent : on cherche une
+    // commande créée il y a quelques secondes.
+    const res = await fetch(wc('/orders?status=pending&per_page=20&orderby=date&order=desc'), { cache: 'no-store' });
+    if (!res.ok) return [];
+    const orders: Array<{
+      id: number;
+      created_via?: string;
+      transaction_id?: string;
+      date_paid?: string | null;
+      date_created_gmt?: string;
+      billing?: { email?: string };
+      line_items?: Array<{ product_id?: number }>;
+    }> = await res.json();
+    const wanted = [...new Set(productIds)].sort().join(',');
+    return (Array.isArray(orders) ? orders : [])
+      .filter((o) => {
+        const created = Date.parse(`${o.date_created_gmt ?? ''}Z`);
+        const products = [...new Set((o.line_items ?? []).map((li) => Number(li.product_id)))].sort().join(',');
+        return (
+          o.created_via === 'rest-api' &&
+          !o.transaction_id &&
+          !o.date_paid &&
+          (o.billing?.email ?? '').toLowerCase() === e &&
+          Number.isFinite(created) &&
+          created >= startedAtMs - 5000 &&
+          products === wanted
+        );
+      })
+      .map((o) => o.id);
+  } catch {
+    return [];
+  }
+}
+
 export async function POST(req: NextRequest) {
+  const startedAtMs = Date.now();
   if (!WC_BASE || !WC_KEY || !WC_SECRET) {
     return NextResponse.json({ error: 'Configuration WooCommerce manquante côté serveur.' }, { status: 500 });
   }
@@ -464,6 +517,10 @@ export async function POST(req: NextRequest) {
     ...(fee_lines.length ? { fee_lines } : {}),
   };
 
+  const appliedCoupon = applyUserCoupon ? userCoupon : null;
+  const productIds = line_items.map((i) => i.product_id);
+  let createdOrderId: number | null = null;
+
   try {
     const res = await fetch(wc('/orders'), {
       method: 'POST',
@@ -471,11 +528,28 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(orderData),
     });
     if (!res.ok) {
-      let msg = `Erreur ${res.status}`;
-      try { const e = await res.json(); msg = e.message || msg; } catch { /* ignore */ }
-      return NextResponse.json({ error: msg }, { status: 502 });
+      // Message brut journalisé côté serveur (logs Netlify) ; le client reçoit une
+      // version lisible — jamais la page HTML d'erreur de WordPress.
+      const raw = await res.text().catch(() => '');
+      const { detail, customer } = describeWcError(res.status, raw, appliedCoupon);
+      console.error(
+        `[CREATE-ORDER] Création refusée par WooCommerce — ${detail} — courriel: ${billingEmail} — code promo: ${appliedCoupon ?? '(aucun)'} — produits: ${productIds.join(',')}`,
+      );
+      // La commande a pu être enregistrée avant l'erreur (plantage WordPress, coupon
+      // rejeté après l'enregistrement) : on l'annule, avec la cause en note, pour ne
+      // pas laisser d'orpheline « en attente » que le client ne pourra jamais payer.
+      const orphans = await findOrphanOrderIds(startedAtMs, billingEmail, productIds);
+      for (const id of orphans) {
+        await cancelOrderWithNote(
+          id,
+          `Création de commande échouée sur le site (le client n’a pas pu payer) — ${detail}. Code promo : ${appliedCoupon ?? 'aucun'}. Commande annulée automatiquement.`,
+        );
+      }
+      if (orphans.length) console.error(`[CREATE-ORDER] Commande(s) orpheline(s) annulée(s) : ${orphans.join(', ')}`);
+      return NextResponse.json({ error: customer }, { status: 502 });
     }
     let order = await res.json();
+    createdOrderId = Number(order?.id) || null;
 
     // Frais de livraison : 15 $ pour les commandes de 100 $ et moins (valeur marchande
     // nette = total autoritatif − taxes, donc après rabais et hors livraison). Gratuite
@@ -534,11 +608,11 @@ export async function POST(req: NextRequest) {
           }),
         }).catch(() => null);
         if (!upd || !upd.ok) {
-          await fetch(wc(`/orders/${order.id}`), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'cancelled' }),
-          }).catch(() => { /* non bloquant */ });
+          console.error(`[CREATE-ORDER] Meta carte-cadeau non écrites sur #${order.id} — HTTP ${upd?.status ?? 'réseau'}`);
+          await cancelOrderWithNote(
+            order.id,
+            `Carte-cadeau ${giftCard.number} : impossible d’enregistrer le montant appliqué (HTTP ${upd?.status ?? 'réseau'}). Commande annulée automatiquement ; le client a été invité à réessayer.`,
+          );
           return NextResponse.json(
             { error: 'Impossible d’appliquer la carte-cadeau. Réessayez ou retirez-la.' },
             { status: 502 },
@@ -566,8 +640,19 @@ export async function POST(req: NextRequest) {
       isClient,
     });
   } catch (err) {
+    // Panne réseau / délai dépassé / réponse illisible : le client n'obtient pas de
+    // numéro de commande, donc une commande déjà créée ne sera jamais payée.
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(`[CREATE-ORDER] Exception — ${reason} — courriel: ${billingEmail} — commande: ${createdOrderId ?? '(inconnue)'}`);
+    const ids = createdOrderId ? [createdOrderId] : await findOrphanOrderIds(startedAtMs, billingEmail, productIds);
+    for (const id of ids) {
+      await cancelOrderWithNote(
+        id,
+        `Création de commande interrompue sur le site (le client n’a pas pu payer) — ${reason}. Commande annulée automatiquement.`,
+      );
+    }
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erreur création de commande.' },
+      { error: 'Ta commande n’a pas pu être créée à cause d’une erreur de notre côté. Réessaie dans un instant, ou écris-nous à info@neoperformance.ca.' },
       { status: 502 }
     );
   }

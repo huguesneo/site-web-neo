@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { fetchGiftCardByNumber, adjustGiftCardBalance, readGiftCardMeta, GC_META_DEBITED } from '../../../../lib/gift-card';
 import { paidStatusFor } from '../../../../lib/paid-status';
+import { addOrderNote, cancelOrderWithNote } from '../../../../lib/order-notes';
 
 /**
  * Route serveur — encaisse un paiement via la NOUVELLE API Moneris.
@@ -73,12 +74,24 @@ async function getAuthoritativeOrder(orderId: string | number): Promise<{ amount
  * paidStatusFor : « completed » si la commande ne contient que des cartes-cadeaux
  * (déclenche la génération PW Gift Cards + courriel), sinon « processing ».
  */
-async function markOrderPaid(orderId: string | number, transactionId: string, status: 'completed' | 'processing'): Promise<void> {
-  await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, set_paid: true, transaction_id: transactionId }),
-  }).catch(() => { /* paiement déjà encaissé ; non bloquant */ });
+async function markOrderPaid(orderId: string | number, transactionId: string, status: 'completed' | 'processing'): Promise<boolean> {
+  // Le paiement est DÉJÀ encaissé : on ne renvoie jamais d'erreur au client ici.
+  // Un échec laisserait la commande « en attente » alors que le client a payé —
+  // on réessaie une fois, puis on le signale clairement (log + note admin).
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const res = await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, set_paid: true, transaction_id: transactionId }),
+    }).catch(() => null);
+    if (res?.ok) return true;
+    console.error(`[MONERIS] Statut payé NON enregistré sur #${orderId} (essai ${attempt}) — HTTP ${res?.status ?? 'réseau'} — paiement ${transactionId}`);
+  }
+  await addOrderNote(
+    orderId,
+    `⚠️ PAIEMENT MONERIS APPROUVÉ (${transactionId || 'id inconnu'}) mais le statut de la commande n’a pas pu être mis à jour automatiquement. À passer manuellement en « ${status === 'completed' ? 'Terminée' : 'En cours'} ».`,
+  );
+  return false;
 }
 
 async function getAccessToken(): Promise<string> {
@@ -163,11 +176,10 @@ export async function POST(req: NextRequest) {
     if (!card || !card.active || card.balance + 0.005 < gc.amount) {
       // Le solde ne couvre plus le montant promis → on annule la commande (le
       // client devra recommencer ; son code promo est libéré par l'annulation).
-      await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'cancelled' }),
-      }).catch(() => { /* non bloquant */ });
+      await cancelOrderWithNote(
+        orderId,
+        `Paiement non tenté : la carte-cadeau ${gc.number} ne couvre plus ${gc.amount.toFixed(2)} $ (solde actuel : ${card ? card.balance.toFixed(2) : 'introuvable'} $${card && !card.active ? ', carte désactivée' : ''}). Commande annulée automatiquement.`,
+      );
       return NextResponse.json(
         { error: 'Le solde de la carte-cadeau a changé depuis l’ajout au panier. Recommence ta commande.' },
         { status: 402 },
@@ -175,6 +187,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Vrai dès que la demande de paiement part chez Moneris : au-delà, un échec
+  // technique est AMBIGU (le paiement a pu passer) et le client ne doit pas
+  // réessayer à l'aveugle.
+  let paymentSent = false;
   try {
     const token = await getAccessToken();
 
@@ -204,6 +220,7 @@ export async function POST(req: NextRequest) {
         : {}),
     };
 
+    paymentSent = true;
     const res = await fetch(`${API_HOST}/payments`, {
       method: 'POST',
       headers: {
@@ -231,18 +248,24 @@ export async function POST(req: NextRequest) {
       // le code (limite 1 par personne) et bloquerait le client à sa 2e tentative.
       // L'annulation décrémente le compteur. Sur un statut ambigu (5xx), on ne touche
       // à rien : le paiement a pu passer malgré tout.
-      if (res.status < 500) {
-        await fetch(wc(`/orders/${encodeURIComponent(String(orderId))}`), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'cancelled' }),
-        }).catch(() => { /* non bloquant */ });
-      }
       const d = data as { transactionDetails?: { message?: string }; message?: string };
       const msg =
         d?.transactionDetails?.message ||
         d?.message ||
         'Le paiement a été refusé.';
+      const monerisStatus = (data as { paymentStatus?: string })?.paymentStatus ?? 'inconnu';
+      const amountTxt = `${(amountCents / 100).toFixed(2)} $`;
+      if (res.status < 500) {
+        await cancelOrderWithNote(
+          orderId,
+          `Paiement Moneris refusé (${amountTxt}) — HTTP ${res.status}, statut ${monerisStatus} : « ${msg} ». Commande annulée automatiquement ; le client peut réessayer.`,
+        );
+      } else {
+        await addOrderNote(
+          orderId,
+          `Réponse Moneris ambiguë (${amountTxt}) — HTTP ${res.status}, statut ${monerisStatus} : « ${msg} ». Commande laissée en attente : vérifier dans le portail Moneris si le paiement est passé avant toute action.`,
+        );
+      }
       return NextResponse.json(
         { approved: false, error: msg, status: (data as { paymentStatus?: string })?.paymentStatus ?? null },
         { status: 402 }
@@ -273,6 +296,10 @@ export async function POST(req: NextRequest) {
       amount?: { amount?: number };
     };
     await markOrderPaid(orderId, ok.paymentId ?? '', paidStatusFor(wcOrder.line_items));
+    await addOrderNote(
+      orderId,
+      `Paiement Moneris approuvé : ${((ok?.amount?.amount ?? amountCents) / 100).toFixed(2)} $ — paiement ${ok.paymentId ?? 'id inconnu'}${ok?.transactionDetails?.authorizationCode ? `, autorisation ${ok.transactionDetails.authorizationCode}` : ''}.`,
+    );
 
     return NextResponse.json({
       approved: true,
@@ -281,8 +308,23 @@ export async function POST(req: NextRequest) {
       amount: ok?.amount?.amount ?? amountCents,
     });
   } catch (err) {
+    // Échec technique (jeton OAuth refusé, panne réseau, délai dépassé…). Si l'appel
+    // /payments est parti, le paiement a pu passer : on ne touche pas au statut, on
+    // laisse seulement une trace pour vérification dans le portail Moneris.
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(`[MONERIS] Échec technique — commande #${orderId} — ${paymentSent ? 'APRÈS' : 'AVANT'} l’envoi du paiement — ${reason}`);
+    await addOrderNote(
+      orderId,
+      paymentSent
+        ? `Échec technique PENDANT le paiement Moneris (${(amountCents / 100).toFixed(2)} $) : ${reason}. Commande laissée en attente : vérifier dans le portail Moneris si le paiement est passé.`
+        : `Échec technique AVANT le paiement Moneris (aucun montant envoyé) : ${reason}.`,
+    );
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erreur paiement Moneris.' },
+      {
+        error: paymentSent
+          ? 'Le paiement n’a pas pu être confirmé à cause d’une erreur technique. Pour éviter un double paiement, écris-nous à info@neoperformance.ca avant de réessayer.'
+          : 'Le paiement n’a pas pu être lancé à cause d’une erreur technique. Aucun montant n’a été prélevé : réessaie dans un instant.',
+      },
       { status: 502 }
     );
   }
