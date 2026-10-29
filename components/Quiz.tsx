@@ -234,7 +234,6 @@ const Quiz: React.FC = () => {
     setAnimKey(k => k + 1);
     setStep(next);
     setHistory(h => [...h, next]);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const goBack = () => {
@@ -244,8 +243,13 @@ const Quiz: React.FC = () => {
     setRevealed(false);
     setAnimKey(k => k + 1);
     setStep(prev);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Remonter en haut une fois la nouvelle étape affichée : un défilement lancé
+  // avant le rendu est annulé quand la page raccourcit (ex. résultat → pistes)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [animKey]);
 
   // Barre de progression : seulement pendant les questions
   const qStart = FLOW.indexOf('sexe'), qEnd = FLOW.indexOf('loading');
@@ -899,10 +903,6 @@ const Quiz: React.FC = () => {
               <p className="text-gray-300 mb-6 text-base leading-relaxed max-w-lg mx-auto font-medium">
                 L'autre moitié, c'est de savoir par quel blocage commencer pour {goalLabel[answers.q11 || ''] || 'retrouver ton corps'}.
                 Pendant ton <strong className="text-white">analyse métabolique complète</strong>, on prend le temps de comprendre chacun de tes blocages et de voir lequel travailler en premier.
-              </p>
-              <p className="text-white font-bold mb-6">
-                <span className="line-through text-gray-500 mr-2">198 $</span>
-                <span className="text-neo">Offerte</span> parce que tu as complété ton profil
               </p>
               <button onClick={() => goTo('calendar')}
                 className="w-full py-5 rounded-full bg-neo text-white font-bold text-lg uppercase tracking-wide shadow-xl shadow-neo/30 hover:bg-neo-600 hover:-translate-y-0.5 transition-all duration-200 mb-4">
