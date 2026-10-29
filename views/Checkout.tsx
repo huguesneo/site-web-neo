@@ -1,11 +1,12 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag, Gift } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle, AlertCircle, Lock, Package, Tag, Gift, Store, MapPin } from 'lucide-react';
 import { useCart, cartLineId, itemUnitPrice, itemImage } from '../contexts/CartContext';
 import { supabase } from '../services/supabaseClient';
 import Section from '../components/Section';
 import { isDigitalProduct } from '../constants';
+import { CLINIC_ADDRESS, CLINIC_HOURS_LABEL, PICKUP_SHIPPING_TITLE, pickupReadyMessage } from '../lib/pickup';
 
 // ─── Moneris Hosted Tokenization (iframe sécurisée) ─────────────────────────────
 const HT_IS_PROD = process.env.NEXT_PUBLIC_MONERIS_ENV === 'prod';
@@ -138,15 +139,24 @@ const Checkout: React.FC = () => {
     firstName: '', lastName: '', email: '', phone: '',
     address: '', city: '', province: 'QC', postalCode: '', notes: '',
   });
+  // ── Cueillette en clinique ───────────────────────────────────────────────────
+  // Retire les frais de livraison (le serveur fait de même — /api/checkout/create-order).
+  // Proposée seulement s'il y a au moins un produit physique à remettre.
+  const [pickup, setPickup] = useState(false);
+  const hasPhysical = items.some((i) => !isDigitalProduct(i.product));
+  const isPickup = pickup && hasPhysical;
+  const shippingFee = isPickup ? 0 : shipping;
+
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [orderInfo, setOrderInfo] = useState<{ orderId: number; total: number; giftApplied?: number } | null>(null);
+  const [orderInfo, setOrderInfo] = useState<{ orderId: number; total: number; giftApplied?: number; pickup?: boolean } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   // Contexte de la commande en cours, lu par le gestionnaire de message de l'iframe
   const pendingRef = useRef<{
     orderId: number;
     total: number;
     giftApplied?: number;
+    pickup?: boolean;
     customer: { firstName: string; lastName: string; email: string; phone: string };
   } | null>(null);
   const finalizedRef = useRef(false);
@@ -160,9 +170,9 @@ const Checkout: React.FC = () => {
   const digitalSubtotal = items
     .filter((i) => isDigitalProduct(i.product))
     .reduce((s, i) => s + itemUnitPrice(i) * i.quantity, 0);
-  const taxableBase = Math.max(0, netGoods - digitalSubtotal) + shipping;
+  const taxableBase = Math.max(0, netGoods - digitalSubtotal) + shippingFee;
   const taxes = taxableBase * 0.14975;
-  const total = netGoods + shipping + taxes;
+  const total = netGoods + shippingFee + taxes;
   // Carte-cadeau : appliquée en dernier, sur le total taxes+livraison incluses
   // (comme de l'argent comptant). Le montant RÉEL est recalculé côté serveur.
   const giftApplied = giftCard ? Math.min(giftCard.balance, Math.round(total * 100) / 100) : 0;
@@ -262,9 +272,22 @@ const Checkout: React.FC = () => {
               <Gift size={13} className="text-neo" /> Carte-cadeau utilisée : −{(orderInfo.giftApplied ?? 0).toFixed(2)} $
             </p>
           )}
-          <p className="text-gray-400 text-sm mb-8">
-            Merci pour ta commande ! Un courriel de confirmation te sera envoyé. Expédition sous 24/48h.
-          </p>
+          {orderInfo.pickup ? (
+            <div className="bg-white/5 border border-neo/30 rounded-2xl p-5 mb-8 text-left">
+              <p className="text-white font-semibold text-sm flex items-center gap-2 mb-2">
+                <Store size={16} className="text-neo" /> {PICKUP_SHIPPING_TITLE}
+              </p>
+              <p className="text-gray-300 text-sm mb-3">{pickupReadyMessage()}</p>
+              <p className="text-gray-400 text-xs flex items-start gap-1.5">
+                <MapPin size={13} className="text-neo shrink-0 mt-0.5" /> {CLINIC_ADDRESS}
+              </p>
+              <p className="text-gray-500 text-xs mt-1 pl-5">{CLINIC_HOURS_LABEL}</p>
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm mb-8">
+              Merci pour ta commande ! Un courriel de confirmation te sera envoyé. Expédition sous 24/48h.
+            </p>
+          )}
 
           <button
             onClick={() => router.push('/boutique')}
@@ -280,9 +303,11 @@ const Checkout: React.FC = () => {
             <span className="flex items-center gap-1.5">
               <Lock size={12} className="text-neo" /> Moneris sécurisé
             </span>
-            <span className="flex items-center gap-1.5">
-              <Package size={12} className="text-neo" /> Expédition 24/48h
-            </span>
+            {!orderInfo.pickup && (
+              <span className="flex items-center gap-1.5">
+                <Package size={12} className="text-neo" /> Expédition 24/48h
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -316,7 +341,7 @@ const Checkout: React.FC = () => {
       // La commande est marquée payée côté serveur après encaissement.
 
       clearCart();
-      setOrderInfo({ orderId: ctx.orderId, total: ctx.total, giftApplied: ctx.giftApplied });
+      setOrderInfo({ orderId: ctx.orderId, total: ctx.total, giftApplied: ctx.giftApplied, pickup: ctx.pickup });
       setStatus('success');
     } catch (e: unknown) {
       finalizedRef.current = false;
@@ -381,6 +406,7 @@ const Checkout: React.FC = () => {
           customer_note: form.notes,
           couponCode: coupon?.code ?? null,
           giftCardNumber: giftCard?.number ?? null,
+          pickup: isPickup,
           accessToken,
         }),
       });
@@ -407,7 +433,7 @@ const Checkout: React.FC = () => {
           throw new Error(free.error || 'La commande n’a pas pu être finalisée. Réessaie.');
         }
         clearCart();
-        setOrderInfo({ orderId, total: 0, giftApplied: serverGiftApplied });
+        setOrderInfo({ orderId, total: 0, giftApplied: serverGiftApplied, pickup: isPickup });
         setStatus('success');
         return;
       }
@@ -427,9 +453,10 @@ const Checkout: React.FC = () => {
         orderId,
         total: authoritativeTotal,
         giftApplied: serverGiftApplied,
+        pickup: isPickup,
         customer: { firstName: form.firstName, lastName: form.lastName, email: form.email, phone: form.phone },
       };
-      setOrderInfo({ orderId, total: authoritativeTotal, giftApplied: serverGiftApplied });
+      setOrderInfo({ orderId, total: authoritativeTotal, giftApplied: serverGiftApplied, pickup: isPickup });
 
       const frame = iframeRef.current?.contentWindow;
       if (!frame) throw new Error('Formulaire de carte non chargé. Recharge la page.');
@@ -458,8 +485,43 @@ const Checkout: React.FC = () => {
 
             {/* Formulaire livraison */}
             <div className="lg:col-span-2 flex flex-col gap-8">
+              {/* Cueillette en clinique : bouton bien visible, en tête du formulaire. */}
+              {hasPhysical && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Veux-tu récupérer ta commande en clinique ?</p>
+                  <button
+                    type="button"
+                    onClick={() => setPickup((p) => !p)}
+                    aria-pressed={isPickup}
+                    className={`w-full text-left rounded-2xl border-2 p-5 flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 transition-colors ${
+                      isPickup
+                        ? 'border-neo bg-neo/5'
+                        : 'border-gray-200 bg-white hover:border-neo/60 shadow-sm'
+                    }`}
+                  >
+                    <span className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isPickup ? 'bg-neo text-white' : 'bg-neo/10 text-neo'}`}>
+                      {isPickup ? <CheckCircle size={24} /> : <Store size={24} />}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-base font-bold text-gray-900">
+                        {isPickup ? 'Cueillette en clinique sélectionnée' : 'Récupérer ma commande en clinique'}
+                      </span>
+                      <span className="block text-sm text-gray-500 mt-0.5">
+                        {isPickup
+                          ? `Aucuns frais de livraison · ${CLINIC_ADDRESS}`
+                          : `Gratuit · ${CLINIC_ADDRESS}`}
+                      </span>
+                      {isPickup && <span className="block text-xs text-gray-400 mt-1">{CLINIC_HOURS_LABEL}</span>}
+                    </span>
+                    <span className={`text-sm font-semibold shrink-0 basis-full sm:basis-auto pl-16 sm:pl-0 ${isPickup ? 'text-gray-500 underline' : 'text-neo'}`}>
+                      {isPickup ? 'Me la faire livrer' : 'Choisir'}
+                    </span>
+                  </button>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-5">Informations de livraison</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-5">{isPickup ? 'Tes coordonnées' : 'Informations de livraison'}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Prénom" name="firstName" value={form.firstName} onChange={handleChange} required />
                   <Field label="Nom"    name="lastName"  value={form.lastName}  onChange={handleChange} required />
@@ -674,9 +736,9 @@ const Checkout: React.FC = () => {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span>Livraison</span>
-                    {shipping > 0 ? (
-                      <span className="font-medium text-gray-900">{shipping.toFixed(2)} $</span>
+                    <span>{isPickup ? PICKUP_SHIPPING_TITLE : 'Livraison'}</span>
+                    {shippingFee > 0 ? (
+                      <span className="font-medium text-gray-900">{shippingFee.toFixed(2)} $</span>
                     ) : (
                       <span className="font-bold text-neo">Gratuite</span>
                     )}
