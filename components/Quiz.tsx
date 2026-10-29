@@ -940,7 +940,7 @@ const Quiz: React.FC = () => {
             </div>
             <div className="text-center">
               <p className="font-bold text-gray-900 text-lg mb-2">Ces pistes aident. Elles ne te disent pas par quel blocage commencer.</p>
-              <p className="text-gray-500 font-medium mb-5">Ton analyse métabolique complète (valeur de 198 $) reste offerte.</p>
+              <p className="text-gray-500 font-medium mb-5">Ton analyse métabolique complète reste gratuite.</p>
               <div className="max-w-sm mx-auto"><CTA label="Réserver mon analyse →" onClick={() => goTo('calendar')} /></div>
             </div>
           </Wrap>
@@ -951,7 +951,7 @@ const Quiz: React.FC = () => {
           <Wrap animKey={animKey} wide>
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-neo/10 text-neo px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                <HeartHandshake size={14} /> Valeur de 198 $ · offerte
+                <HeartHandshake size={14} /> Analyse métabolique complète · gratuite
               </div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Réserve ton analyse métabolique complète</h2>
               <p className="text-gray-500 font-medium max-w-lg mx-auto">
