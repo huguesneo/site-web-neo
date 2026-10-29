@@ -234,7 +234,6 @@ const Quiz: React.FC = () => {
     setAnimKey(k => k + 1);
     setStep(next);
     setHistory(h => [...h, next]);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const goBack = () => {
@@ -244,8 +243,13 @@ const Quiz: React.FC = () => {
     setRevealed(false);
     setAnimKey(k => k + 1);
     setStep(prev);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Remonter en haut une fois la nouvelle étape affichée : un défilement lancé
+  // avant le rendu est annulé quand la page raccourcit (ex. résultat → pistes)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [animKey]);
 
   // Barre de progression : seulement pendant les questions
   const qStart = FLOW.indexOf('sexe'), qEnd = FLOW.indexOf('loading');
@@ -900,10 +904,6 @@ const Quiz: React.FC = () => {
                 L'autre moitié, c'est de savoir par quel blocage commencer pour {goalLabel[answers.q11 || ''] || 'retrouver ton corps'}.
                 Pendant ton <strong className="text-white">analyse métabolique complète</strong>, on prend le temps de comprendre chacun de tes blocages et de voir lequel travailler en premier.
               </p>
-              <p className="text-white font-bold mb-6">
-                <span className="line-through text-gray-500 mr-2">198 $</span>
-                <span className="text-neo">Offerte</span> parce que tu as complété ton profil
-              </p>
               <button onClick={() => goTo('calendar')}
                 className="w-full py-5 rounded-full bg-neo text-white font-bold text-lg uppercase tracking-wide shadow-xl shadow-neo/30 hover:bg-neo-600 hover:-translate-y-0.5 transition-all duration-200 mb-4">
                 Réserver mon analyse complète
@@ -940,7 +940,7 @@ const Quiz: React.FC = () => {
             </div>
             <div className="text-center">
               <p className="font-bold text-gray-900 text-lg mb-2">Ces pistes aident. Elles ne te disent pas par quel blocage commencer.</p>
-              <p className="text-gray-500 font-medium mb-5">Ton analyse métabolique complète (valeur de 198 $) reste offerte.</p>
+              <p className="text-gray-500 font-medium mb-5">Ton analyse métabolique complète reste gratuite.</p>
               <div className="max-w-sm mx-auto"><CTA label="Réserver mon analyse →" onClick={() => goTo('calendar')} /></div>
             </div>
           </Wrap>
@@ -951,7 +951,7 @@ const Quiz: React.FC = () => {
           <Wrap animKey={animKey} wide>
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-neo/10 text-neo px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                <HeartHandshake size={14} /> Valeur de 198 $ · offerte
+                <HeartHandshake size={14} /> Gratuite · sans engagement
               </div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">Réserve ton analyse métabolique complète</h2>
               <p className="text-gray-500 font-medium max-w-lg mx-auto">
