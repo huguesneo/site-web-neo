@@ -32,6 +32,10 @@ const query = `*[_type == "linkPage"][0]{
     emoji,
     url,
     featured,
+    style,
+    icon,
+    width,
+    footer,
     image,
     ctaLabel,
     enabled

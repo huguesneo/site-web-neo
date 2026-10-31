@@ -1,4 +1,17 @@
-import { Instagram, Facebook, ChevronRight, Star } from 'lucide-react';
+import {
+  Instagram,
+  Facebook,
+  ChevronRight,
+  Star,
+  Calendar,
+  BookOpen,
+  ChartLine,
+  Users,
+  Video,
+  FileText,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Image as SanityImage } from 'sanity';
 import { urlForImage } from '@/sanity/lib/image';
 
@@ -26,6 +39,10 @@ export type LienItem = {
   emoji?: string;
   url?: string;
   featured?: boolean;
+  style?: 'standard' | 'principal' | 'sombre' | null;
+  icon?: string | null;
+  width?: 'full' | 'half' | null;
+  footer?: boolean | null;
   image?: SanityImage;
   ctaLabel?: string;
   enabled?: boolean;
@@ -114,6 +131,15 @@ const css = `
     0%, 100% { opacity: 0.35; transform: scale(1); }
     50% { opacity: 0.6; transform: scale(1.08); }
   }
+  /* Deux liens « demie » côte à côte ; l'un sous l'autre sous 340 px. */
+  .lien-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  @media (max-width: 339px) {
+    .lien-grid { grid-template-columns: minmax(0, 1fr); }
+  }
   .lien-pop {
     opacity: 0;
     animation: lienPop 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -133,6 +159,20 @@ function TikTokIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+// Icônes linéaires proposées dans le Studio (valeur du champ « Icône »).
+const ICONS: Record<string, LucideIcon> = {
+  calendar: Calendar,
+  book: BookOpen,
+  chart: ChartLine,
+  group: Users,
+  video: Video,
+  star: Star,
+  article: FileText,
+  sparkles: Sparkles,
+};
+
+type LinkVariant = 'standard' | 'principal' | 'sombre';
 
 function pop(index: number) {
   return {
@@ -193,44 +233,147 @@ function FeaturedCard({ item, index }: { item: LienItem; index: number }) {
   );
 }
 
-/** Lien standard : carte blanche épurée, cohérente avec les cartes du site. */
-function LinkCard({ item, index }: { item: LienItem; index: number }) {
+/**
+ * Lien : trois styles.
+ *  - standard : carte blanche épurée, cohérente avec les cartes du site
+ *  - principal : fond teal, texte foncé (jamais de blanc sur le teal), plus grand
+ *  - sombre : fond #0A1416, texte clair, icône teal clair
+ * `compact` = demi-largeur (disposition verticale, sans chevron).
+ */
+function LinkCard({
+  item,
+  index,
+  compact = false,
+}: {
+  item: LienItem;
+  index: number;
+  compact?: boolean;
+}) {
   const a = pop(index);
+  const variant: LinkVariant =
+    item.style === 'principal' || item.style === 'sombre' ? item.style : 'standard';
+  const Icon = item.icon ? ICONS[item.icon] : undefined;
   const thumbUrl = item.image
-    ? urlForImage(item.image).width(96).height(96).fit('crop').url()
+    ? urlForImage(item.image).width(112).height(112).fit('crop').url()
     : null;
+
+  const isPrincipal = variant === 'principal';
+  const isSombre = variant === 'sombre';
+
+  const box = isPrincipal
+    ? 'bg-neo hover:bg-neo-400 text-[#0A1416] shadow-lg shadow-neo/30 hover:shadow-xl hover:shadow-neo/40 border border-transparent'
+    : isSombre
+      ? 'bg-[#0A1416] text-[#F5F2EC] shadow-md shadow-[#0A1416]/20 hover:shadow-xl hover:shadow-[#0A1416]/30 border border-[#0A1416]'
+      : 'bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-neo-900/10 hover:border-neo/30';
+
+  const tile = isPrincipal
+    ? 'bg-[#0A1416]/10 text-[#0A1416]'
+    : isSombre
+      ? 'bg-white/5 ring-1 ring-white/10 text-[#5FE0D6]'
+      : 'bg-neo/10 ring-1 ring-neo/15 text-neo-700';
+
+  const titleCls = isPrincipal
+    ? 'text-lg font-bold tracking-tight'
+    : isSombre
+      ? 'font-semibold text-[#F5F2EC]'
+      : 'font-semibold text-gray-900';
+  const subCls = isPrincipal
+    ? 'text-sm text-[#0A1416]/85'
+    : isSombre
+      ? 'text-sm text-[#F5F2EC]/75'
+      : 'text-sm text-gray-500';
+  const chevronCls = isPrincipal
+    ? 'text-[#0A1416]'
+    : isSombre
+      ? 'text-[#5FE0D6]'
+      : 'text-neo';
+
+  // Vignette de tête : photo > icône > emoji. Le style « standard » garde son
+  // emoji de secours 🔗 (comme avant) ; principal et sombre n'affichent rien
+  // plutôt qu'une pastille vide : aucune photo ni icône n'est obligatoire.
+  const tileSize = compact ? 'h-10 w-10' : isPrincipal ? 'h-14 w-14' : 'h-12 w-12';
+  const lead = thumbUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={thumbUrl}
+      alt=""
+      className={`${tileSize} rounded-xl object-cover shrink-0`}
+      loading="lazy"
+    />
+  ) : Icon ? (
+    <span
+      className={`${tileSize} rounded-xl flex items-center justify-center shrink-0 ${tile}`}
+      aria-hidden="true"
+    >
+      <Icon className={compact ? 'h-5 w-5' : 'h-6 w-6'} strokeWidth={1.75} />
+    </span>
+  ) : item.emoji || variant === 'standard' ? (
+    <span
+      className={`${tileSize} rounded-xl flex items-center justify-center text-xl shrink-0 ${tile}`}
+      aria-hidden="true"
+    >
+      {item.emoji || '🔗'}
+    </span>
+  ) : null;
+
+  const text = (
+    <span className={`min-w-0 [overflow-wrap:anywhere] ${compact ? 'block' : 'block flex-1'}`}>
+      <span className={`block leading-snug ${titleCls}`}>{item.label}</span>
+      {item.subtitle && <span className={`block mt-0.5 ${subCls}`}>{item.subtitle}</span>}
+    </span>
+  );
+
+  if (compact) {
+    return (
+      <a
+        href={item.url}
+        className={`${a.className} group flex flex-col items-start gap-3 min-h-[44px] h-full rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98] ${box}`}
+        style={a.style}
+      >
+        {lead}
+        {text}
+      </a>
+    );
+  }
 
   return (
     <a
       href={item.url}
-      className={`${a.className} group flex items-center gap-4 bg-white rounded-2xl pl-4 pr-5 py-4 border border-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-neo-900/10 hover:border-neo/30 active:scale-[0.98]`}
+      className={`${a.className} group flex items-center gap-4 min-h-[44px] rounded-2xl pl-4 pr-5 transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98] ${
+        isPrincipal ? 'py-5' : 'py-4'
+      } ${box}`}
       style={a.style}
     >
-      {thumbUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={thumbUrl}
-          alt=""
-          className="h-12 w-12 rounded-xl object-cover shrink-0"
-          loading="lazy"
-        />
-      ) : (
-        <span
-          className="h-12 w-12 rounded-xl bg-neo/10 ring-1 ring-neo/15 flex items-center justify-center text-xl shrink-0"
-          aria-hidden="true"
-        >
-          {item.emoji || '🔗'}
-        </span>
-      )}
-      <span className="flex-1 min-w-0">
-        <span className="block font-semibold text-gray-900 leading-snug">{item.label}</span>
-        {item.subtitle && (
-          <span className="block text-sm text-gray-500 mt-0.5">{item.subtitle}</span>
-        )}
-      </span>
-      <ChevronRight className="h-5 w-5 text-neo shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+      {lead}
+      {text}
+      <ChevronRight
+        className={`h-5 w-5 shrink-0 transition-transform duration-300 group-hover:translate-x-1 ${chevronCls}`}
+      />
     </a>
   );
+}
+
+type Block =
+  | { kind: 'item'; item: LienItem }
+  | { kind: 'pair'; items: [LienItem, LienItem] };
+
+const isHalf = (item: LienItem) =>
+  item._type === 'lienLink' && !item.featured && item.width === 'half';
+
+/** Regroupe les liens « demie » consécutifs deux par deux ; un « demie » seul reste pleine largeur. */
+function toBlocks(items: LienItem[]): Block[] {
+  const blocks: Block[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const next = items[i + 1];
+    if (isHalf(item) && next && isHalf(next)) {
+      blocks.push({ kind: 'pair', items: [item, next] });
+      i++;
+    } else {
+      blocks.push({ kind: 'item', item });
+    }
+  }
+  return blocks;
 }
 
 export default function LienBio({ data }: { data: LienPageData | null }) {
@@ -238,6 +381,11 @@ export default function LienBio({ data }: { data: LienPageData | null }) {
   const items = (page.items?.length ? page.items : FALLBACK.items ?? []).filter(
     (item) => item._type === 'lienSection' || item.enabled !== false,
   );
+  // Liens discrets : sortis de la liste et affichés tout en bas de la page.
+  const isFooterLink = (item: LienItem) =>
+    item._type === 'lienLink' && !item.featured && Boolean(item.footer) && Boolean(item.url);
+  const footerLinks = items.filter(isFooterLink);
+  const blocks = toBlocks(items.filter((item) => !isFooterLink(item)));
 
   const socials = [
     { url: page.instagramUrl, label: 'Instagram', Icon: Instagram },
@@ -329,22 +477,30 @@ export default function LienBio({ data }: { data: LienPageData | null }) {
 
         {/* Liens */}
         <div className="mt-9 space-y-4">
-          {items.map((item) => {
+          {blocks.map((block) => {
+            if (block.kind === 'pair') {
+              const [first, second] = block.items;
+              const i1 = ++animIndex;
+              const i2 = ++animIndex;
+              return (
+                <div key={`${first._key}-${second._key}`} className="lien-grid">
+                  <LinkCard item={first} index={i1} compact />
+                  <LinkCard item={second} index={i2} compact />
+                </div>
+              );
+            }
+            const { item } = block;
             animIndex += 1;
             if (item._type === 'lienSection') {
               const a = pop(animIndex);
               return (
-                <div
+                <h2
                   key={item._key}
-                  className={`${a.className} flex items-center gap-3 pt-4`}
+                  className={`${a.className} pt-4 text-center text-neo-700 font-bold uppercase tracking-[0.15em] text-xs`}
                   style={a.style}
                 >
-                  <span className="h-px flex-1 bg-gradient-to-r from-transparent to-neo-200" />
-                  <h2 className="text-center text-neo-700 font-bold uppercase tracking-[0.15em] text-xs">
-                    {item.heading}
-                  </h2>
-                  <span className="h-px flex-1 bg-gradient-to-l from-transparent to-neo-200" />
-                </div>
+                  {item.heading}
+                </h2>
               );
             }
             return item.featured ? (
@@ -356,9 +512,23 @@ export default function LienBio({ data }: { data: LienPageData | null }) {
         </div>
 
         <footer className="lien-pop mt-12 text-center" style={{ animationDelay: '700ms' }}>
+          {footerLinks.length > 0 && (
+            <ul className="mb-3 flex flex-col items-center">
+              {footerLinks.map((item) => (
+                <li key={item._key}>
+                  <a
+                    href={item.url}
+                    className="inline-flex min-h-[44px] items-center px-2 text-sm text-gray-600 underline underline-offset-4 hover:text-neo-700 transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
           <a
             href="https://www.neoperformance.ca"
-            className="text-xs font-medium text-gray-400 hover:text-neo-700 transition-colors"
+            className="inline-flex min-h-[44px] items-center px-2 text-xs font-medium text-gray-400 hover:text-neo-700 transition-colors"
           >
             neoperformance.ca
           </a>
