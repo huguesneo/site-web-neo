@@ -8,7 +8,7 @@ import Section from '../components/Section';
 import { FREE_SHIPPING_THRESHOLD, isDigitalProduct } from '../constants';
 
 const Cart: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, shippableNet, shipping, coupon, couponNotice, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
+  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, promoDiscount, promoHint, potentialClientDiscount, shippableNet, shipping, coupon, couponNotice, applyCoupon, removeCoupon, removeItem, updateQty } = useCart();
   const [couponInput, setCouponInput] = useState('');
   const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [couponError, setCouponError] = useState('');
@@ -41,7 +41,7 @@ const Cart: React.FC = () => {
   }
 
   const couponDiscount = coupon?.discountValue ?? 0;
-  const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
+  const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount + promoDiscount;
   const netGoods = subtotal - totalDiscount;
   const freeShippingGap = FREE_SHIPPING_THRESHOLD - shippableNet;
   // Seuls les produits physiques sont taxables. On retire le sous-total des
@@ -159,6 +159,15 @@ const Cart: React.FC = () => {
                 <p className="text-xs text-amber-600 mb-4 -mt-2">{couponNotice}</p>
               )}
 
+              {promoHint && (
+                <div className="flex items-center gap-2 rounded-xl bg-neo-50/70 border border-neo/10 px-3 py-2 mb-4">
+                  <Sparkles size={15} className="text-neo shrink-0" />
+                  <span className="text-[12px] text-gray-700 leading-tight">
+                    <span className="font-bold text-neo">Promo 2e produit à -50 %</span> jusqu'au 30 novembre. {promoHint}
+                  </span>
+                </div>
+              )}
+
               <div className="flex flex-col gap-3 text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>Sous-total</span>
@@ -176,10 +185,16 @@ const Cart: React.FC = () => {
                     <span className="font-medium">-{giftCardDiscount.toFixed(2)} $</span>
                   </div>
                 )}
-                {coupon && (
+                {coupon && couponDiscount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Rabais ({coupon.code})</span>
                     <span className="font-medium">-{couponDiscount.toFixed(2)} $</span>
+                  </div>
+                )}
+                {promoDiscount > 0 && (
+                  <div className="flex justify-between text-neo">
+                    <span className="font-medium">Promo : 2e produit à -50 %</span>
+                    <span className="font-medium">-{promoDiscount.toFixed(2)} $</span>
                   </div>
                 )}
                 <div className="flex justify-between">
