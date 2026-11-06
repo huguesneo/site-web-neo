@@ -5,6 +5,7 @@ import { fetchCouponByCode, priceCartLines, evaluateCoupon, emailAllowed, perUse
 import { normalizeGiftCardNumber, fetchGiftCardByNumber, isExpired, GC_META_NUMBER, GC_META_ID, GC_META_AMOUNT } from '../../../../lib/gift-card';
 import { cancelOrderWithNote, describeWcError } from '../../../../lib/order-notes';
 import { PICKUP_META_KEY, PICKUP_SHIPPING_TITLE } from '../../../../lib/pickup';
+import { computeDeuxiemeA50, isPromoDeuxiemeActive, isPromoExcludedProductId, promoDeuxiemeWins, PROMO_DEUXIEME_NOM } from '../../../../lib/promo-deuxieme-50';
 
 /**
  * Route serveur — crée la commande WooCommerce de façon SÛRE.
@@ -394,6 +395,7 @@ export async function POST(req: NextRequest) {
 
   let applyUserCoupon = false;
   let userFreeShipping = false;
+  let userCouponDiscount = 0; // rabais estimé du code (sert à l'arbitrage avec la promo « 2e produit »)
   if (userCoupon && userCoupon.toLowerCase() !== CLIENT_COUPON_CODE.toLowerCase()) {
     // Libère d'abord les tentatives impayées du client (paiement échoué / page fermée)
     // pour qu'elles ne comptent pas contre sa limite d'utilisation.
@@ -427,6 +429,7 @@ export async function POST(req: NextRequest) {
           );
         }
         applyUserCoupon = true;
+        userCouponDiscount = ev.discount;
         // « Le meilleur des deux » : un code « usage individuel » (règle WooCommerce) ne
         // se cumule pas avec le rabais client -13 % — on applique le plus avantageux
         // pour le client. Même arbitrage que l'affichage du panier (CartContext).
@@ -440,22 +443,82 @@ export async function POST(req: NextRequest) {
       }
     }
   }
+
+  // Rabais client carte-cadeau (montant fixe par variante) : clients seulement, et
+  // seulement si une carte-cadeau est au panier. Calculé ICI (avant d'ajouter les rabais à
+  // la commande) pour pouvoir l'arbitrer avec la promotion « 2e produit à -50 % ».
+  let gcDiscount = 0;
+  if (isClient) {
+    const giftLines = line_items
+      .filter((i) => i.product_id === GIFT_CARD_PRODUCT_ID)
+      .map((i) => ({ variation_id: (i as { variation_id?: number }).variation_id, quantity: i.quantity }));
+    gcDiscount = await giftCardClientDiscountTotal(giftLines);
+  }
+
+  // ── Promotion « 2e produit à -50 % » ────────────────────────────────────────
+  // Automatique, calculée sur les VRAIS prix lus dans WooCommerce (jamais ceux du
+  // navigateur). Ne se cumule avec AUCUN autre rabais (client -13 %, rabais carte-cadeau
+  // client, code promo) : si elle est strictement plus avantageuse, on retire les autres.
+  // Fail-closed : si les prix sont illisibles alors que le panier compte au moins 2 unités
+  // admissibles, on refuse (sinon le client paierait plus que le total affiché au panier).
+  let promoDiscount = 0;
+  let promoPhysicalDiscount = 0;
+  let promoNote = '';
+  if (isPromoDeuxiemeActive()) {
+    const eligibleQty = line_items
+      .filter((i) => !isPromoExcludedProductId(i.product_id))
+      .reduce((n, i) => n + i.quantity, 0);
+    if (eligibleQty >= 2) {
+      const pricedAll = await priceCartLines(line_items);
+      if (!pricedAll) {
+        return NextResponse.json(
+          { error: 'Impossible de valider la promotion « 2e produit à -50 % » pour le moment. Réessayez dans un instant.' },
+          { status: 502 },
+        );
+      }
+      const digitalIds = await fetchDigitalProductIds();
+      const promo = computeDeuxiemeA50(
+        pricedAll.map((l) => ({
+          key: `${l.product_id}:${l.variation_id ?? 0}`,
+          unitPrice: l.unitPrice,
+          quantity: l.quantity,
+          excluded: isPromoExcludedProductId(l.product_id),
+          physical: !digitalIds.has(l.product_id),
+        })),
+      );
+      // Rabais « autres » réellement retenus à ce stade (après l'arbitrage code / -13 %).
+      const clientPctDiscount = wantClientCoupon && dfhIds
+        ? pricedAll
+            .filter((l) => dfhIds!.has(l.product_id))
+            .reduce((sum, l) => sum + l.unitPrice * l.quantity, 0) * (parseFloat(CLIENT_COUPON_PERCENT) / 100)
+        : 0;
+      const otherDiscounts = (applyUserCoupon ? userCouponDiscount : 0) + clientPctDiscount + gcDiscount;
+      if (promoDeuxiemeWins(promo.discount, otherDiscounts)) {
+        promoDiscount = promo.discount;
+        promoPhysicalDiscount = promo.physicalDiscount;
+        promoNote = `${PROMO_DEUXIEME_NOM} : ${promo.discountedUnits} unité(s) sur ${promo.eligibleUnits} à -50 % (${promo.discount.toFixed(2)} $, avant taxes). Autres rabais retirés (non cumulables) : code ${applyUserCoupon ? userCoupon : 'aucun'}, rabais client ${clientPctDiscount.toFixed(2)} $, rabais carte-cadeau client ${gcDiscount.toFixed(2)} $.`;
+        applyUserCoupon = false;
+        userFreeShipping = false;
+        wantClientCoupon = false;
+        gcDiscount = 0;
+      }
+    }
+  }
+
   if (applyUserCoupon) coupon_lines.push({ code: userCoupon });
   if (wantClientCoupon && dfhIds && (await ensureClientCoupon(dfhIds))) {
     coupon_lines.push({ code: CLIENT_COUPON_CODE });
   }
 
-  // Rabais client carte-cadeau (montant fixe par variante) → ligne de remise négative.
-  // Clients seulement, et seulement si une carte-cadeau est au panier.
+  // Rabais → lignes de remise négatives. La promotion « 2e produit » est TAXABLE : c'est un
+  // rabais appliqué AVANT taxes (WooCommerce répartit alors la baisse de taxe sur les
+  // articles). Le rabais client carte-cadeau reste hors taxes comme avant.
   const fee_lines: Array<{ name: string; total: string; tax_status: string }> = [];
-  if (isClient) {
-    const giftLines = line_items
-      .filter((i) => i.product_id === GIFT_CARD_PRODUCT_ID)
-      .map((i) => ({ variation_id: (i as { variation_id?: number }).variation_id, quantity: i.quantity }));
-    const gcDiscount = await giftCardClientDiscountTotal(giftLines);
-    if (gcDiscount > 0) {
-      fee_lines.push({ name: 'Rabais client carte-cadeau', total: (-gcDiscount).toFixed(2), tax_status: 'none' });
-    }
+  if (gcDiscount > 0) {
+    fee_lines.push({ name: 'Rabais client carte-cadeau', total: (-gcDiscount).toFixed(2), tax_status: 'none' });
+  }
+  if (promoDiscount > 0) {
+    fee_lines.push({ name: `Promotion ${PROMO_DEUXIEME_NOM}`, total: (-promoDiscount).toFixed(2), tax_status: 'taxable' });
   }
 
   // ── Carte-cadeau (paiement) ─────────────────────────────────────────────────
@@ -564,6 +627,15 @@ export async function POST(req: NextRequest) {
     let order = await res.json();
     createdOrderId = Number(order?.id) || null;
 
+    // Trace dans l'admin WooCommerce de la promotion appliquée (non bloquant).
+    if (promoNote) {
+      await fetch(wc(`/orders/${order.id}/notes`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: promoNote, customer_note: false }),
+      }).catch(() => { /* non bloquant */ });
+    }
+
     // Frais de livraison : 15 $ pour les commandes de 100 $ et moins (valeur marchande
     // nette = total autoritatif − taxes, donc après rabais et hors livraison). Gratuite
     // au-delà. On se base sur le total recalculé par WooCommerce — jamais sur une valeur
@@ -577,9 +649,11 @@ export async function POST(req: NextRequest) {
       // Ex. produit 32 $ + carte-cadeau 100 $ → base = 32 $ (≤ 100) → frais 15 $.
       const digitalIds = await fetchDigitalProductIds();
       const lines: Array<{ product_id?: number; total?: string }> = Array.isArray(order.line_items) ? order.line_items : [];
-      const physicalNet = lines
+      // La promotion « 2e produit » est une ligne de remise (pas un rabais de ligne) : on
+      // retire sa part PHYSIQUE de la base pour que les frais soient calculés après rabais.
+      const physicalNet = Math.max(0, lines
         .filter((li) => !digitalIds.has(Number(li.product_id)))
-        .reduce((sum, li) => sum + parseFloat(li.total || '0'), 0);
+        .reduce((sum, li) => sum + parseFloat(li.total || '0'), 0) - promoPhysicalDiscount);
       // Un code avec « livraison gratuite » (free_shipping) annule les frais — seulement
       // s'il a réellement été appliqué (pas écarté par l'arbitrage « meilleur des deux »).
       // La cueillette en clinique les annule aussi.

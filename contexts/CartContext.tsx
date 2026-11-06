@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { GHLProduct, ProductVariation } from '../data/ghlProducts';
 import { useClientStatus } from '../hooks/useClientStatus';
 import { CLIENT_DISCOUNT_RATE, GIFT_CARD_PRODUCT_ID, isClientDiscountEligible, giftCardClientDiscount, giftCardFaceValue, isDigitalProduct, shippingFeeFor } from '../constants';
+import { computeDeuxiemeA50, isPromoDeuxiemeActive, isPromoExcludedProductId, promoDeuxiemeWins } from '../lib/promo-deuxieme-50';
 
 /** Variante choisie pour une ligne de panier (sous-ensemble de ProductVariation). */
 export type SelectedVariation = Pick<ProductVariation, 'id' | 'label' | 'price' | 'image'>;
@@ -49,6 +50,8 @@ interface CartContextValue {
   clientDiscount: number;   // rabais client -13 % appliqué en dollars (0 si non connecté)
   giftCardDiscount: number; // rabais client carte-cadeau appliqué en dollars (0 si non connecté)
   potentialClientDiscount: number; // rabais total possible (appât non-connecté)
+  promoDiscount: number;    // rabais « 2e produit à -50 % » retenu en dollars (0 si non applicable ou battu par un autre rabais)
+  promoHint: string;        // invitation à ajouter un produit pour (re)déclencher la promotion ('' si rien à dire)
   shippableNet: number;     // valeur nette des produits PHYSIQUES (base du seuil de livraison)
   shipping: number;         // frais de livraison estimés (0 si gratuite ou panier 100 % numérique)
   hydrated: boolean;
@@ -112,7 +115,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (sum, i) => sum + giftCardClientDiscount(i.product.id, giftCardFaceValue(i.variation?.label)) * i.quantity,
     0,
   );
-  const giftCardDiscount = isClient ? giftCardDiscountPotential : 0;
+  const giftCardDiscountBase = isClient ? giftCardDiscountPotential : 0;
   // Économies potentielles totales si le visiteur (non connecté) devenait client.
   const potentialClientDiscount = discountableSubtotal * CLIENT_DISCOUNT_RATE + giftCardDiscountPotential;
 
@@ -148,13 +151,45 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Même arbitrage que le serveur au moment de la commande (create-order).
   const arbitrage = !!(coupon?.individualUse && rawClientDiscount > 0 && rawCouponDiscount > 0);
   const couponSuppressed = arbitrage && rawClientDiscount > rawCouponDiscount;
-  const clientDiscount = arbitrage && !couponSuppressed ? 0 : rawClientDiscount;
-  const couponDiscountValue = couponSuppressed ? 0 : rawCouponDiscount;
-  const couponNotice = removalNotice || (arbitrage
-    ? (couponSuppressed
-        ? 'Ton rabais client (-13 %) est plus avantageux que ce code : on a gardé le meilleur des deux.'
-        : 'Ce code est plus avantageux que ton rabais client (-13 %) : on a gardé le meilleur des deux.')
-    : '');
+  const clientDiscountBase = arbitrage && !couponSuppressed ? 0 : rawClientDiscount;
+  const couponDiscountBase = couponSuppressed ? 0 : rawCouponDiscount;
+
+  // ── Promotion « 2e produit à -50 % » ────────────────────────────────────────
+  // Automatique, aucun code. Ne se cumule avec AUCUN autre rabais (client -13 %, rabais
+  // carte-cadeau client, code promo) : on garde le plus avantageux pour le client. Même
+  // arbitrage que le serveur au moment de la commande (create-order).
+  const promoResult = isPromoDeuxiemeActive()
+    ? computeDeuxiemeA50(items.map((i) => ({
+        key: cartLineKey(i),
+        unitPrice: itemUnitPrice(i),
+        quantity: i.quantity,
+        excluded: isPromoExcludedProductId(i.product.id),
+        physical: !isDigitalProduct(i.product),
+      })))
+    : { discount: 0, physicalDiscount: 0, eligibleUnits: 0, discountedUnits: 0 };
+  const otherDiscounts = clientDiscountBase + giftCardDiscountBase + couponDiscountBase;
+  const promoWon = promoDeuxiemeWins(promoResult.discount, otherDiscounts);
+  const promoDiscount = promoWon ? promoResult.discount : 0;
+  const clientDiscount = promoWon ? 0 : clientDiscountBase;
+  const giftCardDiscount = promoWon ? 0 : giftCardDiscountBase;
+  const couponDiscountValue = promoWon ? 0 : couponDiscountBase;
+  const promoHint = !isPromoDeuxiemeActive() || promoResult.eligibleUnits === 0
+    ? ''
+    : promoResult.eligibleUnits % 2 === 1
+      ? (promoResult.eligibleUnits === 1
+          ? 'Ajoute un 2e produit : le moins cher des deux est à -50 %.'
+          : 'Ajoute un produit de plus : un autre article passe à -50 %.')
+      : '';
+
+  const couponNotice = removalNotice || (promoWon && otherDiscounts > 0
+    ? 'La promotion « 2e produit à -50 % » est plus avantageuse que tes autres rabais : on a gardé le meilleur (les rabais ne se cumulent pas).'
+    : promoResult.discount > 0 && otherDiscounts > 0
+      ? 'Tes autres rabais sont plus avantageux que la promotion « 2e produit à -50 % » : on a gardé le meilleur (les rabais ne se cumulent pas).'
+      : arbitrage
+        ? (couponSuppressed
+            ? 'Ton rabais client (-13 %) est plus avantageux que ce code : on a gardé le meilleur des deux.'
+            : 'Ce code est plus avantageux que ton rabais client (-13 %) : on a gardé le meilleur des deux.')
+        : '');
 
   // ── Frais de livraison ──────────────────────────────────────────────────────
   // Les produits NUMÉRIQUES (carte-cadeau, suivis) ne génèrent pas de frais et NE
@@ -175,10 +210,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const physicalCouponShare = couponEligibleSubtotal > 0
     ? couponDiscountValue * (physicalEligibleSubtotal / couponEligibleSubtotal)
     : 0;
-  const shippableNet = Math.max(0, physicalSubtotal - clientDiscount - physicalCouponShare);
+  // La promotion « 2e produit à -50 % » ne réduit la base que par sa part PHYSIQUE.
+  const shippableNet = Math.max(
+    0,
+    physicalSubtotal - clientDiscount - physicalCouponShare - (promoWon ? promoResult.physicalDiscount : 0),
+  );
   // Un code « livraison gratuite » (free_shipping) annule les frais — sauf s'il a été
   // écarté par l'arbitrage « meilleur des deux ».
-  const shipping = coupon?.freeShipping && !couponSuppressed ? 0 : shippingFeeFor(shippableNet);
+  const shipping = coupon?.freeShipping && !couponSuppressed && !promoWon ? 0 : shippingFeeFor(shippableNet);
 
   // Re-valide le code promo quand la COMPOSITION du panier change : les règles
   // dépendent du panier (minimum, produits admissibles, soldes…). Debounce léger pour
@@ -284,7 +323,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <CartContext.Provider value={{ items, count, subtotal, isClient, clientDiscount, giftCardDiscount, potentialClientDiscount, shippableNet, shipping, hydrated, coupon: coupon ? { ...coupon, discountValue: couponDiscountValue } : null, couponNotice, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
+    <CartContext.Provider value={{ items, count, subtotal, isClient, clientDiscount, giftCardDiscount, promoDiscount, promoHint,
+      // Appât « en tant que client vous auriez économisé X $ » : seulement si le rabais client
+      // battrait réellement la promotion « 2e produit à -50 % » déjà obtenue.
+      potentialClientDiscount: potentialClientDiscount > promoDiscount ? potentialClientDiscount : 0,
+      shippableNet, shipping, hydrated, coupon: coupon ? { ...coupon, discountValue: couponDiscountValue } : null, couponNotice, applyCoupon, removeCoupon, addItem, removeItem, updateQty, clearCart }}>
       {children}
     </CartContext.Provider>
   );

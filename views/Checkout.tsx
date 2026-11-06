@@ -74,7 +74,7 @@ const PROVINCES: { label: string; code: string }[] = [
 ];
 
 const Checkout: React.FC = () => {
-  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, shipping, coupon, couponNotice, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
+  const { items, subtotal, isClient, clientDiscount, giftCardDiscount, promoDiscount, shipping, coupon, couponNotice, applyCoupon, removeCoupon, clearCart, hydrated } = useCart();
   const router = useRouter();
 
   const [couponInput, setCouponInput] = useState('');
@@ -164,7 +164,7 @@ const Checkout: React.FC = () => {
   // Estimation affichée avant soumission. Le montant RÉEL facturé est celui que
   // WooCommerce recalcule côté serveur (prix réels + taxes + rabais).
   const couponDiscount = coupon?.discountValue ?? 0;
-  const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount;
+  const totalDiscount = clientDiscount + giftCardDiscount + couponDiscount + promoDiscount;
   const netGoods = subtotal - totalDiscount;
   // Seuls les produits physiques sont taxables (carte-cadeau et suivis exclus).
   const digitalSubtotal = items
@@ -729,10 +729,16 @@ const Checkout: React.FC = () => {
                       <span className="font-medium">-{giftCardDiscount.toFixed(2)} $</span>
                     </div>
                   )}
-                  {coupon && (
+                  {coupon && couponDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Rabais ({coupon.code})</span>
                       <span className="font-medium">-{couponDiscount.toFixed(2)} $</span>
+                    </div>
+                  )}
+                  {promoDiscount > 0 && (
+                    <div className="flex justify-between text-neo">
+                      <span className="font-medium">Promo : 2e produit à -50 %</span>
+                      <span className="font-medium">-{promoDiscount.toFixed(2)} $</span>
                     </div>
                   )}
                   <div className="flex justify-between">
