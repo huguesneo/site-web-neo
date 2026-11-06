@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CookieConsent from '@/components/CookieConsent';
 import Chatbot from '@/components/Chatbot';
+import PromoPopup from '@/components/PromoPopup';
 
 /**
  * Habillage du site (header, footer, bandeau cookies, chatbot).
@@ -55,6 +56,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       <Footer />
       <CookieConsent />
       <Chatbot />
+      <PromoPopup />
     </>
   );
 }
