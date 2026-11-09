@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 Disallow: /admin/
+Disallow: /elody
 Sitemap: https://www.neoperformance.ca/sitemap.xml

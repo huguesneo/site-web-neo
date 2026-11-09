@@ -35,6 +35,9 @@ import PromoPopup from '@/components/PromoPopup';
  *
  * Masqué aussi sur /rencontre-gratuite : page de pub Meta, sans navigation
  * ni chatbot, ni bannière cookies.
+ *
+ * Masqué aussi sur les pages partenaires (/elody) : trafic Instagram, avec leur
+ * propre layout (app/(landing)/layout.tsx) : logo seul et pied de page minimal.
  */
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -45,7 +48,8 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
     pathname === '/continuite' ||
     pathname?.startsWith('/continuite/naturo') ||
     pathname?.startsWith('/evaluation-reprise') ||
-    pathname?.startsWith('/rencontre-gratuite');
+    pathname?.startsWith('/rencontre-gratuite') ||
+    pathname === '/elody';
 
   if (isFullScreen) return <>{children}</>;
 
