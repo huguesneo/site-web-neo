@@ -23,7 +23,25 @@ export const runtime = 'nodejs';
 
 const IS_PROD = process.env.MONERIS_ENV === 'prod';
 const API_HOST = IS_PROD ? 'https://api.moneris.io' : 'https://api.sb.moneris.io';
-const API_VERSION = '2024-09-17';
+// Même version que le terminal NEO KPI (customerReference y est prouvé en prod).
+const API_VERSION = '2026-08-14';
+// Version utilisée avant — sert uniquement au filet de sécurité (voir POST).
+const LEGACY_API_VERSION = '2024-09-17';
+
+/**
+ * « ID client » au portail Moneris (champ `customerReference`, texte libre) :
+ * « Prénom Nom 8236 ». Même nettoyage que le terminal NEO KPI (sans accents,
+ * lettres/chiffres/espace/'/-), 40 caractères max. Le numéro de commande à la
+ * fin évite les doublons et fait le lien avec WooCommerce pour la comptabilité.
+ */
+function customerReferenceFor(first: string | undefined, last: string | undefined, orderId: string | number): string {
+  const suffix = ` ${orderId}`.replace(/[^A-Za-z0-9 \-]/g, '');
+  const name = `${first ?? ''} ${last ?? ''}`
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Za-z0-9 '\-]/g, '').replace(/\s+/g, ' ').trim()
+    .slice(0, Math.max(0, 40 - suffix.length)).trim();
+  return name ? `${name}${suffix}` : '';
+}
 
 const WC_BASE = process.env.WC_URL;
 const WC_KEY = process.env.WC_KEY;
@@ -196,7 +214,33 @@ export async function POST(req: NextRequest) {
 
     const fullName = `${customer?.firstName ?? ''} ${customer?.lastName ?? ''}`.trim();
 
+    const customerReference = customerReferenceFor(customer?.firstName, customer?.lastName, orderId);
+
+    // Requête principale — même forme que le terminal NEO KPI (qui remplit déjà
+    // « ID client » au portail Moneris) : version d'API récente, nom du client dans
+    // `customerReference` (texte libre), nom du titulaire DANS paymentMethod.
+    // NB : ne JAMAIS mettre le nom dans `customerId` — format strict de 30 car.
+    // (^[A-Za-z]{2}\d{2}[A-Za-z0-9]{26}$) qui faisait échouer tout le paiement.
     const payload: Record<string, unknown> = {
+      idempotencyKey: randomUUID(),
+      orderId: String(orderId),
+      amount: { amount: amountCents, currency: 'CAD' },
+      ...(customerReference ? { customerReference } : {}),
+      paymentMethod: {
+        paymentMethodSource: 'TEMPORARY_TOKEN',
+        temporaryToken,
+        storePaymentMethod: 'DO_NOT_STORE',
+        ...(fullName ? { cardholderInformation: { cardholderName: fullName.slice(0, 60) } } : {}),
+      },
+      ecommerceIndicator: 'SSL_MERCHANT',
+      automaticCapture: true,
+      dynamicDescriptor: 'NEO Performance',
+    };
+
+    // Filet de sécurité : requête identique à celle utilisée avant ce changement
+    // (ancienne version d'API, sans customerReference). Utilisée seulement si
+    // Moneris rejette la requête principale comme MAL FORMÉE (aucun prélèvement).
+    const legacyPayload: Record<string, unknown> = {
       idempotencyKey: randomUUID(),
       amount: { amount: amountCents, currency: 'CAD' },
       paymentMethod: {
@@ -206,36 +250,45 @@ export async function POST(req: NextRequest) {
       },
       automaticCapture: true,
       dynamicDescriptor: 'NEO Performance',
-      ...(orderId ? { orderId: String(orderId) } : {}),
-      // NB : le champ Moneris `customerId` n'est PAS un nom libre — il exige un
-      // format strict (30 car., motif ^[A-Za-z]{2}\d{2}[A-Za-z0-9]{26}$). Y mettre
-      // le nom du client faisait échouer TOUT le paiement (400 INVALID_FORMAT).
-      // Le nom est déjà transmis via cardholderName ci-dessous, qui s'affiche au portail.
+      orderId: String(orderId),
       ...(fullName
-        ? {
-            paymentMethodDetails: {
-              cardholderInformation: { cardholderName: fullName },
-            },
-          }
+        ? { paymentMethodDetails: { cardholderInformation: { cardholderName: fullName } } }
         : {}),
     };
 
-    paymentSent = true;
-    const res = await fetch(`${API_HOST}/payments`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-Api-Key': MONERIS_API_KEY,
-        'Api-Version': API_VERSION,
-        'X-Merchant-Id': MONERIS_MERCHANT_ID,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    const sendPayment = async (apiVersion: string, body: Record<string, unknown>) => {
+      const r = await fetch(`${API_HOST}/payments`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-Api-Key': MONERIS_API_KEY,
+          'Api-Version': apiVersion,
+          'X-Merchant-Id': MONERIS_MERCHANT_ID,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      const text = await r.text();
+      let json: Record<string, unknown> = {};
+      try { json = text ? JSON.parse(text) : {}; } catch { /* réponse non-JSON */ }
+      return { res: r, rawText: text, data: json };
+    };
 
-    const rawText = await res.text();
-    let data: Record<string, unknown> = {};
-    try { data = rawText ? JSON.parse(rawText) : {}; } catch { /* réponse non-JSON */ }
+    paymentSent = true;
+    let { res, rawText, data } = await sendPayment(API_VERSION, payload);
+
+    // Rejet de validation (400/422 SANS paymentStatus) = la requête n'a pas été
+    // traitée, aucun montant prélevé → on peut renvoyer sans risque de double
+    // paiement. Un refus de carte, lui, porte un paymentStatus : jamais renvoyé.
+    if ((res.status === 400 || res.status === 422) && !(data as { paymentStatus?: string })?.paymentStatus) {
+      console.error(`[MONERIS] Requête principale rejetée (HTTP ${res.status}) — commande #${orderId} — renvoi avec l'ancien format. Corps:`, rawText);
+      await addOrderNote(
+        orderId,
+        `Moneris a rejeté le format de la requête de paiement (HTTP ${res.status}) — aucun montant prélevé. Paiement renvoyé avec l'ancien format (sans nom dans « ID client »).`,
+      );
+      ({ res, rawText, data } = await sendPayment(LEGACY_API_VERSION, legacyPayload));
+    }
+
     const approved = res.ok && (data as { paymentStatus?: string })?.paymentStatus === 'SUCCEEDED';
 
     if (!approved) {
